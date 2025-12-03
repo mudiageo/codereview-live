@@ -4,9 +4,9 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "vite dev -- port 3232",
 		"build": "vite build",
-		"preview": "vite preview",
+		"preview": "vite preview --port 3232",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -17,7 +17,8 @@
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"tauri": "tauri"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
@@ -31,6 +32,8 @@
 		"@tailwindcss/forms": "^0.5.10",
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.1.17",
+		"@tauri-apps/api": "^2.9.1",
+		"@tauri-apps/cli": "^2.9.5",
 		"@types/node": "^22",
 		"@vitest/browser-playwright": "^4.0.10",
 		"bits-ui": "^2.14.2",

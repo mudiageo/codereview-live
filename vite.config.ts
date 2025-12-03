@@ -10,6 +10,12 @@ export default defineConfig({
 		sveltekit(),
 		devtoolsJson()
 	],
+  clearScreen: false,
+  server: {
+    watch: {`
+      ignored: ["**/src-tauri/**"],
+    },
+  },
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
