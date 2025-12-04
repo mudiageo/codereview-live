@@ -1,0 +1,402 @@
+<script lang="ts">
+  import { Button } from '$lib/components/ui/button';
+  import { Badge } from '$lib/components/ui/badge';
+  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+  import { Textarea } from '$lib/components/ui/textarea';
+  import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+  import { Card, CardContent } from '$lib/components/ui/card';
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from '$lib/components/ui/dropdown-menu';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import Share2 from '@lucide/svelte/icons/share-2';
+  import MoreVertical from '@lucide/svelte/icons/more-vertical';
+  import Play from '@lucide/svelte/icons/play';
+  import Pause from '@lucide/svelte/icons/pause';
+  import Maximize from '@lucide/svelte/icons/maximize';
+  import Volume2 from '@lucide/svelte/icons/volume-2';
+  import VolumeX from '@lucide/svelte/icons/volume-x';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Send from '@lucide/svelte/icons/send';
+  import VideoIcon from '@lucide/svelte/icons/video';
+  import MessageSquare from '@lucide/svelte/icons/message-square';
+  import Check from '@lucide/svelte/icons/check';
+  
+  // Mock data
+  const review = {
+    id: '1',
+    title: 'Add JWT Authentication to API',
+    description: 'Implemented JWT-based authentication for all API endpoints with refresh token support.',
+    author: { name: 'John Doe', avatar: '' },
+    createdAt: '2 hours ago',
+    status: 'published',
+    videoUrl: '',
+    videoDuration: 272, // 4:32 in seconds
+    codeContent: `// Before
+app.get('/api/users', (req, res) => {
+  const users = db.getAllUsers();
+  res.json(users);
+});
+
+// After
+app.get('/api/users', authMiddleware, (req, res) => {
+  const users = db.getAllUsers();
+  res.json(users);
+});
+
+// New middleware
+const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};`,
+    language: 'javascript',
+  };
+  
+  const comments = [
+    {
+      id: '1',
+      author: { name: 'Jane Smith', avatar: '' },
+      content: 'Great implementation! Have you considered adding rate limiting to prevent brute force attacks?',
+      timestamp: '1 hour ago',
+      videoTimestamp: 45,
+      isResolved: false,
+      replies: [
+        {
+          id: '2',
+          author: { name: 'John Doe', avatar: '' },
+          content: 'Good point! I\'ll add that in the next iteration.',
+          timestamp: '30 mins ago',
+        }
+      ]
+    }
+  ];
+  
+  let isPlaying = $state(false);
+  let isMuted = $state(false);
+  let currentTime = $state(0);
+  let newComment = $state('');
+  let activeTab = $state('diff');
+  
+  function getInitials(name: string) {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  }
+  
+  function formatTime(seconds: number) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+  
+  function togglePlay() {
+    isPlaying = !isPlaying;
+  }
+  
+  function toggleMute() {
+    isMuted = !isMuted;
+  }
+  
+  function seekTo(seconds: number) {
+    currentTime = seconds;
+    // TODO: Seek video to timestamp
+  }
+  
+  async function postComment() {
+    if (!newComment.trim()) return;
+    // TODO: Post comment
+    console.log('Posting comment:', newComment);
+    newComment = '';
+  }
+  
+  async function explainCode() {
+    // TODO: Call AI to explain code
+    console.log('Explaining code...');
+  }
+</script>
+
+<div class="h-[calc(100vh-8rem)] flex flex-col">
+  <!-- Header -->
+  <div class="border-b p-4 space-y-2">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        <Button variant="ghost" size="icon" href="/reviews">
+          <ArrowLeft class="h-5 w-5" />
+        </Button>
+        <div class="flex-1 min-w-0">
+          <h1 class="text-xl font-semibold truncate">{review.title}</h1>
+          <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <Avatar class="h-5 w-5">
+              <AvatarImage src={review.author.avatar} />
+              <AvatarFallback class="text-xs">{getInitials(review.author.name)}</AvatarFallback>
+            </Avatar>
+            <span>{review.author.name}</span>
+            <span>·</span>
+            <span>{review.createdAt}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <Badge variant="outline" class="badge-published">
+          {review.status}
+        </Badge>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            {#snippet child(props)}
+            <Button {...props} variant="outline" size="sm" class="gap-2">
+              <Share2 class="h-4 w-4" />
+              Share
+            </Button>
+            {/snippet}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>Copy Link</DropdownMenuItem>
+            <DropdownMenuItem>Export as File</DropdownMenuItem>
+            <DropdownMenuItem>P2P Transfer</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            {#snippet child(props)}
+            <Button {...props} variant="ghost" size="icon">
+              <MoreVertical class="h-5 w-5" />
+            </Button>
+            {/snippet}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>Edit Review</DropdownMenuItem>
+            <DropdownMenuItem>Archive</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem class="text-destructive">Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  </div>
+
+  <!-- Split View -->
+  <div class="flex-1 grid lg:grid-cols-2 overflow-hidden">
+    <!-- Left Panel: Code Viewer -->
+    <div class="flex flex-col border-r overflow-hidden">
+      <!-- Code Header -->
+      <div class="border-b p-2 flex items-center justify-between bg-muted/30">
+        <Tabs bind:value={activeTab}>
+          <TabsList class="h-8">
+            <TabsTrigger value="diff" class="text-xs">Diff View</TabsTrigger>
+            <TabsTrigger value="full" class="text-xs">Full Code</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <div class="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onclick={explainCode} class="gap-2 h-8 text-xs">
+            <Sparkles class="h-3 w-3" />
+            AI Explain
+          </Button>
+        </div>
+      </div>
+      
+      <!-- Code Content -->
+      <div class="flex-1 overflow-auto">
+        <pre class="p-4 text-sm font-mono leading-relaxed"><code>{review.codeContent}</code></pre>
+      </div>
+    </div>
+
+    <!-- Right Panel: Video & Comments -->
+    <div class="flex flex-col overflow-hidden">
+      <!-- Video Player -->
+      <div class="border-b bg-black">
+        <div class="aspect-video bg-muted flex items-center justify-center">
+          <VideoIcon class="h-16 w-16 text-muted-foreground" />
+        </div>
+        
+        <!-- Video Controls -->
+        <div class="bg-black/90 p-3 space-y-2">
+          <!-- Timeline -->
+          <div class="relative h-1 bg-white/20 rounded-full cursor-pointer">
+            <div class="absolute h-full bg-primary rounded-full" style="width: {(currentTime / review.videoDuration) * 100}%"></div>
+            <!-- Timestamp markers -->
+            {#each comments as comment}
+              {#if comment.videoTimestamp}
+                <button
+                  class="absolute -top-1 w-3 h-3 bg-chart-2 rounded-full border-2 border-black"
+                  style="left: {(comment.videoTimestamp / review.videoDuration) * 100}%"
+                  onclick={() => seekTo(comment.videoTimestamp)}
+                ></button>
+              {/if}
+            {/each}
+          </div>
+          
+          <!-- Controls -->
+          <div class="flex items-center justify-between text-white">
+            <div class="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8 text-white hover:bg-white/20"
+                onclick={togglePlay}
+              >
+                {#if isPlaying}
+                  <Pause class="h-4 w-4" />
+                {:else}
+                  <Play class="h-4 w-4" />
+                {/if}
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8 text-white hover:bg-white/20"
+                onclick={toggleMute}
+              >
+                {#if isMuted}
+                  <VolumeX class="h-4 w-4" />
+                {:else}
+                  <Volume2 class="h-4 w-4" />
+                {/if}
+              </Button>
+              
+              <span class="text-xs font-mono">
+                {formatTime(currentTime)} / {formatTime(review.videoDuration)}
+              </span>
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-8 w-8 text-white hover:bg-white/20"
+            >
+              <Maximize class="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Comments Section -->
+      <div class="flex-1 overflow-auto p-4 space-y-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold flex items-center gap-2">
+            <MessageSquare class="h-4 w-4" />
+            Comments ({comments.length})
+          </h3>
+          <Button size="sm" variant="outline" class="gap-2">
+            <VideoIcon class="h-3 w-3" />
+            Video Reply
+          </Button>
+        </div>
+        
+        {#if comments.length === 0}
+          <Card>
+            <CardContent class="flex flex-col items-center justify-center p-8 text-center">
+              <MessageSquare class="h-8 w-8 text-muted-foreground mb-2" />
+              <p class="text-sm text-muted-foreground">No comments yet</p>
+            </CardContent>
+          </Card>
+        {:else}
+          {#each comments as comment}
+            <Card>
+              <CardContent class="p-4 space-y-3">
+                <!-- Comment Header -->
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-2">
+                    <Avatar class="h-8 w-8">
+                      <AvatarImage src={comment.author.avatar} />
+                      <AvatarFallback class="text-xs">
+                        {getInitials(comment.author.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p class="text-sm font-medium">{comment.author.name}</p>
+                      <p class="text-xs text-muted-foreground">{comment.timestamp}</p>
+                    </div>
+                  </div>
+                  
+                  {#if comment.videoTimestamp}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      class="gap-1 h-6 text-xs"
+                      onclick={() => seekTo(comment.videoTimestamp)}
+                    >
+                      <Play class="h-3 w-3" />
+                      {formatTime(comment.videoTimestamp)}
+                    </Button>
+                  {/if}
+                </div>
+                
+                <!-- Comment Content -->
+                <p class="text-sm">{comment.content}</p>
+                
+                <!-- Comment Actions -->
+                <div class="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" class="h-7 text-xs">
+                    Reply
+                  </Button>
+                  {#if !comment.isResolved}
+                    <Button variant="ghost" size="sm" class="h-7 text-xs gap-1">
+                      <Check class="h-3 w-3" />
+                      Resolve
+                    </Button>
+                  {/if}
+                </div>
+                
+                <!-- Replies -->
+                {#if comment.replies?.length > 0}
+                  <div class="ml-6 space-y-3 pt-3 border-t">
+                    {#each comment.replies as reply}
+                      <div class="flex items-start gap-2">
+                        <Avatar class="h-6 w-6">
+                          <AvatarImage src={reply.author.avatar} />
+                          <AvatarFallback class="text-xs">
+                            {getInitials(reply.author.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div class="flex-1">
+                          <div class="flex items-center gap-2">
+                            <p class="text-sm font-medium">{reply.author.name}</p>
+                            <p class="text-xs text-muted-foreground">{reply.timestamp}</p>
+                          </div>
+                          <p class="text-sm mt-1">{reply.content}</p>
+                        </div>
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
+              </CardContent>
+            </Card>
+          {/each}
+        {/if}
+      </div>
+      
+      <!-- New Comment Input -->
+      <div class="border-t p-4">
+        <div class="flex gap-2">
+          <Textarea
+            placeholder="Add a comment..."
+            class="flex-1 resize-none"
+            rows={2}
+            bind:value={newComment}
+          />
+          <Button size="icon" onclick={postComment} disabled={!newComment.trim()}>
+            <Send class="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
