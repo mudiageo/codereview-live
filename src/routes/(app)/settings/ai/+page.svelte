@@ -128,4 +128,24 @@
     </CardContent>
   </Card>
 
+  <Card>
+    <CardHeader>
+      <CardTitle>Usage This Month</CardTitle>
+      <CardDescription>Track your AI credit consumption</CardDescription>
+    </CardHeader>
+    <CardContent class="space-y-2">
+      <div class="flex justify-between text-sm">
+        <span>AI Credits Used</span>
+        <span class="font-medium">{creditsUsed} / {creditsLimit}</span>
+      </div>
+      <Progress value={(creditsUsed / creditsLimit) * 100} />
+      <p class="text-xs text-muted-foreground">
+        Resets on the 1st of each month
+      </p>
+    </CardContent>
+  </Card>
+
+  <Button onclick={handleSave} disabled={saving}>
+    {saving ? 'Saving...' : 'Save Changes'}
+  </Button>
 </div>
