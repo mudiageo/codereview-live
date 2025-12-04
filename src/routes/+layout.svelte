@@ -2,8 +2,9 @@
  import { ModeWatcher } from "mode-watcher";
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
-	
-	let { children } = $props();
+    
+  let { children } = $props();
+
 </script>
  
 <svelte:head>

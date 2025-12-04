@@ -12,7 +12,7 @@ export default defineConfig({
 	],
   clearScreen: false,
   server: {
-    watch: {`
+    watch: {
       ignored: ["**/src-tauri/**"],
     },
   },
