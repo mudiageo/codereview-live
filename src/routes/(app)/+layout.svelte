@@ -72,7 +72,66 @@
   function toggleMobileMenu() {
     mobileMenuOpen = !mobileMenuOpen;
   }
+  
+  import { onMount } from 'svelte';
+  import { initDb, syncEngine } from '$lib/db';
+
+  import { reviewsStore, projectsStore, commentsStore,} from '$lib/stores/index.svelte';
+
+  import { Toaster } from '$lib/components/ui/sonner';
+  import SearchCommand from '$lib/components/search-command.svelte';
+  import { browser } from '$app/environment';
+
+  let searchOpen = $state(false);
+  
+  onMount(async () => {
+    if (!browser) return;
+    
+    try {
+      // Initialize database
+      await initDb();
+      
+      // Load initial data
+      await Promise.all([
+        reviewsStore.load(),
+        projectsStore.load(),
+        commentsStore.load(),
+      ]);
+      
+      // Start sync
+      
+    } catch (err) {
+      console.error('Failed to initialize app:', err);
+    }
+    
+    return () => {
+      // Cleanup on unmount
+      syncEngine.destroy();
+    };
+  });
+  
+  const syncState = $derived(syncEngine.state);
 </script>
+
+<Toaster richColors position="top-right" />
+<SearchCommand bind:open={searchOpen} />
+
+<!-- Sync Status Indicator -->
+{#if syncState.isSyncing}
+  <div class="fixed top-4 right-4 z-50 animate-pulse">
+    <div class="flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg">
+      <div class="h-2 w-2 bg-white rounded-full animate-ping"></div>
+      <span class="text-sm">Syncing...</span>
+    </div>
+  </div>
+{:else if !syncState.isOnline}
+  <div class="fixed top-4 right-4 z-50">
+    <div class="flex items-center gap-2 bg-destructive text-destructive-foreground px-3 py-2 rounded-lg shadow-lg">
+      <div class="h-2 w-2 bg-white rounded-full"></div>
+      <span class="text-sm">Offline</span>
+    </div>
+  </div>
+{/if}
 
 <!-- Desktop Layout -->
 <div class="flex h-screen overflow-hidden bg-background">

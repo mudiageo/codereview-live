@@ -1,6 +1,9 @@
 import { pgTable, text, timestamp, integer, boolean, jsonb, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
+import { syncMetadata } from 'sveltekit-sync/adapters/drizzle'
+export { syncLog, clientState } from 'sveltekit-sync/adapters/drizzle'
+
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -98,7 +101,10 @@ export const projects = pgTable('projects', {
   color: text('color').default('#8B5CF6'), // Project color for UI
   isTeam: boolean('is_team').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")     .defaultNow()     
+    .$onUpdate(() => /* @__PURE__ */ new Date())     
+    .notNull(),
+    ...syncMetadata
 });
 
 // Reviews table
@@ -125,7 +131,10 @@ export const reviews = pgTable('reviews', {
   }>(),
   viewCount: integer('view_count').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")     .defaultNow()     
+    .$onUpdate(() => /* @__PURE__ */ new Date())     
+    .notNull(),
+    ...syncMetadata
 });
 
 // Comments table
@@ -141,7 +150,10 @@ export const comments = pgTable('comments', {
   codeLineEnd: integer('code_line_end'),
   isResolved: boolean('is_resolved').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")     .defaultNow()     
+  .$onUpdate(() => /* @__PURE__ */ new Date())     
+  .notNull(),
+  ...syncMetadata
 });
 
 // Team members table
@@ -152,6 +164,7 @@ export const teamMembers = pgTable('team_members', {
   role: text('role').default('member').notNull(), // owner, admin, member, viewer
   invitedBy: text('invited_by').references(() => users.id),
   joinedAt: timestamp('joined_at').defaultNow().notNull(),
+  ...syncMetadata
 });
 
 // Subscriptions table
@@ -166,7 +179,10 @@ export const subscriptions = pgTable('subscriptions', {
   currentPeriodEnd: timestamp('current_period_end'),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")     .defaultNow()     
+    .$onUpdate(() => /* @__PURE__ */ new Date())     
+    .notNull(), 
+    ...syncMetadata
 });
 
 // AI usage tracking
