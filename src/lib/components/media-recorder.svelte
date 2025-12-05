@@ -7,7 +7,6 @@
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue,
   } from '$lib/components/ui/select';
   import Circle from '@lucide/svelte/icons/circle';
   import Square from '@lucide/svelte/icons/square';
@@ -180,7 +179,7 @@
         <label class="text-sm font-medium">Recording Source</label>
         <Select bind:value={selectedSource}>
           <SelectTrigger>
-            <SelectValue />
+            {selectedSource || ""}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="screen">Screen</SelectItem>

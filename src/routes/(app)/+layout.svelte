@@ -364,7 +364,7 @@
     
     <a
       href="/reviews/new"
-      class="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground -mt-6 shadow-lg"
+      class="flex h-12 w-70 items-center justify-center rounded-full bg-primary text-primary-foreground -mt-6 shadow-lg"
     >
       <Plus class="h-6 w-6" />
     </a>

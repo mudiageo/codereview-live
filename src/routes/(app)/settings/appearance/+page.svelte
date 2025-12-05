@@ -9,6 +9,8 @@
   import Sun from '@lucide/svelte/icons/sun';
   import Moon from '@lucide/svelte/icons/moon';
   import Monitor from '@lucide/svelte/icons/monitor';
+  import { resetMode, setMode } from "mode-watcher";
+
   
   let theme = $state('dark');
   let editorTheme = $state('vscode-dark');
@@ -38,7 +40,7 @@
       <CardDescription>Select your preferred theme</CardDescription>
     </CardHeader>
     <CardContent>
-      <RadioGroup bind:value={theme} class="grid grid-cols-3 gap-4">
+      <RadioGroup onValueChange={(value) => { if(value === 'system') resetMode(); else setMode(value);}} bind:value={theme} class="grid grid-cols-3 gap-4">
         <div>
           <RadioGroupItem value="light" id="light" class="peer sr-only" />
           <Label

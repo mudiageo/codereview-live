@@ -1,2 +1,10 @@
-<h1>Welcome to SvelteKit</h1>
+<script>
+  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
+  
+  onMount(() => {
+    // Redirect to your default route
+    goto('/dashboard');
+  });
+</script><h1>Welcome to SvelteKit</h1>
 <p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>

@@ -10,6 +10,9 @@ export default defineConfig({
 		sveltekit(),
 		devtoolsJson()
 	],
+  experimental: {
+    enableNativePlugin: true,
+  },
   clearScreen: false,
   server: {
     watch: {

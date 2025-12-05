@@ -104,7 +104,7 @@
         <Label>Default Playback Speed</Label>
         <Select bind:value={defaultSpeed}>
           <SelectTrigger>
-            {defaultSpend || ""}
+            {defaultSpeed || ""}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="0.5">0.5x</SelectItem>
