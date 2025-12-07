@@ -433,3 +433,4 @@ class SettingsStore {
 export const settingsStore = new SettingsStore();
 
 
+ai usage, notifications 

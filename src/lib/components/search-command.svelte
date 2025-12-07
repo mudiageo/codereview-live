@@ -57,7 +57,7 @@
     <CommandGroup heading="Quick Actions">
       {#each quickActions as action}
         <CommandItem onSelect={() => handleSelect(action.href)}>
-          <svelte:component this={action.icon} class="mr-2 h-4 w-4" />
+          <action.icon class="mr-2 h-4 w-4" />
           <span>{action.label}</span>
         </CommandItem>
       {/each}

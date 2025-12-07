@@ -61,7 +61,7 @@
     <Dialog bind:open={inviteOpen}>
       <DialogTrigger>
         {#snippet child(props)}
-        <Button {...props} class="gap-2">
+          <Button {...props} class="gap-2">
           <UserPlus class="h-4 w-4" />
           Invite Member
         </Button>
@@ -101,16 +101,17 @@
     </CardHeader>
     <CardContent class="space-y-2">
       {#each members as member}
+        {@const Icon = getRoleIcon(member.role) }
         <div class="flex items-center justify-between p-3 rounded-lg border">
           <div class="flex items-center gap-3">
             <Avatar>
-              <AvatarImage src={member.avatar} />
+              <AvatarImage src={membercon.avatar} />
               <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
             </Avatar>
             <div>
               <p class="font-medium flex items-center gap-2">
                 {member.name}
-                <svelte:component this={getRoleIcon(member.role)} class="h-3 w-3 text-muted-foreground" />
+                <Icon class="h-3 w-3 text-muted-foreground" />
               </p>
               <p class="text-sm text-muted-foreground">{member.email}</p>
             </div>

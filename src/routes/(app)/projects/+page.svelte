@@ -20,12 +20,15 @@
   import FileVideo from '@lucide/svelte/icons/file-video';
   import Users from '@lucide/svelte/icons/users';
   import Clock from '@lucide/svelte/icons/clock';
+  import { projectsStore } from '$lib/stores/index.svelte';
   
   let view = $state<'grid' | 'list'>('grid');
   let searchQuery = $state('');
   let loading = $state(false);
   
-  const projects = [
+  const projects = projectsStore.data
+  
+  const projectss = [
     {
       id: '1',
       name: 'My Awesome App',

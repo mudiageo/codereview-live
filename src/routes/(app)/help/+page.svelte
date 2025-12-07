@@ -83,7 +83,7 @@
         <CardHeader>
           <div class="flex items-center gap-3">
             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <svelte:component this={category.icon} class="h-5 w-5 text-primary" />
+              <category.icon class="h-5 w-5 text-primary" />
             </div>
             <CardTitle>{category.title}</CardTitle>
           </div>

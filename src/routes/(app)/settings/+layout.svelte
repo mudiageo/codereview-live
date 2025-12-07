@@ -47,7 +47,7 @@
               : "hover:bg-muted"
           )}
         >
-          <svelte:component this={item.icon} class="h-5 w-5" />
+          <item.icon class="h-5 w-5" />
           {item.name}
         </a>
       {/each}
@@ -74,7 +74,7 @@
             : "bg-muted"
         )}
       >
-        <svelte:component this={item.icon} class="h-4 w-4" />
+        <item.icon class="h-4 w-4" />
         {item.name}
       </a>
     {/each}

@@ -78,6 +78,7 @@ export const auth = betterAuth({
 	},
 	// Advanced configuration
 	advanced: {
+	  cookiePrefix: "cr_",
 		generateId: () => crypto.randomUUID(),
 		crossSubDomainCookies: {
 			enabled: false
