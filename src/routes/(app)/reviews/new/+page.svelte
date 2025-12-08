@@ -16,6 +16,16 @@
   import Circle from '@lucide/svelte/icons/circle';
   import Square from '@lucide/svelte/icons/square';
   import Sparkles from '@lucide/svelte/icons/sparkles';
+  import AuthGuard from '$lib/components/auth-guard.svelte';
+  import PaywallDialog from '$lib/components/paywall-dialog.svelte';
+  import LimitReached from '$lib/components/limit-reached.svelte';
+  import UpgradeDialog from '$lib/components/upgrade-dialog.svelte';
+  import { reviewsStore, subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
+  import { auth } from '$lib/stores/auth.svelte';
+  import { hasFeatureAccess, getLimit, isWithinLimit } from '$lib/config';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { toast } from 'svelte-sonner';
   
   let step = $state(1);
   let title = $state('');
@@ -28,6 +38,21 @@
   let videoBlob = $state<Blob | null>(null);
   let aiSummary = $state('');
   let loading = $state(false);
+  let showPaywall = $state(false);
+  let showUpgrade = $state(false);
+  let showLimitReached = $state(false);
+  
+  onMount(async () => {
+    await reviewsStore.load();
+    await subscriptionsStore.load();
+    await aiUsageStore.load();
+  });
+  
+  const userPlan = $derived(auth.currentUser?.plan || 'free');
+  const reviewCount = $derived(reviewsStore.count);
+  const reviewLimit = $derived(getLimit(userPlan as any, 'localReviews'));
+  const canCreateReview = $derived(isWithinLimit(reviewCount, reviewLimit));
+  const hasAI = $derived(hasFeatureAccess(userPlan as any, 'advancedAI'));
   
   const projects = [
     { id: '1', name: 'My Awesome App' },
@@ -68,11 +93,27 @@
   }
   
   async function generateAISummary() {
+    if (!hasAI) {
+      showPaywall = true;
+      return;
+    }
+    
     loading = true;
     try {
       // TODO: Call Gemini API
       await new Promise(resolve => setTimeout(resolve, 1500));
       aiSummary = 'This code implements JWT-based authentication for the API endpoints. Key changes include adding token generation, validation middleware, and secure session management.';
+      
+      // Track AI usage
+      await aiUsageStore.create({
+        userId: auth.currentUser?.id,
+        reviewId: null,
+        feature: 'summary',
+        tokensUsed: 150,
+        success: true
+      });
+    } catch (error) {
+      toast.error('Failed to generate AI summary');
     } finally {
       loading = false;
     }
@@ -80,36 +121,53 @@
   
   async function saveDraft() {
     // TODO: Save to local storage
-    console.log('Saving draft...');
+    toast.success('Draft saved');
   }
   
   async function publishReview() {
-    // TODO: Publish review
-    console.log('Publishing review...');
-    window.location.href = '/reviews';
-  }
-  import AuthGuard from '$lib/components/auth-guard.svelte';
-  import PaywallDialog from '$lib/components/paywall-dialog.svelte';
-  import { page } from '$app/state';
-  
-  let showPaywall = $state(false);
-  
-  const user = $derived(page.data.user);
-  const canCreateReview = $derived(() => {
-    // Check if user has reached their review limit
-    return user.plan !== 'free' || user.reviewCount < 10;
-  });
-  
-  function handleCreateAttempt() {
-    if (!canCreateReview()) {
-      showPaywall = true;
-    } else {
-      // Proceed with creation
+    if (!canCreateReview) {
+      showLimitReached = true;
+      return;
+    }
+    
+    try {
+      await reviewsStore.create({
+        title,
+        description,
+        projectId,
+        authorId: auth.currentUser?.id || '',
+        codeContent: code,
+        codeLanguage: language,
+        videoUrl: null,
+        videoSize: null,
+        videoDuration: null,
+        thumbnailUrl: null,
+        shareToken: crypto.randomUUID(),
+        isPublic: false,
+        status: 'published',
+        aiSummary,
+        metadata: null,
+      });
+      
+      toast.success('Review published!');
+      goto('/reviews');
+    } catch (error) {
+      toast.error('Failed to publish review');
     }
   }
 </script>
 
 <AuthGuard requireAuth requirePlan="free">
+{#if !canCreateReview}
+  <div class="max-w-4xl mx-auto space-y-6 py-8">
+    <LimitReached 
+      type="cloud-reviews" 
+      current={reviewCount} 
+      limit={reviewLimit}
+      onUpgrade={() => showUpgrade = true}
+    />
+  </div>
+{:else}
 <div class="max-w-4xl mx-auto space-y-6">
   <!-- Header -->
   <div class="flex items-center gap-4">
@@ -400,10 +458,14 @@
     </div>
   {/if}
 </div>
+{/if}
 </AuthGuard>
 
 <PaywallDialog
   bind:open={showPaywall}
-  feature="Unlimited Reviews"
+  feature="Advanced AI Features"
   requiredPlan="pro"
+  onUpgrade={() => showUpgrade = true}
 />
+
+<UpgradeDialog bind:open={showUpgrade} currentPlan={userPlan as any} />

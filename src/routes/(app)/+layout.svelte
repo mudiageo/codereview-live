@@ -74,15 +74,19 @@
   }
   
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import { initDb, syncEngine } from '$lib/db';
 
   import { reviewsStore, projectsStore, commentsStore,} from '$lib/stores/index.svelte';
 
   import { Toaster } from '$lib/components/ui/sonner';
   import SearchCommand from '$lib/components/search-command.svelte';
+  import KeyboardShortcutsDialog from '$lib/components/keyboard-shortcuts-dialog.svelte';
   import { browser } from '$app/environment';
+  import { KeyboardShortcuts } from '$lib/utils/keyboard-shortcuts';
 
   let searchOpen = $state(false);
+  let shortcutsOpen = $state(false);
   
   onMount(async () => {
     if (!browser) return;
@@ -97,6 +101,16 @@
         projectsStore.load(),
         commentsStore.load(),
       ]);
+      
+      // Setup keyboard shortcuts
+      const shortcuts = new KeyboardShortcuts();
+      shortcuts.register('mod+k', () => { searchOpen = true; }, { description: 'Open search' });
+      shortcuts.register('mod+/', () => { shortcutsOpen = true; }, { description: 'Show shortcuts' });
+      shortcuts.register('g d', () => { goto('/dashboard'); }, { description: 'Go to dashboard' });
+      shortcuts.register('g p', () => { goto('/projects'); }, { description: 'Go to projects' });
+      shortcuts.register('g r', () => { goto('/reviews'); }, { description: 'Go to reviews' });
+      shortcuts.register('c', () => { goto('/reviews/new'); }, { description: 'Create review' });
+      shortcuts.enable();
       
       // Start sync
       
@@ -115,6 +129,7 @@
 
 <Toaster richColors position="top-right" />
 <SearchCommand bind:open={searchOpen} />
+<KeyboardShortcutsDialog bind:open={shortcutsOpen} />
 
 <!-- Sync Status Indicator -->
 {#if syncState.isSyncing}

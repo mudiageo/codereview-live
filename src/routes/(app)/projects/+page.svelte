@@ -21,6 +21,7 @@
   import Users from '@lucide/svelte/icons/users';
   import Clock from '@lucide/svelte/icons/clock';
   import { projectsStore } from '$lib/stores/index.svelte';
+  import { SearchEngine } from '$lib/utils/search';
   
   let view = $state<'grid' | 'list'>('grid');
   let searchQuery = $state('');
@@ -28,44 +29,10 @@
   
   const projects = projectsStore.data
   
-  const projectss = [
-    {
-      id: '1',
-      name: 'My Awesome App',
-      description: 'Main web application',
-      color: '#8B5CF6',
-      reviewCount: 24,
-      memberCount: 5,
-      lastActivity: '2 hours ago',
-      isTeam: true
-    },
-    {
-      id: '2',
-      name: 'Backend API',
-      description: 'REST API for mobile apps',
-      color: '#3B82F6',
-      reviewCount: 18,
-      memberCount: 3,
-      lastActivity: '1 day ago',
-      isTeam: true
-    },
-    {
-      id: '3',
-      name: 'Mobile App',
-      description: 'React Native mobile app',
-      color: '#10B981',
-      reviewCount: 12,
-      memberCount: 1,
-      lastActivity: '3 days ago',
-      isTeam: false
-    }
-  ];
-  
   const filteredProjects = $derived(
-    projects.filter(p => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    searchQuery 
+      ? SearchEngine.searchProjects(projects, searchQuery)
+      : projects
   );
 </script>
 
