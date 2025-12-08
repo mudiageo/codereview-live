@@ -1,7 +1,8 @@
 import Stripe from 'stripe';
+import { config } from '../config'
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
-const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+const stripeSecretKey = config.payments.stripe.secretKey;
+const stripeWebhookSecret = config.payments.stripe.webhookSecret;
 
 if (!stripeSecretKey) {
 	console.warn('STRIPE_SECRET_KEY is not set');

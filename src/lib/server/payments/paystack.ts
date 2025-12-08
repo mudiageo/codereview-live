@@ -1,5 +1,7 @@
-const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY || '';
-const paystackWebhookSecret = process.env.PAYSTACK_WEBHOOK_SECRET || '';
+import { config } from '../config'
+
+const paystackSecretKey = config.payments.paystack.secretKey;
+const paystackWebhookSecret = config.payments.paystack.webhookSecret;
 
 if (!paystackSecretKey) {
 	console.warn('PAYSTACK_SECRET_KEY is not set');
