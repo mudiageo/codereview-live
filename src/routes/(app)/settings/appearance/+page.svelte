@@ -10,12 +10,23 @@
   import Moon from '@lucide/svelte/icons/moon';
   import Monitor from '@lucide/svelte/icons/monitor';
   import { resetMode, setMode } from "mode-watcher";
+  import { settingsStore } from '$lib/stores/index.svelte';
 
-  
-  let theme = $state('dark');
-  let editorTheme = $state('vscode-dark');
-  let fontSize = $state([14]);
+  const settings = $derived(settingsStore.settings);
   let saving = $state(false);
+  
+  function updateSetting(key: keyof typeof settings, value: any) {
+    settingsStore.update({ [key]: value });
+  }
+  
+  function handleThemeChange(value: string) {
+    updateSetting('theme', value as 'light' | 'dark' | 'system');
+    if (value === 'system') {
+      resetMode();
+    } else {
+      setMode(value);
+    }
+  }
   
   async function handleSave() {
     saving = true;
@@ -40,7 +51,7 @@
       <CardDescription>Select your preferred theme</CardDescription>
     </CardHeader>
     <CardContent>
-      <RadioGroup onValueChange={(value) => { if(value === 'system') resetMode(); else setMode(value);}} bind:value={theme} class="grid grid-cols-3 gap-4">
+      <RadioGroup onValueChange={handleThemeChange} value={settings.theme} class="grid grid-cols-3 gap-4">
         <div>
           <RadioGroupItem value="light" id="light" class="peer sr-only" />
           <Label
@@ -84,16 +95,23 @@
       <div class="space-y-2">
         <Label>Font Size</Label>
         <div class="flex items-center gap-4">
-          <Slider bind:value={fontSize} max={20} min={10} step={1} class="flex-1" />
-          <span class="text-sm w-12 text-right">{fontSize[0]}px</span>
+          <Slider 
+            value={[settings.fontSize]} 
+            onValueChange={(value) => updateSetting('fontSize', value[0])}
+            max={20} 
+            min={10} 
+            step={1} 
+            class="flex-1" 
+          />
+          <span class="text-sm w-12 text-right">{settings.fontSize}px</span>
         </div>
       </div>
       
       <div class="space-y-2">
         <Label>Editor Theme</Label>
-        <Select bind:value={editorTheme}>
+        <Select value={settings.editorTheme} onValueChange={(value) => updateSetting('editorTheme', value)}>
           <SelectTrigger>
-            {editorTheme || ""}
+            {settings.editorTheme || ""}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="vscode-dark">VS Code Dark</SelectItem>

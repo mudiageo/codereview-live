@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { Button } from '$lib/components/ui/button';
   import { Badge } from '$lib/components/ui/badge';
   import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
@@ -24,66 +25,33 @@
   import Check from '@lucide/svelte/icons/check';
   import Play from '@lucide/svelte/icons/play';
   import { toast } from 'svelte-sonner';
+  import { reviewsStore, commentsStore } from '$lib/stores/index.svelte';
   
-  // Mock data
-  const review = {
-    id: '1',
-    title: 'Add JWT Authentication to API',
-    description: 'Implemented JWT-based authentication for all API endpoints with refresh token support.',
-    author: { name: 'John Doe', avatar: '' },
-    createdAt: '2 hours ago',
-    status: 'published',
+  const reviewId = $derived(page.params.id);
+  
+  // Load data from stores
+  $effect(() => {
+    reviewsStore.load();
+    commentsStore.load();
+  });
+  
+  // Get review from store
+  const review = $derived(reviewsStore.findById(reviewId) || {
+    id: reviewId,
+    title: 'Review Not Found',
+    description: 'This review could not be loaded',
+    authorName: 'Unknown',
+    authorAvatar: '',
+    createdAt: new Date(),
+    status: 'draft',
     videoUrl: '',
-    videoDuration: 272, // 4:32 in seconds
-    codeContent: `// Before
-app.get('/api/users', (req, res) => {
-  const users = db.getAllUsers();
-  res.json(users);
-});
-
-// After
-app.get('/api/users', authMiddleware, (req, res) => {
-  const users = db.getAllUsers();
-  res.json(users);
-});
-
-// New middleware
-const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+    videoDuration: 0,
+    codeContent: '',
+    language: 'text',
+  });
   
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-  
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};`,
-    language: 'javascript',
-  };
-  
-  const comments = [
-    {
-      id: '1',
-      author: { name: 'Jane Smith', avatar: '' },
-      content: 'Great implementation! Have you considered adding rate limiting to prevent brute force attacks?',
-      timestamp: '1 hour ago',
-      videoTimestamp: 45,
-      isResolved: false,
-      replies: [
-        {
-          id: '2',
-          author: { name: 'John Doe', avatar: '' },
-          content: 'Good point! I\'ll add that in the next iteration.',
-          timestamp: '30 mins ago',
-        }
-      ]
-    }
-  ];
+  // Get comments for this review with threading
+  const threadedComments = $derived(commentsStore.getThreaded(reviewId));
   
   let currentTime = $state(0);
   let newComment = $state('');
@@ -91,9 +59,9 @@ const authMiddleware = (req, res, next) => {
   
   // Prepare video markers from comments
   const videoMarkers = $derived(
-    comments
+    threadedComments
       .filter(c => c.videoTimestamp)
-      .map(c => ({ time: c.videoTimestamp, label: c.author.name }))
+      .map(c => ({ time: c.videoTimestamp, label: c.authorName || 'User' }))
   );
   
   function getInitials(name: string) {
@@ -105,6 +73,18 @@ const authMiddleware = (req, res, next) => {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
+
+  function formatTimestamp(date: Date) {
+    const now = new Date();
+    const diff = now.getTime() - new Date(date).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+    return new Date(date).toLocaleDateString();
+  }
   
   function handleTimeUpdate(time: number) {
     currentTime = time;
@@ -112,13 +92,32 @@ const authMiddleware = (req, res, next) => {
   
   async function postComment() {
     if (!newComment.trim()) return;
-    // TODO: Post comment
-    toast.success('Comment posted');
-    newComment = '';
+    
+    try {
+      await commentsStore.create({
+        reviewId: reviewId,
+        authorId: 'current-user-id', // TODO: Get from auth
+        authorName: 'Current User',
+        content: newComment,
+        videoTimestamp: currentTime > 0 ? Math.floor(currentTime) : undefined,
+      });
+      toast.success('Comment posted');
+      newComment = '';
+    } catch (error) {
+      toast.error('Failed to post comment');
+    }
+  }
+  
+  async function toggleResolve(commentId: string) {
+    try {
+      await commentsStore.toggleResolved(commentId);
+      toast.success('Comment resolved status updated');
+    } catch (error) {
+      toast.error('Failed to update comment');
+    }
   }
   
   async function explainCode() {
-    // TODO: Call AI to explain code
     toast.promise(
       new Promise(resolve => setTimeout(resolve, 2000)),
       {
