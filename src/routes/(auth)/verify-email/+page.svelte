@@ -3,7 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Button } from '$lib/components/ui/button';
-	import { CheckCircle, XCircle, Loader2 } from 'lucide-svelte';
+	import CheckCircle from '@lucide/svelte/icons/check-circle';
+	import XCircle from '@lucide/svelte/icons/x-circle';
+	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import { toast } from 'svelte-sonner';
 
 	let status = $state<'verifying' | 'success' | 'error'>('verifying');

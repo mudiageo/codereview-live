@@ -6,7 +6,9 @@
 	import { teamsStore, teamInvitationsStore } from '$lib/stores/index.svelte';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { hasFeatureAccess } from '$lib/config';
-	import { UserPlus, Trash2, Mail } from 'lucide-svelte';
+	import UserPlus from '@lucide/svelte/icons/user-plus';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import Mail from '@lucide/svelte/icons/mail';
 	import { onMount } from 'svelte';
 
 	const userPlan = $derived(auth.currentUser?.plan || 'free');

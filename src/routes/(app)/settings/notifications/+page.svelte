@@ -2,7 +2,9 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
 	import { toast } from 'svelte-sonner';
-	import { Bell, Mail, MessageSquare } from 'lucide-svelte';
+	import Bell from '@lucide/svelte/icons/bell';
+	import Mail from '@lucide/svelte/icons/mail';
+	import MessageSquare from '@lucide/svelte/icons/message-square';
 
 	let emailNotifications = $state({
 		reviewComments: true,

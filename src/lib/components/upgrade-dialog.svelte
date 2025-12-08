@@ -4,7 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { RadioGroup, RadioGroupItem } from '$lib/components/ui/radio-group';
 	import { Label } from '$lib/components/ui/label';
-	import { Check } from 'lucide-svelte';
+	import Check from '@lucide/svelte/icons/check';
 	import { toast } from 'svelte-sonner';
 
 	let {

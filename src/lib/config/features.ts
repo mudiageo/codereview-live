@@ -65,6 +65,14 @@ export function getLimit(userPlan: PlanId, limitKey: keyof (typeof planLimits)['
 }
 
 export function isWithinLimit(
+	currentValue: number,
+	limit: number
+): boolean {
+	return limit === -1 || currentValue < limit;
+}
+
+// Alternative signature for plan-based checks
+export function isPlanWithinLimit(
 	userPlan: PlanId,
 	limitKey: keyof (typeof planLimits)['free'],
 	currentValue: number

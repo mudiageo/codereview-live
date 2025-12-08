@@ -7,7 +7,7 @@
 	import { toast } from 'svelte-sonner';
 	import { projectsStore, subscriptionsStore } from '$lib/stores/index.svelte';
 	import { auth } from '$lib/stores/auth.svelte';
-	import { ArrowLeft } from 'lucide-svelte';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import { hasFeatureAccess } from '$lib/config';
 
 	let name = $state('');
