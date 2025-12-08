@@ -356,6 +356,298 @@ class CommentsStore {
 
 export const commentsStore = new CommentsStore();
 
+// Subscription Store with sveltekit-sync collection
+class SubscriptionsStore {
+  private collection = browser ? syncEngine.collection('subscriptions') : null;
+  
+  data = $state<import('$lib/server/db/schema').Subscription[]>([]);
+  isLoading = $state(false);
+  error = $state<Error | null>(null);
+  
+  get current() {
+    return this.data[0] || null;
+  }
+  
+  get isActive() {
+    return this.current?.status === 'active';
+  }
+  
+  async load() {
+    if (!this.collection) return;
+    
+    this.isLoading = true;
+    this.error = null;
+    
+    try {
+      await this.collection.load();
+      this.data = this.collection.data as import('$lib/server/db/schema').Subscription[];
+    } catch (err) {
+      this.error = err as Error;
+      console.error('Failed to load subscriptions:', err);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+  
+  async update(id: string, updates: Partial<import('$lib/server/db/schema').Subscription>) {
+    if (!this.collection) return;
+    
+    try {
+      await this.collection.update(id, {
+        ...updates,
+        updatedAt: new Date(),
+      });
+      
+      this.data = this.data.map(sub =>
+        sub.id === id ? { ...sub, ...updates, updatedAt: new Date() } : sub
+      );
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+}
+
+export const subscriptionsStore = new SubscriptionsStore();
+
+// Teams Store with sveltekit-sync collection
+class TeamsStore {
+  private collection = browser ? syncEngine.collection('teams') : null;
+  
+  data = $state<import('$lib/server/db/schema').Team[]>([]);
+  isLoading = $state(false);
+  error = $state<Error | null>(null);
+  
+  get current() {
+    return this.data[0] || null;
+  }
+  
+  get count() {
+    return this.data.length;
+  }
+  
+  async load() {
+    if (!this.collection) return;
+    
+    this.isLoading = true;
+    this.error = null;
+    
+    try {
+      await this.collection.load();
+      this.data = this.collection.data as import('$lib/server/db/schema').Team[];
+    } catch (err) {
+      this.error = err as Error;
+      console.error('Failed to load teams:', err);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+  
+  async create(team: Omit<import('$lib/server/db/schema').Team, 'id' | 'createdAt' | 'updatedAt'>) {
+    if (!this.collection) return null;
+    
+    try {
+      const newTeam = {
+        ...team,
+        id: crypto.randomUUID(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      await this.collection.create(newTeam);
+      this.data = [...this.data, newTeam as import('$lib/server/db/schema').Team];
+      
+      return newTeam;
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+  
+  async update(id: string, updates: Partial<import('$lib/server/db/schema').Team>) {
+    if (!this.collection) return;
+    
+    try {
+      await this.collection.update(id, {
+        ...updates,
+        updatedAt: new Date(),
+      });
+      
+      this.data = this.data.map(team =>
+        team.id === id ? { ...team, ...updates, updatedAt: new Date() } : team
+      );
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+  
+  async delete(id: string) {
+    if (!this.collection) return;
+    
+    try {
+      await this.collection.delete(id);
+      this.data = this.data.filter(team => team.id !== id);
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+  
+  findById(id: string) {
+    return this.data.find(team => team.id === id);
+  }
+}
+
+export const teamsStore = new TeamsStore();
+
+// Team Invitations Store with sveltekit-sync collection
+class TeamInvitationsStore {
+  private collection = browser ? syncEngine.collection('teamInvitations') : null;
+  
+  data = $state<import('$lib/server/db/schema').TeamInvitation[]>([]);
+  isLoading = $state(false);
+  error = $state<Error | null>(null);
+  
+  get pending() {
+    return this.data.filter(inv => new Date(inv.expiresAt) > new Date());
+  }
+  
+  get expired() {
+    return this.data.filter(inv => new Date(inv.expiresAt) <= new Date());
+  }
+  
+  async load() {
+    if (!this.collection) return;
+    
+    this.isLoading = true;
+    this.error = null;
+    
+    try {
+      await this.collection.load();
+      this.data = this.collection.data as import('$lib/server/db/schema').TeamInvitation[];
+    } catch (err) {
+      this.error = err as Error;
+      console.error('Failed to load team invitations:', err);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+  
+  async create(invitation: Omit<import('$lib/server/db/schema').TeamInvitation, 'id' | 'createdAt'>) {
+    if (!this.collection) return null;
+    
+    try {
+      const newInvitation = {
+        ...invitation,
+        id: crypto.randomUUID(),
+        createdAt: new Date(),
+      };
+      
+      await this.collection.create(newInvitation);
+      this.data = [...this.data, newInvitation as import('$lib/server/db/schema').TeamInvitation];
+      
+      return newInvitation;
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+  
+  async delete(id: string) {
+    if (!this.collection) return;
+    
+    try {
+      await this.collection.delete(id);
+      this.data = this.data.filter(inv => inv.id !== id);
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+  
+  findByTeam(teamId: string) {
+    return this.data.filter(inv => inv.teamId === teamId);
+  }
+  
+  findByEmail(email: string) {
+    return this.data.filter(inv => inv.email === email);
+  }
+}
+
+export const teamInvitationsStore = new TeamInvitationsStore();
+
+// AI Usage Store with sveltekit-sync collection
+class AIUsageStore {
+  private collection = browser ? syncEngine.collection('aiUsage') : null;
+  
+  data = $state<any[]>([]);
+  isLoading = $state(false);
+  error = $state<Error | null>(null);
+  
+  get totalTokens() {
+    return this.data.reduce((sum, usage) => sum + (usage.tokensUsed || 0), 0);
+  }
+  
+  get successfulRequests() {
+    return this.data.filter(usage => usage.success);
+  }
+  
+  async load() {
+    if (!this.collection) return;
+    
+    this.isLoading = true;
+    this.error = null;
+    
+    try {
+      await this.collection.load();
+      this.data = this.collection.data;
+    } catch (err) {
+      this.error = err as Error;
+      console.error('Failed to load AI usage:', err);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+  
+  async create(usage: any) {
+    if (!this.collection) return null;
+    
+    try {
+      const newUsage = {
+        ...usage,
+        id: crypto.randomUUID(),
+        createdAt: new Date(),
+      };
+      
+      await this.collection.create(newUsage);
+      this.data = [...this.data, newUsage];
+      
+      return newUsage;
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+  
+  findByReview(reviewId: string) {
+    return this.data.filter(usage => usage.reviewId === reviewId);
+  }
+  
+  findByFeature(feature: string) {
+    return this.data.filter(usage => usage.feature === feature);
+  }
+  
+  getUsageByMonth(year: number, month: number) {
+    return this.data.filter(usage => {
+      const date = new Date(usage.createdAt);
+      return date.getFullYear() === year && date.getMonth() === month;
+    });
+  }
+}
+
+export const aiUsageStore = new AIUsageStore();
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   editorTheme: string;
@@ -430,7 +722,4 @@ class SettingsStore {
   }
 }
 
-export const settingsStore = new SettingsStore();
-
-
-//TODO Implement ai usage, notifications stores 
+export const settingsStore = new SettingsStore(); 

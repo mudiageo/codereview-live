@@ -37,6 +37,10 @@ export async function initDb() {
       comments: 'id',
       users: 'id',
       teamMembers: 'id',
+      subscriptions: 'id',
+      teams: 'id',
+      teamInvitations: 'id',
+      aiUsage: 'id',
     });
 
     // SyncEngine.init() now handles initial data pull automatically
