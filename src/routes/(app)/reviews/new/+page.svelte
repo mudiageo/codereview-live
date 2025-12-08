@@ -88,8 +88,28 @@
     console.log('Publishing review...');
     window.location.href = '/reviews';
   }
+  import AuthGuard from '$lib/components/auth-guard.svelte';
+  import PaywallDialog from '$lib/components/paywall-dialog.svelte';
+  import { page } from '$app/state';
+  
+  let showPaywall = $state(false);
+  
+  const user = $derived(page.data.user);
+  const canCreateReview = $derived(() => {
+    // Check if user has reached their review limit
+    return user.plan !== 'free' || user.reviewCount < 10;
+  });
+  
+  function handleCreateAttempt() {
+    if (!canCreateReview()) {
+      showPaywall = true;
+    } else {
+      // Proceed with creation
+    }
+  }
 </script>
 
+<AuthGuard requireAuth requirePlan="free">
 <div class="max-w-4xl mx-auto space-y-6">
   <!-- Header -->
   <div class="flex items-center gap-4">
@@ -380,3 +400,10 @@
     </div>
   {/if}
 </div>
+</AuthGuard>
+
+<PaywallDialog
+  bind:open={showPaywall}
+  feature="Unlimited Reviews"
+  requiredPlan="pro"
+/>

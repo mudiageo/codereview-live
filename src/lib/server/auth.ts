@@ -6,7 +6,7 @@ import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { getRequestEvent } from "$app/server";
-
+import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -19,15 +19,17 @@ export const auth = betterAuth({
 	}),
 	emailAndPassword: {
 		enabled: true,
-		requireEmailVerification: false, // Set to true when email provider is configured
+		requireEmailVerification: true,
+		sendVerificationEmail: async ({ user, url, token }) => {
+      await sendVerificationEmail(user.email, token);
+    },
+    sendResetPassword: async ({ user, url, token }) => {
+			console.log(`Password reset link for ${user.email}: ${url}`);
+      await sendPasswordResetEmail(user.email, token);
+    },
 		minPasswordLength: 8,
 		maxPasswordLength: 128,
 		autoSignIn: true,
-		sendResetPassword: async ({ user, url, token }) => {
-			// TODO: Implement email sending for password reset
-			// When ready, send email with reset link: url
-			console.log(`Password reset link for ${user.email}: ${url}`);
-		}
 	},
 	socialProviders: {
 		google: {
@@ -51,7 +53,7 @@ export const auth = betterAuth({
 			// When ready, send email with verification link: url
 			console.log(`Email verification link for ${user.email}: ${url}`);
 		},
-		sendOnSignUp: false, // Set to true when email provider is configured
+		sendOnSignUp: true, 
 		autoSignInAfterVerification: true
 	},
 	// Session configuration
@@ -85,35 +87,18 @@ export const auth = betterAuth({
 		}
 	},
 	// User configuration
+  trustedOrigins: [process.env.PUBLIC_APP_URL!],
 	user: {
 		additionalFields: {
-			firstName: {
-				type: 'string',
-				required: false,
-				input: true
-			},
-			lastName: {
-				type: 'string',
-				required: false,
-				input: true
-			},
-			phone: {
-				type: 'string',
-				required: false,
-				input: true
-			},
-			userType: {
-				type: 'string',
-				required: true,
-				input: true,
-				returned: true
-			},
-			isActive: {
-				type: 'boolean',
-				required: false,
-				defaultValue: true,
-				input: false
-			}
+			plan: {
+        type: "string",
+        defaultValue: "free",
+        required: false,
+      },
+      apiKey: {
+        type: "string",
+        required: false,
+      },
 		},
 		changeEmail: {
 			enabled: true,
@@ -143,3 +128,35 @@ export const auth = betterAuth({
 	],
 	experimental: { joins: true }
 });
+
+
+// Helper to get user from request
+export async function getUser() {
+  const event = getRequestEvent();
+  const session = await auth.api.getSession({
+    headers: event.request.headers,
+  });
+
+  if (!session?.user) {
+    throw new Error('Unauthorized');
+  }
+
+  return session.user;
+}
+
+// Helper to check if user has permission
+export async function checkPermission(
+  requiredPlan: 'free' | 'pro' | 'team'
+) {
+  const user = await getUser();
+  
+  const planHierarchy = { free: 0, pro: 1, team: 2 };
+  const userPlanLevel = planHierarchy[user.plan as keyof typeof planHierarchy] || 0;
+  const requiredPlanLevel = planHierarchy[requiredPlan];
+  
+  if (userPlanLevel < requiredPlanLevel) {
+    throw new Error('Insufficient permissions');
+  }
+  
+  return user;
+}

@@ -59,7 +59,7 @@
     <DialogHeader>
       <div class="flex items-center justify-center mb-4">
         <div class="rounded-full bg-primary/10 p-3">
-          <svelte:component this={plan.icon} class="h-8 w-8 text-primary" />
+          <plan.icon class="h-8 w-8 text-primary" />
         </div>
       </div>
       <DialogTitle class="text-center">Upgrade to {plan.name}</DialogTitle>

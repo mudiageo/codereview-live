@@ -1,10 +1,7 @@
 import { query, command, getRequestEvent } from '$app/server';
 import * as v from 'valibot';
 import { syncEngine } from '$lib/server/sync'
-// import { getUser } from '$lib/server/auth'; // Your auth function
-function getUser(req) {
-  return { id: 'uswr1' }
-}
+import { getUser } from '$lib/server/auth';
 
 // Validation schemas
 const SyncOperationSchema = v.object({
@@ -25,9 +22,8 @@ const SyncOperationsArraySchema = v.array(SyncOperationSchema);
 export const pushChanges = command(
   SyncOperationsArraySchema,
   async (operations) => {
-    const { request } = getRequestEvent()
     // Get authenticated user
-    const user = await getUser(request);
+    const user = await getUser();
     if (!user) {
       throw new Error('Unauthorized');
     }
@@ -45,8 +41,7 @@ export const pullChanges = query(
     clientId: v.string()
   }),
   async ({ lastSync, clientId }) => {
-    const { request } = getRequestEvent()
-    const user = await getUser(request);
+    const user = await getUser();
     if (!user) {
       throw new Error('Unauthorized');
     }

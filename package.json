@@ -70,7 +70,9 @@
 	},
 	"dependencies": {
 		"better-auth": "^1.4.4",
-		"postgres": "^3.4.7"
+		"nodemailer": "^7.0.11",
+		"postgres": "^3.4.7",
+		"resend": "^6.5.2"
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [

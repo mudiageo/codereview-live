@@ -2,25 +2,30 @@ import { auth } from '$lib/server/auth';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { building } from '$app/environment';
 import { redirect } from '@sveltejs/kit'
+import { rateLimit } from '$lib/server/rate-limit';
 
-const protectedRoutes = {
-	'/app/student': {
-		allowedRoles: ['student'],
-	},
-	'/app/company': {
-		allowedRoles: ['company'],
-	},
-}
+const protectedRoutes = [
+  '/dashboard',
+  '/projects',
+  '/reviews',
+  '/team',
+  '/settings',
+];
 
-export async function handle({ event, resolve }) {
-	
-	// Fetch current session from Better Auth
-	const session = await auth.api.getSession({
-		headers: event.request.headers,
-	});
-	
-	// Make session and user available on server
-	if (session) {
+const authRoutes = ['/login', '/signup'];
+
+export const handle: Handle = async ({ event, resolve }) => {
+  // Rate limiting
+  if (await rateLimit(event)) {
+    return new Response('Too many requests', { status: 429 });
+  }
+
+  // Get session from Better-Auth
+  const session = await auth.api.getSession({
+    headers: event.request.headers,
+  });
+
+  	if (session) {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
 	}
@@ -31,23 +36,33 @@ export async function handle({ event, resolve }) {
 			headers: event.request.headers
 		});
 	};
-			
-	const currentPath = event.url.pathname;
-		// Check protected routes
-	const protectedRoute = Object.entries(protectedRoutes).find(
-				([route]) => route === currentPath || currentPath.startsWith(route)
-			);
 
-	if (protectedRoute) {
-		const routeConfig = protectedRoute[1];
+  const { pathname } = event.url;
 
-		if (!session?.user) redirect(303, '/auth/login');
-		if (routeConfig.allowedRoles && !routeConfig.allowedRoles.includes(session.user.userType)) {
-		  
-				redirect(303,  session.user.userType ? `/app/${session.user.userType}` : '/auth/login');
-			}
-	}
+  // Redirect authenticated users away from auth pages
+  if (session?.user && authRoutes.some((route) => pathname.startsWith(route))) {
+    redirect(303, '/dashboard');
+  }
 
+  // Protect routes that require authentication
+  if (
+    !session?.user &&
+    protectedRoutes.some((route) => pathname.startsWith(route))
+  ) {
+    // redirect(303, `/login?redirect=${pathname}`);
+  }
 
-	return svelteKitHandler({ event, resolve, auth, building });
-}
+  // Add security headers
+  event.setHeaders({
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    ...(process.env.NODE_ENV === 'production' && {
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+    })  // CSP for production
+});
+ 
+  
+  return svelteKitHandler({ event, resolve, auth, building });
+};
