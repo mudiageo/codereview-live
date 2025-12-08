@@ -20,6 +20,8 @@
   import PaywallDialog from '$lib/components/paywall-dialog.svelte';
   import LimitReached from '$lib/components/limit-reached.svelte';
   import UpgradeDialog from '$lib/components/upgrade-dialog.svelte';
+  import CodeEditor from '$lib/components/code-editor.svelte';
+  import MediaRecorder from '$lib/components/media-recorder.svelte';
   import { reviewsStore, subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
   import { auth } from '$lib/stores/auth.svelte';
   import { hasFeatureAccess, getLimit, isWithinLimit } from '$lib/config';
@@ -36,6 +38,7 @@
   let isRecording = $state(false);
   let recordingTime = $state(0);
   let videoBlob = $state<Blob | null>(null);
+  let thumbnail = $state<string>('');
   let aiSummary = $state('');
   let loading = $state(false);
   let showPaywall = $state(false);
@@ -276,11 +279,11 @@
               </Select>
             </div>
             
-            <Textarea
-              placeholder="Paste your code here..."
-              rows={15}
-              class="font-mono text-sm"
+            <CodeEditor
               bind:value={code}
+              language={language}
+              readonly={false}
+              showLineNumbers={true}
             />
           </TabsContent>
           
@@ -350,54 +353,14 @@
             <CardDescription>Record yourself explaining the changes</CardDescription>
           </CardHeader>
           <CardContent class="space-y-4">
-            <!-- Recording Area -->
-            <div class="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center">
-              {#if !isRecording && !videoBlob}
-                <div class="text-center">
-                  <VideoIcon class="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p class="text-sm text-muted-foreground mb-4">
-                    Click the button below to start recording
-                  </p>
-                </div>
-              {:else if isRecording}
-                <div class="text-center">
-                  <div class="relative mb-4">
-                    <Circle class="h-16 w-16 text-video-recording animate-pulse" />
-                    <div class="absolute inset-0 flex items-center justify-center">
-                      <div class="h-8 w-8 rounded-full bg-video-recording"></div>
-                    </div>
-                  </div>
-                  <p class="text-2xl font-mono font-bold mb-2">{formatTime(recordingTime)}</p>
-                  <Badge variant="destructive" class="animate-pulse">Recording</Badge>
-                </div>
-              {:else}
-                <div class="text-center">
-                  <VideoIcon class="h-12 w-12 mx-auto text-primary mb-4" />
-                  <p class="text-sm text-muted-foreground">
-                    Recording complete! Preview or re-record.
-                  </p>
-                </div>
-              {/if}
-            </div>
-            
-            <!-- Recording Controls -->
-            <div class="flex items-center justify-center gap-2">
-              {#if !isRecording && !videoBlob}
-                <Button onclick={startRecording} size="lg" class="gap-2">
-                  <Circle class="h-5 w-5" />
-                  Start Recording
-                </Button>
-              {:else if isRecording}
-                <Button onclick={stopRecording} size="lg" variant="destructive" class="gap-2">
-                  <Square class="h-5 w-5" />
-                  Stop Recording
-                </Button>
-              {:else}
-                <Button variant="outline" onclick={() => videoBlob = null}>
-                  Re-record
-                </Button>
-              {/if}
-            </div>
+            <MediaRecorder
+              onRecordingComplete={(blob, thumb) => {
+                videoBlob = blob;
+                thumbnail = thumb;
+              }}
+              maxDuration={600}
+              quality="high"
+            />
             
             <div class="flex justify-between gap-2 pt-4">
               <Button variant="ghost" onclick={() => step = 2}>

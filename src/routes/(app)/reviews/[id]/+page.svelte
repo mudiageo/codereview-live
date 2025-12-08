@@ -12,19 +12,18 @@
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from '$lib/components/ui/dropdown-menu';
+  import CodeEditor from '$lib/components/code-editor.svelte';
+  import VideoPlayer from '$lib/components/video-player.svelte';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Share2 from '@lucide/svelte/icons/share-2';
   import MoreVertical from '@lucide/svelte/icons/more-vertical';
-  import Play from '@lucide/svelte/icons/play';
-  import Pause from '@lucide/svelte/icons/pause';
-  import Maximize from '@lucide/svelte/icons/maximize';
-  import Volume2 from '@lucide/svelte/icons/volume-2';
-  import VolumeX from '@lucide/svelte/icons/volume-x';
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import Send from '@lucide/svelte/icons/send';
   import VideoIcon from '@lucide/svelte/icons/video';
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Check from '@lucide/svelte/icons/check';
+  import Play from '@lucide/svelte/icons/play';
+  import { toast } from 'svelte-sonner';
   
   // Mock data
   const review = {
@@ -86,11 +85,16 @@ const authMiddleware = (req, res, next) => {
     }
   ];
   
-  let isPlaying = $state(false);
-  let isMuted = $state(false);
   let currentTime = $state(0);
   let newComment = $state('');
   let activeTab = $state('diff');
+  
+  // Prepare video markers from comments
+  const videoMarkers = $derived(
+    comments
+      .filter(c => c.videoTimestamp)
+      .map(c => ({ time: c.videoTimestamp, label: c.author.name }))
+  );
   
   function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -102,29 +106,27 @@ const authMiddleware = (req, res, next) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
   
-  function togglePlay() {
-    isPlaying = !isPlaying;
-  }
-  
-  function toggleMute() {
-    isMuted = !isMuted;
-  }
-  
-  function seekTo(seconds: number) {
-    currentTime = seconds;
-    // TODO: Seek video to timestamp
+  function handleTimeUpdate(time: number) {
+    currentTime = time;
   }
   
   async function postComment() {
     if (!newComment.trim()) return;
     // TODO: Post comment
-    console.log('Posting comment:', newComment);
+    toast.success('Comment posted');
     newComment = '';
   }
   
   async function explainCode() {
     // TODO: Call AI to explain code
-    console.log('Explaining code...');
+    toast.promise(
+      new Promise(resolve => setTimeout(resolve, 2000)),
+      {
+        loading: 'AI is analyzing the code...',
+        success: 'Analysis complete!',
+        error: 'Failed to analyze code'
+      }
+    );
   }
 </script>
 
@@ -212,79 +214,34 @@ const authMiddleware = (req, res, next) => {
       </div>
       
       <!-- Code Content -->
-      <div class="flex-1 overflow-auto">
-        <pre class="p-4 text-sm font-mono leading-relaxed"><code>{review.codeContent}</code></pre>
+      <div class="flex-1 overflow-auto p-4">
+        <CodeEditor
+          value={review.codeContent}
+          language={review.language}
+          readonly={true}
+          showLineNumbers={true}
+        />
       </div>
     </div>
 
     <!-- Right Panel: Video & Comments -->
     <div class="flex flex-col overflow-hidden">
       <!-- Video Player -->
-      <div class="border-b bg-black">
-        <div class="aspect-video bg-muted flex items-center justify-center">
-          <VideoIcon class="h-16 w-16 text-muted-foreground" />
-        </div>
-        
-        <!-- Video Controls -->
-        <div class="bg-black/90 p-3 space-y-2">
-          <!-- Timeline -->
-          <div class="relative h-1 bg-white/20 rounded-full cursor-pointer">
-            <div class="absolute h-full bg-primary rounded-full" style="width: {(currentTime / review.videoDuration) * 100}%"></div>
-            <!-- Timestamp markers -->
-            {#each comments as comment}
-              {#if comment.videoTimestamp}
-                <button
-                  class="absolute -top-1 w-3 h-3 bg-chart-2 rounded-full border-2 border-black"
-                  style="left: {(comment.videoTimestamp / review.videoDuration) * 100}%"
-                  onclick={() => seekTo(comment.videoTimestamp)}
-                ></button>
-              {/if}
-            {/each}
-          </div>
-          
-          <!-- Controls -->
-          <div class="flex items-center justify-between text-white">
-            <div class="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8 text-white hover:bg-white/20"
-                onclick={togglePlay}
-              >
-                {#if isPlaying}
-                  <Pause class="h-4 w-4" />
-                {:else}
-                  <Play class="h-4 w-4" />
-                {/if}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8 text-white hover:bg-white/20"
-                onclick={toggleMute}
-              >
-                {#if isMuted}
-                  <VolumeX class="h-4 w-4" />
-                {:else}
-                  <Volume2 class="h-4 w-4" />
-                {/if}
-              </Button>
-              
-              <span class="text-xs font-mono">
-                {formatTime(currentTime)} / {formatTime(review.videoDuration)}
-              </span>
+      <div class="border-b">
+        {#if review.videoUrl}
+          <VideoPlayer
+            src={review.videoUrl}
+            onTimeUpdate={handleTimeUpdate}
+            markers={videoMarkers}
+          />
+        {:else}
+          <div class="aspect-video bg-muted flex items-center justify-center">
+            <div class="text-center">
+              <VideoIcon class="h-16 w-16 text-muted-foreground mb-2 mx-auto" />
+              <p class="text-sm text-muted-foreground">No video available</p>
             </div>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              class="h-8 w-8 text-white hover:bg-white/20"
-            >
-              <Maximize class="h-4 w-4" />
-            </Button>
           </div>
-        </div>
+        {/if}
       </div>
       
       <!-- Comments Section -->
