@@ -114,9 +114,11 @@
 					{#each availablePlans as planId}
 						{@const plan = plans[planId]}
 						<div
-							class="relative border rounded-lg p-6 cursor-pointer transition-all hover:border-primary"
-							class:border-primary={selectedPlan === planId}
-							class:bg-primary/5={selectedPlan === planId}
+							class={{
+                'relative border rounded-lg p-6 cursor-pointer transition-all hover:border-primary': true,
+                'border-primary bg-primary/5': selectedPlan === planId
+              }}
+
 							onclick={() => (selectedPlan = planId)}
 						>
 							<div class="flex items-start gap-3">

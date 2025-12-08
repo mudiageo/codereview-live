@@ -1,17 +1,17 @@
-import { writable, derived } from 'svelte/store';
-import { authClient } from '$lib/auth.client';
+
+import { authClient } from '$lib/auth-client';
 import type { User } from 'better-auth';
 
-export const currentUser = writable<User | null>(null);
 class AuthState {
   currentUser: User | null = $state(null)
   isAuthenticated: boolean = $state(this.currentUser !== null)
   userPlan: boolean = $state(this.currentUser?.plan  || 'free')
 }
 export const auth = new AuthState()
-export const isAuthenticated = $derived(auth.isAuthenticated);
+export const currentUser: User | null = auth.currentUser;
+export const isAuthenticated = auth.isAuthenticated;
 
-export const userPlan = $derived(auth.userPlan);
+export const userPlan = auth.userPlan;
 
 // Initialize auth state
 if (typeof window !== 'undefined') {
