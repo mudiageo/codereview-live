@@ -22,6 +22,7 @@
   import UpgradeDialog from '$lib/components/upgrade-dialog.svelte';
   import CodeEditor from '$lib/components/code-editor.svelte';
   import MediaRecorder from '$lib/components/media-recorder.svelte';
+  import VideoUploader from '$lib/components/video-uploader.svelte';
   import { reviewsStore, subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
   import { auth } from '$lib/stores/auth.svelte';
   import { hasFeatureAccess, getLimit, isWithinLimit } from '$lib/config';
@@ -44,6 +45,8 @@
   let showPaywall = $state(false);
   let showUpgrade = $state(false);
   let showLimitReached = $state(false);
+  let videoMethod = $state<'record' | 'upload'>('record');
+  let reviewId = $state<string>('');
   
   onMount(async () => {
     await reviewsStore.load();
@@ -123,8 +126,41 @@
   }
   
   async function saveDraft() {
-    // TODO: Save to local storage
-    toast.success('Draft saved');
+    try {
+      if (!reviewId) {
+        // Create a new draft review
+        const draft = await reviewsStore.create({
+          title: title || 'Untitled Review',
+          description,
+          projectId,
+          authorId: auth.currentUser?.id || '',
+          codeContent: code,
+          codeLanguage: language,
+          videoUrl: null,
+          videoSize: null,
+          videoDuration: null,
+          thumbnailUrl: null,
+          shareToken: crypto.randomUUID(),
+          isPublic: false,
+          status: 'draft',
+          aiSummary,
+          metadata: null,
+        });
+        reviewId = draft.id;
+      } else {
+        // Update existing draft
+        await reviewsStore.update(reviewId, {
+          title,
+          description,
+          codeContent: code,
+          codeLanguage: language,
+          aiSummary,
+        });
+      }
+      toast.success('Draft saved');
+    } catch (error) {
+      toast.error('Failed to save draft');
+    }
   }
   
   async function publishReview() {
@@ -134,23 +170,36 @@
     }
     
     try {
-      await reviewsStore.create({
-        title,
-        description,
-        projectId,
-        authorId: auth.currentUser?.id || '',
-        codeContent: code,
-        codeLanguage: language,
-        videoUrl: null,
-        videoSize: null,
-        videoDuration: null,
-        thumbnailUrl: null,
-        shareToken: crypto.randomUUID(),
-        isPublic: false,
-        status: 'published',
-        aiSummary,
-        metadata: null,
-      });
+      if (reviewId) {
+        // Update existing draft to published
+        await reviewsStore.update(reviewId, {
+          status: 'published',
+          title,
+          description,
+          codeContent: code,
+          codeLanguage: language,
+          aiSummary,
+        });
+      } else {
+        // Create new published review
+        await reviewsStore.create({
+          title,
+          description,
+          projectId,
+          authorId: auth.currentUser?.id || '',
+          codeContent: code,
+          codeLanguage: language,
+          videoUrl: null,
+          videoSize: null,
+          videoDuration: null,
+          thumbnailUrl: null,
+          shareToken: crypto.randomUUID(),
+          isPublic: false,
+          status: 'published',
+          aiSummary,
+          metadata: null,
+        });
+      }
       
       toast.success('Review published!');
       goto('/reviews');
@@ -344,23 +393,48 @@
   {/if}
 
   {#if step === 3}
-    <!-- Step 3: Record Video -->
+    <!-- Step 3: Add Video -->
     <div class="grid gap-4 lg:grid-cols-3">
       <div class="lg:col-span-2">
         <Card>
           <CardHeader>
             <CardTitle>Video Walkthrough</CardTitle>
-            <CardDescription>Record yourself explaining the changes</CardDescription>
+            <CardDescription>Record or upload a video explaining the changes</CardDescription>
           </CardHeader>
           <CardContent class="space-y-4">
-            <MediaRecorder
-              onRecordingComplete={(blob, thumb) => {
-                videoBlob = blob;
-                thumbnail = thumb;
-              }}
-              maxDuration={600}
-              quality="high"
-            />
+            <Tabs bind:value={videoMethod} class="w-full">
+              <TabsList class="grid w-full grid-cols-2">
+                <TabsTrigger value="record">Record</TabsTrigger>
+                <TabsTrigger value="upload">Upload</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="record" class="space-y-4">
+                <MediaRecorder
+                  onRecordingComplete={(blob, thumb) => {
+                    videoBlob = blob;
+                    thumbnail = thumb;
+                  }}
+                  maxDuration={600}
+                  quality="high"
+                />
+              </TabsContent>
+              
+              <TabsContent value="upload" class="space-y-4">
+                {#if reviewId}
+                  <VideoUploader
+                    reviewId={reviewId}
+                    onUploadComplete={(result) => {
+                      toast.success('Video uploaded successfully!');
+                      // You can handle the uploaded video URL here if needed
+                    }}
+                  />
+                {:else}
+                  <div class="text-center py-8 text-muted-foreground">
+                    <p>Save draft first to enable video upload</p>
+                  </div>
+                {/if}
+              </TabsContent>
+            </Tabs>
             
             <div class="flex justify-between gap-2 pt-4">
               <Button variant="ghost" onclick={() => step = 2}>
@@ -371,7 +445,7 @@
                   <Save class="h-4 w-4 mr-2" />
                   Save Draft
                 </Button>
-                <Button onclick={publishReview} disabled={!videoBlob}>
+                <Button onclick={publishReview} disabled={!videoBlob && videoMethod === 'record'}>
                   Publish Review
                 </Button>
               </div>
