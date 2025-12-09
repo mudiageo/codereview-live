@@ -15,9 +15,13 @@
   } from '$lib/components/ui/dropdown-menu';
   import CodeEditor from '$lib/components/code-editor.svelte';
   import VideoPlayer from '$lib/components/video-player.svelte';
+  import P2PShareDialog from '$lib/components/p2p-share-dialog.svelte';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Share2 from '@lucide/svelte/icons/share-2';
   import MoreVertical from '@lucide/svelte/icons/more-vertical';
+  import Download from '@lucide/svelte/icons/download';
+  import Upload from '@lucide/svelte/icons/upload';
+  import Users from '@lucide/svelte/icons/users';
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import Send from '@lucide/svelte/icons/send';
   import VideoIcon from '@lucide/svelte/icons/video';
@@ -26,6 +30,7 @@
   import Play from '@lucide/svelte/icons/play';
   import { toast } from 'svelte-sonner';
   import { reviewsStore, commentsStore } from '$lib/stores/index.svelte';
+  import { ReviewExporter } from '$lib/utils/export-import';
   
   const reviewId = $derived(page.params.id);
   
@@ -56,6 +61,7 @@
   let currentTime = $state(0);
   let newComment = $state('');
   let activeTab = $state('diff');
+  let showP2PShare = $state(false);
   
   // Prepare video markers from comments
   const videoMarkers = $derived(
@@ -181,6 +187,14 @@
             {/snippet}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onclick={exportReview}>
+              <Download class="h-4 w-4 mr-2" />
+              Export Review
+            </DropdownMenuItem>
+            <DropdownMenuItem onclick={shareP2P}>
+              <Users class="h-4 w-4 mr-2" />
+              Share via P2P
+            </DropdownMenuItem>
             <DropdownMenuItem>Edit Review</DropdownMenuItem>
             <DropdownMenuItem>Archive</DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -356,3 +370,9 @@
     </div>
   </div>
 </div>
+
+<P2PShareDialog
+  bind:open={showP2PShare}
+  onClose={() => showP2PShare = false}
+  reviewData={review}
+/>

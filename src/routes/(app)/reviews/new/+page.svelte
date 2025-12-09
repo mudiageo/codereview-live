@@ -23,6 +23,7 @@
   import CodeEditor from '$lib/components/code-editor.svelte';
   import MediaRecorder from '$lib/components/media-recorder.svelte';
   import VideoUploader from '$lib/components/video-uploader.svelte';
+  import GitHubImportDialog from '$lib/components/github-import-dialog.svelte';
   import { reviewsStore, projectsStore, subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
   import { auth } from '$lib/stores/auth.svelte';
   import { hasFeatureAccess, getLimit, isWithinLimit } from '$lib/config';
@@ -48,8 +49,7 @@
   let showLimitReached = $state(false);
   let videoMethod = $state<'record' | 'upload'>('record');
   let reviewId = $state<string>('');
-  
-  
+  let showGitHubImport = $state(false);
   
   const userPlan = $derived(auth.currentUser?.plan || 'free');
   const reviewCount = $derived(reviewsStore.count);
@@ -93,6 +93,15 @@
     } finally {
       loading = false;
     }
+  }
+  
+  function handleGitHubImport(data: { title: string; code: string; language: string; prUrl: string }) {
+    title = data.title;
+    code = data.code;
+    language = data.language;
+    description = `Imported from: ${data.prUrl}`;
+    showGitHubImport = false;
+    toast.success('Pull request imported successfully');
   }
   
   async function saveDraft() {
@@ -321,7 +330,7 @@
           
           <TabsContent value="github">
             <div class="space-y-4">
-              <Button variant="outline" class="w-full gap-2">
+              <Button variant="outline" class="w-full gap-2" onclick={() => showGitHubImport = true}>
                 <Github class="h-4 w-4" />
                 Connect GitHub
               </Button>
@@ -476,3 +485,9 @@
 />
 
 <UpgradeDialog bind:open={showUpgrade} currentPlan={userPlan as any} />
+
+<GitHubImportDialog
+  bind:open={showGitHubImport}
+  onClose={() => showGitHubImport = false}
+  onImport={handleGitHubImport}
+/>
