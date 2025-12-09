@@ -53,7 +53,7 @@ class AuthState {
       }
     });
     
-    if (result.data.user) {
+    if (result.data?.user) {
       this.currentUser = result.dara.user;
     }
     

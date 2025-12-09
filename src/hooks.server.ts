@@ -17,7 +17,7 @@ const authRoutes = ['/login', '/signup'];
 
 export const handle: Handle = async ({ event, resolve }) => {
   // Rate limiting
-  const ip = event.getClientAddress();
+  const ip = building ? '' : event.getClientAddress();
   if (await rateLimit(ip)) {
     return new Response('Too many requests', { status: 429 });
   }
@@ -51,7 +51,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     !session?.user &&
     protectedRoutes.some((route) => pathname.startsWith(route))
   ) {
-    redirect(303, `/login?redirect=${pathname}`);
+    if(!building) redirect(303, `/login?redirect=${pathname}`);
   }
 
   // Add security headers

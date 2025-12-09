@@ -4,6 +4,7 @@
   import { Switch } from '$lib/components/ui/switch';
   import { RadioGroup, RadioGroupItem } from '$lib/components/ui/radio-group';
   import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
+  import { goto } from '$app/navigation'
   
   let theme = $state('dark');
   let aiEnabled = $state(true);
@@ -16,7 +17,7 @@
     loading = true;
     // Save preferences
     await new Promise(resolve => setTimeout(resolve, 500));
-    window.location.href = '/dashboard';
+    goto('/dashboard');
   }
 </script>
 

@@ -6,6 +6,8 @@
   import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
   import Camera from '@lucide/svelte/icons/camera';
+  import { goto } from '$app/navigation'
+  
   
   let name = $state('');
   let role = $state('');
@@ -33,7 +35,7 @@
     loading = true;
     // Save profile data
     await new Promise(resolve => setTimeout(resolve, 500));
-    window.location.href = '/onboarding/preferences';
+    goto('/onboarding/preferences');
   }
 </script>
 
@@ -84,7 +86,7 @@
             </SelectTrigger>
             <SelectContent>
               {#each roles as roleOption}
-                <SelectItem value={roleOption}>{roleOption}</SelectItem>
+                <SelectItem type="single" value={roleOption}>{roleOption}</SelectItem>
               {/each}
             </SelectContent>
           </Select>

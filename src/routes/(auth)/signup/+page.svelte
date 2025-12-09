@@ -11,8 +11,9 @@
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
   import { authClient } from '$lib/auth-client';
+  import { auth } from '$lib/stores/auth.svelte';
   import { goto } from '$app/navigation'
-  
+ 
   let name = $state('');
   let email = $state('');
   let password = $state('');
@@ -86,6 +87,7 @@
       else error = result.error 
     } catch (err) {
       error = 'Failed to create account. Email may already be in use.';
+      console.log(err)
     } finally {
       loading = false;
     }
