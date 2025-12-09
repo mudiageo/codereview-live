@@ -29,11 +29,11 @@ export const syncEngine = new ServerSyncEngine(adapter, {
       columns: ['id', 'name', 'ownerId', 'plan', 'maxMembers', 'createdAt', 'updatedAt', '_version', '_updatedAt'],
     },
     teamInvitations: {
-      table: 'team_invitations',
+      table: 'teamInvitations',
       columns: ['id', 'teamId', 'email', 'role', 'invitedBy', 'token', 'expiresAt', 'createdAt', '_version', '_updatedAt'],
     },
     aiUsage: {
-      table: 'ai_usage',
+      table: 'aiUsage',
       columns: ['id', 'userId', 'reviewId', 'feature', 'tokensUsed', 'success', 'createdAt'],
     },
   },

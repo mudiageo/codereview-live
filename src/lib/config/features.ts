@@ -34,6 +34,7 @@ export const featureFlags = {
 export const planLimits = {
 	free: {
 		maxReviews: 10,
+		localReviews: 10,
 		maxProjects: 5,
 		maxStorageBytes: 1024 * 1024 * 1024, // 1GB
 		aiCreditsPerMonth: 50,

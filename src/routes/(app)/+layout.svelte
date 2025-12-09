@@ -76,9 +76,6 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { initDb, syncEngine } from '$lib/db';
-
-  import { reviewsStore, projectsStore, commentsStore,} from '$lib/stores/index.svelte';
-
   import { Toaster } from '$lib/components/ui/sonner';
   import SearchCommand from '$lib/components/search-command.svelte';
   import KeyboardShortcutsDialog from '$lib/components/keyboard-shortcuts-dialog.svelte';
@@ -89,18 +86,12 @@
   let shortcutsOpen = $state(false);
   
   onMount(async () => {
-    if (!browser) return;
-    
     try {
       // Initialize database
       await initDb();
       
       // Load initial data
-      await Promise.all([
-        reviewsStore.load(),
-        projectsStore.load(),
-        commentsStore.load(),
-      ]);
+     
       
       // Setup keyboard shortcuts
       const shortcuts = new KeyboardShortcuts();

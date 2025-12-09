@@ -16,22 +16,11 @@
   import Eye from '@lucide/svelte/icons/eye';
   import Clock from '@lucide/svelte/icons/clock';
   import { reviewsStore, commentsStore, teamsStore, aiUsageStore, subscriptionsStore } from '$lib/stores/index.svelte';
+  import { initDb } from '$lib/db';
   import { getLimit } from '$lib/config';
+  import { browser } from '$app/environment'; 
+  let loading = $state(false);
 
-  let loading = $state(true);
-  
-  // Load data from stores
-  $effect(() => {
-    Promise.all([
-      reviewsStore.load(),
-      commentsStore.load(),
-      teamsStore.load(),
-      aiUsageStore.load(),
-      subscriptionsStore.load()
-    ]).finally(() => {
-      loading = false;
-    });
-  });
 
   // Compute stats from real data
   const stats = $derived([

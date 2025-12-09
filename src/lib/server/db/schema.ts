@@ -23,7 +23,6 @@ export const users = pgTable("users", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   phone: text("phone"),
-  userType: text("user_type").notNull(),
   isActive: boolean("is_active").default(true),
   githubId: text('github_id').unique(),
   googleId: text('google_id').unique(), 
@@ -194,6 +193,7 @@ export const aiUsage = pgTable('ai_usage', {
   tokensUsed: integer('tokens_used').default(0),
   success: boolean('success').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  ...syncMetadata
 });
 
 // Teams table (for team plan organizations)
@@ -257,6 +257,30 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   aiUsage: many(aiUsage),
   ownedTeams: many(teams),
   apiKeys: many(apiKeys),
+  sessions: many(sessions),
+  accounts: many(accounts),
+  twoFactors: many(twoFactors),
+}));
+
+export const sessionRelations = relations(sessions, ({ one }) => ({
+  users: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const accountRelations = relations(accounts, ({ one }) => ({
+  users: one(users, {
+    fields: [accounts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const twoFactorRelations = relations(twoFactors, ({ one }) => ({
+  users: one(users, {
+    fields: [twoFactors.userId],
+    references: [users.id],
+  }),
 }));
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({

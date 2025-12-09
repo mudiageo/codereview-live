@@ -23,17 +23,18 @@
   import CodeEditor from '$lib/components/code-editor.svelte';
   import MediaRecorder from '$lib/components/media-recorder.svelte';
   import VideoUploader from '$lib/components/video-uploader.svelte';
-  import { reviewsStore, subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
+  import { reviewsStore, projectsStore, subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
   import { auth } from '$lib/stores/auth.svelte';
   import { hasFeatureAccess, getLimit, isWithinLimit } from '$lib/config';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { toast } from 'svelte-sonner';
-  
+  import { page } from '$app/state';
+
   let step = $state(1);
   let title = $state('');
   let description = $state('');
-  let projectId = $state('');
+  let projectId = $state(page.url.searchParams.get('project') || '');
   let code = $state('');
   let language = $state('javascript');
   let isRecording = $state(false);
@@ -48,11 +49,7 @@
   let videoMethod = $state<'record' | 'upload'>('record');
   let reviewId = $state<string>('');
   
-  onMount(async () => {
-    await reviewsStore.load();
-    await subscriptionsStore.load();
-    await aiUsageStore.load();
-  });
+  
   
   const userPlan = $derived(auth.currentUser?.plan || 'free');
   const reviewCount = $derived(reviewsStore.count);
@@ -60,43 +57,16 @@
   const canCreateReview = $derived(isWithinLimit(reviewCount, reviewLimit));
   const hasAI = $derived(hasFeatureAccess(userPlan as any, 'advancedAI'));
   
-  const projects = [
+  const projects = $derived(projectsStore.data || [
     { id: '1', name: 'My Awesome App' },
     { id: '2', name: 'Backend API' },
     { id: '3', name: 'Mobile App' }
-  ];
+  ]);
   
   const languages = [
     'javascript', 'typescript', 'python', 'java', 'go', 
     'rust', 'php', 'ruby', 'c', 'cpp', 'csharp', 'html', 'css'
   ];
-  
-  let recordingInterval: number;
-  
-  function startRecording() {
-    isRecording = true;
-    recordingTime = 0;
-    recordingInterval = window.setInterval(() => {
-      recordingTime++;
-    }, 1000);
-    
-    // TODO: Implement actual screen recording
-    console.log('Starting recording...');
-  }
-  
-  function stopRecording() {
-    isRecording = false;
-    clearInterval(recordingInterval);
-    
-    // TODO: Save recorded video
-    console.log('Stopping recording...');
-  }
-  
-  function formatTime(seconds: number) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
   
   async function generateAISummary() {
     if (!hasAI) {
@@ -270,9 +240,9 @@
         
         <div class="space-y-2">
           <Label for="project">Project</Label>
-          <Select bind:value={projectId}>
+          <Select type="single" bind:value={projectId}>
             <SelectTrigger>
-              {projectId || "Select project"}
+              {projects.find(p => p.id === projectId)?.name || "Select project"}
             </SelectTrigger>
             <SelectContent>
               {#each projects as project}

@@ -10,6 +10,8 @@
   import Chrome from '@lucide/svelte/icons/chrome';
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
+  import { authClient } from '$lib/auth-client';
+  import { goto } from '$app/navigation'
   
   let name = $state('');
   let email = $state('');
@@ -77,13 +79,11 @@
     
     try {
       // Call your Better-Auth signup function here
-      // const result = await authClient.signUp.email({ name, email, password });
-      
-      // Mock delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+       const result = await auth.signUp({ name, email, password });
       
       // On success, redirect to onboarding
-      window.location.href = '/onboarding';
+      if(result.data.user) goto('/onboarding');
+      else error = result.error 
     } catch (err) {
       error = 'Failed to create account. Email may already be in use.';
     } finally {
@@ -97,7 +97,7 @@
     
     try {
       // Call Better-Auth social signup
-      // await authClient.signUp.social({ provider });
+      await auth.signInWithProvider({ provider });
       console.log(`Signing up with ${provider}`);
     } catch (err) {
       error = `Failed to sign up with ${provider}. Please try again.`;

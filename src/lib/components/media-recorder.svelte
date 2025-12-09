@@ -382,7 +382,7 @@
           bind:this={videoPreview}
           class="w-full h-full object-contain"
           muted
-        ></video>
+        ><track kind="captions"></video>
         
         <!-- Webcam PiP -->
         {#if includeWebcam && webcamStream}
@@ -391,7 +391,7 @@
               bind:this={webcamPreview}
               class="w-full h-full object-cover"
               muted
-            ></video>
+            ><track kind="captions"></video>
           </div>
         {/if}
         
@@ -413,7 +413,7 @@
           src={URL.createObjectURL(videoBlob)}
           class="w-full h-full object-contain"
           controls
-        ></video>
+        ><track kind="captions"></video>
       {/if}
     </div>
     

@@ -5,6 +5,7 @@
   import * as Card from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import Lock from '@lucide/svelte/icons/lock';
+  import { auth } from '$lib/stores/auth.svelte';
   
   interface Props {
     children: import('svelte').Snippet;
@@ -15,7 +16,7 @@
   
   let { children, requireAuth = true, requirePlan, fallback }: Props = $props();
   
-  const user = $derived(page.data.user);
+  const user = $derived(auth.currentUser);
   const isAuthenticated = $derived(!!user);
   const hasRequiredPlan = $derived.by(() => {
     if (!requirePlan || !user) return true;
@@ -29,12 +30,12 @@
   
   onMount(() => {
     if (requireAuth && !isAuthenticated) {
-      goto(`/login?redirect=${page.url.pathname}`);
+      //goto(`/login?redirect=${page.url.pathname}`);
     }
   });
   
   const canAccess = $derived(
-    (!requireAuth || isAuthenticated) && (!requirePlan || hasRequiredPlan())
+    (!requireAuth || isAuthenticated) && (!requirePlan || hasRequiredPlan)
   );
 </script>
 
@@ -62,7 +63,7 @@
       </Card.Content>
     </Card.Root>
   </div>
-{:else if requirePlan && !hasRequiredPlan()}
+{:else if requirePlan && !hasRequiredPlan}
   <div class="flex items-center justify-center min-h-[60vh]">
     <Card.Root class="max-w-md">
       <Card.Header class="text-center">

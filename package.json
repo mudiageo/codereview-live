@@ -72,6 +72,8 @@
 		"vitest-browser-svelte": "^2.0.1"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.947.0",
+		"@aws-sdk/s3-request-presigner": "^3.947.0",
 		"@ffmpeg/ffmpeg": "^0.12.15",
 		"@ffmpeg/util": "^0.12.2",
 		"@octokit/rest": "^22.0.1",

@@ -1,11 +1,11 @@
 import { browser } from '$app/environment'
 import { syncEngine } from '$lib/db';
 
-import type { Review, Project, Comment,} from '$lib/server/db/schema';
+import type { Review, Project, Comment, Team, TeamInvitation, Subscription } from '$lib/server/db/schema';
 
 
 class ReviewsStore {
-  private collection = browser ? syncEngine.collection('reviews') : null;
+  private collection = {id: null};
   
   data = $state<Review[]>([]);
   isLoading = $state(false);
@@ -38,7 +38,10 @@ class ReviewsStore {
     this.error = null;
     
     try {
-      await this.collection.load();
+      this.collection = syncEngine.collection('reviews'); 
+      this.collection.load();
+      
+      // await this.collection.load();
       this.data = this.collection.data as Review[];
     } catch (err) {
       this.error = err as Error;
@@ -129,7 +132,7 @@ class ReviewsStore {
 export const reviewsStore = new ReviewsStore();
 
 class ProjectsStore {
-  private collection = browser ? syncEngine.collection('projects') : null;
+  private collection = {id: null};
   
   data = $derived<Project[]>(browser ? this.collection?.data : [] );
   isLoading = $state(false);
@@ -159,7 +162,8 @@ class ProjectsStore {
     this.error = null;
     
     try {
-      await this.collection.load();
+      this.collection = syncEngine.collection('projects'); this.collection.load();
+      
       this.data = this.collection.data as Project[];
     } catch (err) {
       this.error = err as Error;
@@ -245,7 +249,7 @@ class ProjectsStore {
 export const projectsStore = new ProjectsStore();
 
 class CommentsStore {
-  private collection = browser ? syncEngine.collection('comments') : null;
+  private collection = {id: null};
   
   data = $state<Comment[]>([]);
   isLoading = $state(false);
@@ -266,7 +270,7 @@ class CommentsStore {
     this.error = null;
     
     try {
-      await this.collection.load();
+       this.collection = syncEngine.collection('comments'); this.collection.load();
       this.data = this.collection.data as Comment[];
     } catch (err) {
       this.error = err as Error;
@@ -358,7 +362,7 @@ export const commentsStore = new CommentsStore();
 
 // Subscription Store with sveltekit-sync collection
 class SubscriptionsStore {
-  private collection = browser ? syncEngine.collection('subscriptions') : null;
+  private collection = {id: null};
   
   data = $state<import('$lib/server/db/schema').Subscription[]>([]);
   isLoading = $state(false);
@@ -379,7 +383,7 @@ class SubscriptionsStore {
     this.error = null;
     
     try {
-      await this.collection.load();
+      this.collection = syncEngine.collection('subscriptions'); this.collection.load();
       this.data = this.collection.data as import('$lib/server/db/schema').Subscription[];
     } catch (err) {
       this.error = err as Error;
@@ -412,7 +416,7 @@ export const subscriptionsStore = new SubscriptionsStore();
 
 // Teams Store with sveltekit-sync collection
 class TeamsStore {
-  private collection = browser ? syncEngine.collection('teams') : null;
+  private collection = {id: null};
   
   data = $state<import('$lib/server/db/schema').Team[]>([]);
   isLoading = $state(false);
@@ -433,7 +437,7 @@ class TeamsStore {
     this.error = null;
     
     try {
-      await this.collection.load();
+      this.collection = syncEngine.collection('teams'); this.collection.load();
       this.data = this.collection.data as import('$lib/server/db/schema').Team[];
     } catch (err) {
       this.error = err as Error;
@@ -503,7 +507,7 @@ export const teamsStore = new TeamsStore();
 
 // Team Invitations Store with sveltekit-sync collection
 class TeamInvitationsStore {
-  private collection = browser ? syncEngine.collection('teamInvitations') : null;
+  private collection = {id: null};
   
   data = $state<import('$lib/server/db/schema').TeamInvitation[]>([]);
   isLoading = $state(false);
@@ -524,7 +528,7 @@ class TeamInvitationsStore {
     this.error = null;
     
     try {
-      await this.collection.load();
+      this.collection = syncEngine.collection('teamInvitations')
       this.data = this.collection.data as import('$lib/server/db/schema').TeamInvitation[];
     } catch (err) {
       this.error = err as Error;
@@ -579,8 +583,7 @@ export const teamInvitationsStore = new TeamInvitationsStore();
 
 // AI Usage Store with sveltekit-sync collection
 class AIUsageStore {
-  private collection = browser ? syncEngine.collection('aiUsage') : null;
-  
+  private collection = {id: null};
   data = $state<any[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
@@ -600,7 +603,8 @@ class AIUsageStore {
     this.error = null;
     
     try {
-      await this.collection.load();
+      this.collection = syncEngine.collection('aiUsage'); this.collection.load();
+  
       this.data = this.collection.data;
     } catch (err) {
       this.error = err as Error;
