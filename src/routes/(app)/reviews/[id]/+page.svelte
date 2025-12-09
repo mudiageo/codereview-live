@@ -141,10 +141,10 @@
           <h1 class="text-xl font-semibold truncate">{review.title}</h1>
           <div class="flex items-center gap-2 text-sm text-muted-foreground">
             <Avatar class="h-5 w-5">
-              <AvatarImage src={review.author.avatar} />
-              <AvatarFallback class="text-xs">{getInitials(review.author.name)}</AvatarFallback>
+              <AvatarImage src={review.author?.avatar} />
+              <AvatarFallback class="text-xs">{getInitials(review.author?.name ||'')}</AvatarFallback>
             </Avatar>
-            <span>{review.author.name}</span>
+            <span>{review.author?.name}</span>
             <span>·</span>
             <span>{review.createdAt}</span>
           </div>
@@ -248,7 +248,7 @@
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-semibold flex items-center gap-2">
             <MessageSquare class="h-4 w-4" />
-            Comments ({comments.length})
+            Comments ({threadedComments.length})
           </h3>
           <Button size="sm" variant="outline" class="gap-2">
             <VideoIcon class="h-3 w-3" />
@@ -256,7 +256,7 @@
           </Button>
         </div>
         
-        {#if comments.length === 0}
+        {#if threadedComments.length === 0}
           <Card>
             <CardContent class="flex flex-col items-center justify-center p-8 text-center">
               <MessageSquare class="h-8 w-8 text-muted-foreground mb-2" />
@@ -264,20 +264,20 @@
             </CardContent>
           </Card>
         {:else}
-          {#each comments as comment}
+          {#each threadedComments as comment}
             <Card>
               <CardContent class="p-4 space-y-3">
                 <!-- Comment Header -->
                 <div class="flex items-start justify-between">
                   <div class="flex items-center gap-2">
                     <Avatar class="h-8 w-8">
-                      <AvatarImage src={comment.author.avatar} />
+                      <AvatarImage src={comment.author?.avatar} />
                       <AvatarFallback class="text-xs">
-                        {getInitials(comment.author.name)}
+                        {getInitials(comment.author?.name || '')}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p class="text-sm font-medium">{comment.author.name}</p>
+                      <p class="text-sm font-medium">{comment.author?.name}</p>
                       <p class="text-xs text-muted-foreground">{comment.timestamp}</p>
                     </div>
                   </div>
@@ -317,14 +317,14 @@
                     {#each comment.replies as reply}
                       <div class="flex items-start gap-2">
                         <Avatar class="h-6 w-6">
-                          <AvatarImage src={reply.author.avatar} />
+                          <AvatarImage src={reply.author?.avatar} />
                           <AvatarFallback class="text-xs">
-                            {getInitials(reply.author.name)}
+                            {getInitials(reply.author?.name || '')}
                           </AvatarFallback>
                         </Avatar>
                         <div class="flex-1">
                           <div class="flex items-center gap-2">
-                            <p class="text-sm font-medium">{reply.author.name}</p>
+                            <p class="text-sm font-medium">{reply.author?.name}</p>
                             <p class="text-xs text-muted-foreground">{reply.timestamp}</p>
                           </div>
                           <p class="text-sm mt-1">{reply.content}</p>
