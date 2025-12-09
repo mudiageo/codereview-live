@@ -1,4 +1,4 @@
-import Peer, { DataConnection } from 'peerjs';
+import Peer, { type DataConnection } from 'peerjs';
 import { EncryptionUtil } from './encryption';
 
 export interface P2PCallbacks {
