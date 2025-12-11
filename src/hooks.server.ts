@@ -59,7 +59,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     'X-Frame-Options': 'DENY',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    // 'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=()',
+    'Permissions-Policy': 'camera=(self), microphone=(self), fullscreen=(self)',
     ...(process.env.NODE_ENV === 'production' && {
       'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
     })  // CSP for production
