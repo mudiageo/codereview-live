@@ -23,7 +23,6 @@ export const users = pgTable("users", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   phone: text("phone"),
-  userType: text("user_type").notNull(),
   isActive: boolean("is_active").default(true),
   githubId: text('github_id').unique(),
   googleId: text('google_id').unique(), 
@@ -194,6 +193,57 @@ export const aiUsage = pgTable('ai_usage', {
   tokensUsed: integer('tokens_used').default(0),
   success: boolean('success').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  ...syncMetadata
+});
+
+// Teams table (for team plan organizations)
+export const teams = pgTable('teams', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  ownerId: text('owner_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  plan: text('plan').default('team').notNull(),
+  maxMembers: integer('max_members').default(10),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  ...syncMetadata
+});
+
+// Team invitations
+export const teamInvitations = pgTable('team_invitations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  teamId: uuid('team_id').references(() => teams.id, { onDelete: 'cascade' }).notNull(),
+  email: text('email').notNull(),
+  role: text('role').default('member').notNull(),
+  invitedBy: text('invited_by').references(() => users.id).notNull(),
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  ...syncMetadata
+});
+
+// API keys for programmatic access
+export const apiKeys = pgTable('api_keys', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  name: text('name').notNull(),
+  key: text('key').notNull().unique(),
+  lastUsedAt: timestamp('last_used_at'),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  ...syncMetadata
+});
+
+// Webhook events log
+export const webhookEvents = pgTable('webhook_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  provider: text('provider').notNull(), // stripe, paystack
+  eventType: text('event_type').notNull(),
+  eventData: jsonb('event_data').notNull(),
+  processed: boolean('processed').default(false),
+  error: text('error'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 
@@ -205,6 +255,32 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   teamMemberships: many(teamMembers),
   subscription: one(subscriptions),
   aiUsage: many(aiUsage),
+  ownedTeams: many(teams),
+  apiKeys: many(apiKeys),
+  sessions: many(sessions),
+  accounts: many(accounts),
+  twoFactors: many(twoFactors),
+}));
+
+export const sessionRelations = relations(sessions, ({ one }) => ({
+  users: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const accountRelations = relations(accounts, ({ one }) => ({
+  users: one(users, {
+    fields: [accounts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const twoFactorRelations = relations(twoFactors, ({ one }) => ({
+  users: one(users, {
+    fields: [twoFactors.userId],
+    references: [users.id],
+  }),
 }));
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
@@ -259,6 +335,32 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
   }),
 }));
 
+export const teamsRelations = relations(teams, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [teams.ownerId],
+    references: [users.id],
+  }),
+  invitations: many(teamInvitations),
+}));
+
+export const teamInvitationsRelations = relations(teamInvitations, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamInvitations.teamId],
+    references: [teams.id],
+  }),
+  inviter: one(users, {
+    fields: [teamInvitations.invitedBy],
+    references: [users.id],
+  }),
+}));
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  user: one(users, {
+    fields: [apiKeys.userId],
+    references: [users.id],
+  }),
+}));
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -270,3 +372,8 @@ export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
+export type TeamInvitation = typeof teamInvitations.$inferSelect;
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type WebhookEvent = typeof webhookEvents.$inferSelect;

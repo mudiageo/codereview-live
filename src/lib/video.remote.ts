@@ -10,13 +10,13 @@ import { writeFile, unlink } from 'fs/promises';
 
 const MAX_SIZE = config.video.maxSizeMB * 1024 * 1024;
 
-export const uploadVideo = form(
+export const uploadVideo = command(
   v.object({
     video: v.custom<File>((val) => val instanceof File, 'Video file is required'),
     reviewId: v.string(),
   }),
-  async ({ video, reviewId }, { request }) => {
-    const user = await getUser(request);
+  async ({ video, reviewId }) => {
+    const user = await getUser();
 
     // Validate file size
     if (video.size > MAX_SIZE) {
@@ -100,8 +100,8 @@ export const deleteVideo = command(
     videoKey: v.string(),
     thumbnailKey: v.optional(v.string()),
   }),
-  async ({ videoKey, thumbnailKey }, { request }) => {
-    const user = await getUser(request);
+  async ({ videoKey, thumbnailKey }) => {
+    const user = await getUser();
 
     try {
       await deleteFile(videoKey);

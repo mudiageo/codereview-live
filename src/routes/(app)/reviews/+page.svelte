@@ -18,49 +18,29 @@
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Eye from '@lucide/svelte/icons/eye';
   import Clock from '@lucide/svelte/icons/clock';
+  import { reviewsStore } from '$lib/stores/index.svelte';
+  import { SearchEngine } from '$lib/utils/search';
+  import VirtualList from '$lib/components/virtual-list.svelte';
   
   let searchQuery = $state('');
   let statusFilter = $state('all');
   let sortBy = $state('recent');
   
-  const reviews = [
-    {
-      id: '1',
-      title: 'Add JWT Authentication to API',
-      author: { name: 'John Doe', avatar: '' },
-      project: 'My Awesome App',
-      status: 'published',
-      commentCount: 5,
-      viewCount: 12,
-      duration: '4:32',
-      thumbnail: '',
-      createdAt: '2 hours ago'
-    },
-    {
-      id: '2',
-      title: 'Refactor User Dashboard Component',
-      author: { name: 'Jane Smith', avatar: '' },
-      project: 'Frontend',
-      status: 'published',
-      commentCount: 8,
-      viewCount: 24,
-      duration: '6:15',
-      thumbnail: '',
-      createdAt: '5 hours ago'
-    },
-    {
-      id: '3',
-      title: 'Fix Payment Processing Bug',
-      author: { name: 'Mike Johnson', avatar: '' },
-      project: 'Backend API',
-      status: 'draft',
-      commentCount: 2,
-      viewCount: 5,
-      duration: '3:48',
-      thumbnail: '',
-      createdAt: '1 day ago'
+  const allReviews = $derived(reviewsStore.data);
+  
+  const filteredReviews = $derived(() => {
+    let results = searchQuery 
+      ? SearchEngine.searchReviews(allReviews, searchQuery)
+      : allReviews;
+    
+    if (statusFilter !== 'all') {
+      results = results.filter(r => r.status === statusFilter);
     }
-  ];
+    
+    return results;
+  });
+  
+  const shouldUseVirtualList = $derived(filteredReviews().length > 50);
   
   function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();

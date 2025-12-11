@@ -10,7 +10,10 @@
   import Chrome from '@lucide/svelte/icons/chrome';
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
-  
+  import { authClient } from '$lib/auth-client';
+  import { auth } from '$lib/stores/auth.svelte';
+  import { goto } from '$app/navigation'
+ 
   let name = $state('');
   let email = $state('');
   let password = $state('');
@@ -19,6 +22,8 @@
   let loading = $state(false);
   let error = $state('');
   let passwordStrength = $state(0);
+  let verificationEmailSent = $state(false);
+  let userEmail = $state('');
   
   // Password strength calculator
   $effect(() => {
@@ -77,15 +82,35 @@
     
     try {
       // Call your Better-Auth signup function here
-      // const result = await authClient.signUp.email({ name, email, password });
+       const result = await auth.signUp({ name, email, password });
       
-      // Mock delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // On success, redirect to onboarding
-      window.location.href = '/onboarding';
+      // On success, show verification email sent message
+      if(result.data.user) {
+        verificationEmailSent = true;
+        userEmail = email;
+      } else {
+        error = result.error;
+      }
     } catch (err) {
       error = 'Failed to create account. Email may already be in use.';
+      console.log(err)
+    } finally {
+      loading = false;
+    }
+  }
+  
+  async function resendVerificationEmail() {
+    loading = true;
+    try {
+      // Call resend verification endpoint
+      await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail })
+      });
+      // Show success toast or message
+    } catch (err) {
+      error = 'Failed to resend verification email';
     } finally {
       loading = false;
     }
@@ -97,7 +122,7 @@
     
     try {
       // Call Better-Auth social signup
-      // await authClient.signUp.social({ provider });
+      await auth.signInWithProvider({ provider });
       console.log(`Signing up with ${provider}`);
     } catch (err) {
       error = `Failed to sign up with ${provider}. Please try again.`;
@@ -123,6 +148,47 @@
       </CardHeader>
       
       <CardContent class="space-y-4">
+        {#if verificationEmailSent}
+          <!-- Verification Email Sent Message -->
+          <div class="space-y-4 text-center py-6">
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-chart-2/10">
+              <CheckCircle2 class="h-8 w-8 text-chart-2" />
+            </div>
+            
+            <div class="space-y-2">
+              <h3 class="text-lg font-semibold">Check your email</h3>
+              <p class="text-sm text-muted-foreground">
+                We've sent a verification link to
+              </p>
+              <p class="text-sm font-medium">{userEmail}</p>
+              <p class="text-sm text-muted-foreground mt-4">
+                Click the link in the email to verify your account and complete your registration.
+              </p>
+            </div>
+            
+            <div class="space-y-2 pt-4">
+              <Button
+                variant="outline"
+                class="w-full"
+                onclick={resendVerificationEmail}
+                disabled={loading}
+              >
+                {loading ? 'Sending...' : 'Resend Verification Email'}
+              </Button>
+              <Button
+                variant="ghost"
+                class="w-full"
+                href="/login"
+              >
+                Go to Login
+              </Button>
+            </div>
+            
+            <p class="text-xs text-muted-foreground pt-4">
+              Didn't receive the email? Check your spam folder or try resending.
+            </p>
+          </div>
+        {:else}
         <!-- Error Alert -->
         {#if error}
           <div class="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
@@ -236,6 +302,7 @@
             {loading ? 'Creating account...' : 'Create account'}
           </Button>
         </form>
+        {/if}
         
         <!-- Divider -->
         <div class="relative">

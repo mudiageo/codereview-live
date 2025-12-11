@@ -9,6 +9,9 @@
   import Github from '@lucide/svelte/icons/github';
   import Chrome from '@lucide/svelte/icons/chrome';
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import { authClient } from '$lib/auth-client';
+  import { auth } from '$lib/stores/auth.svelte';
+  import { goto } from '$app/navigation';
   
   let email = $state('');
   let password = $state('');
@@ -23,13 +26,11 @@
     
     try {
       // Call your Better-Auth login function here
-      // const result = await authClient.signIn.email({ email, password });
+       const result = await auth.signIn(email, password, rememberMe);
       
-      // Mock delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if(result.data.user) goto('/dashboard');
+      else error = result.error
       
-      // On success, redirect to dashboard
-      window.location.href = '/dashboard';
     } catch (err) {
       error = 'Invalid email or password. Please try again.';
     } finally {
@@ -43,7 +44,7 @@
     
     try {
       // Call Better-Auth social login
-      // await authClient.signIn.social({ provider });
+       await auth.signInWithProvider({ provider });
       console.log(`Logging in with ${provider}`);
     } catch (err) {
       error = `Failed to login with ${provider}. Please try again.`;

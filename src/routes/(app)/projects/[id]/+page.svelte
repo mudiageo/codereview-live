@@ -13,33 +13,31 @@
   import Clock from '@lucide/svelte/icons/clock';
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Eye from '@lucide/svelte/icons/eye';
+  import { projectsStore, reviewsStore, commentsStore, teamsStore } from '$lib/stores/index.svelte';
   
   const projectId = $derived(page.params.id);
   
-  const project = {
-    id: projectId,
-    name: 'My Awesome App',
-    description: 'Main web application',
-    color: '#8B5CF6',
-    repoUrl: 'https://github.com/user/repo',
-    isTeam: true,
-    members: [
-      { id: '1', name: 'John Doe', avatar: '', role: 'owner' },
-      { id: '2', name: 'Jane Smith', avatar: '', role: 'admin' },
-    ]
-  };
+  // Load stores
+  $effect(() => {
+    projectsStore.load();
+    reviewsStore.load();
+    commentsStore.load();
+    teamsStore.load();
+  });
   
-  const reviews = [
-    {
-      id: '1',
-      title: 'Add JWT Authentication',
-      author: { name: 'John Doe', avatar: '' },
-      status: 'published',
-      commentCount: 5,
-      viewCount: 12,
-      createdAt: '2 hours ago'
-    }
-  ];
+  // Get project from store
+  const project = $derived(projectsStore.findById(projectId) || {
+    id: projectId,
+    name: 'Project Not Found',
+    description: 'This project could not be loaded',
+    color: '#8B5CF6',
+    isTeam: false,
+  });
+  
+  const reviews = $derived(reviewsStore.findByProject(projectId));
+  const totalComments = $derived(
+    reviews.reduce((sum, r) => sum + commentsStore.findByReview(r.id).length, 0)
+  );
   
   function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -84,8 +82,8 @@
         <FileVideo class="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div class="text-2xl font-bold">24</div>
-        <p class="text-xs text-muted-foreground">+3 this week</p>
+        <div class="text-2xl font-bold">{reviews.length}</div>
+        <p class="text-xs text-muted-foreground">{reviews.filter(r => r.status === 'published').length} published</p>
       </CardContent>
     </Card>
     
@@ -95,8 +93,8 @@
         <Users class="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div class="text-2xl font-bold">{project.members.length}</div>
-        <p class="text-xs text-muted-foreground">2 active today</p>
+        <div class="text-2xl font-bold">{project.isTeam ? (teamsStore.current?.memberCount || 1) : 1}</div>
+        <p class="text-xs text-muted-foreground">{project.isTeam ? 'Team project' : 'Personal'}</p>
       </CardContent>
     </Card>
     
@@ -106,8 +104,8 @@
         <MessageSquare class="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div class="text-2xl font-bold">142</div>
-        <p class="text-xs text-muted-foreground">+18 this week</p>
+        <div class="text-2xl font-bold">{totalComments}</div>
+        <p class="text-xs text-muted-foreground">across all reviews</p>
       </CardContent>
     </Card>
   </div>
@@ -128,10 +126,10 @@
                 <CardTitle class="line-clamp-2">{review.title}</CardTitle>
                 <div class="flex items-center gap-2 text-sm text-muted-foreground">
                   <Avatar class="h-6 w-6">
-                    <AvatarImage src={review.author.avatar} />
-                    <AvatarFallback class="text-xs">{getInitials(review.author.name)}</AvatarFallback>
+                    <AvatarImage src={review.authorAvatar} />
+                    <AvatarFallback class="text-xs">{getInitials(review.authorName || 'User')}</AvatarFallback>
                   </Avatar>
-                  <span>{review.author.name}</span>
+                  <span>{review.authorName || 'Unknown'}</span>
                 </div>
               </CardHeader>
               <CardContent>
@@ -139,14 +137,14 @@
                   <div class="flex items-center gap-3 text-sm text-muted-foreground">
                     <div class="flex items-center gap-1">
                       <MessageSquare class="h-4 w-4" />
-                      <span>{review.commentCount}</span>
+                      <span>{commentsStore.findByReview(review.id).length}</span>
                     </div>
                     <div class="flex items-center gap-1">
                       <Eye class="h-4 w-4" />
-                      <span>{review.viewCount}</span>
+                      <span>{review.viewCount || 0}</span>
                     </div>
                   </div>
-                  <Badge variant="outline" class="badge-published">{review.status}</Badge>
+                  <Badge variant="outline" class={`badge-${review.status}`}>{review.status}</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -156,23 +154,19 @@
     </TabsContent>
     
     <TabsContent value="members" class="space-y-2">
-      {#each project.members as member}
+      {#if project.isTeam && teamsStore.current}
         <Card>
-          <CardContent class="flex items-center justify-between p-4">
-            <div class="flex items-center gap-3">
-              <Avatar>
-                <AvatarImage src={member.avatar} />
-                <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p class="font-medium">{member.name}</p>
-                <p class="text-sm text-muted-foreground capitalize">{member.role}</p>
-              </div>
-            </div>
-            <Badge variant="secondary">{member.role}</Badge>
+          <CardContent class="flex items-center justify-center p-8 text-center text-muted-foreground">
+            <p>Team member management available in <a href="/settings/team" class="text-primary hover:underline">Team Settings</a></p>
           </CardContent>
         </Card>
-      {/each}
+      {:else}
+        <Card>
+          <CardContent class="flex items-center justify-center p-8 text-center text-muted-foreground">
+            <p>This is a personal project. Upgrade to Team plan to add members.</p>
+          </CardContent>
+        </Card>
+      {/if}
     </TabsContent>
   </Tabs>
 </div>

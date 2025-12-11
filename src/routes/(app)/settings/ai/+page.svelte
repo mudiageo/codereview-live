@@ -9,15 +9,19 @@
   import { toast } from 'svelte-sonner';
   import Info from '@lucide/svelte/icons/info';
   import ExternalLink from '@lucide/svelte/icons/external-link';
+  import { settingsStore, aiUsageStore, subscriptionsStore } from '$lib/stores/index.svelte';
+  import { getLimit } from '$lib/config';
   
-  let aiEnabled = $state(true);
-  let autoSummarize = $state(false);
-  let detectSmells = $state(true);
-  let suggestImprovements = $state(true);
-  let apiKey = $state('');
-  let creditsUsed = $state(153);
-  let creditsLimit = $state(1000);
+  // Load stores
+  $effect(() => {
+    aiUsageStore.load();
+    subscriptionsStore.load();
+  });
+  
   let saving = $state(false);
+  const settings = $derived(settingsStore.settings);
+  const creditsUsed = $derived(aiUsageStore.totalTokens);
+  const creditsLimit = $derived(getLimit(subscriptionsStore.current?.plan || 'free', 'aiCredits'));
   
   async function handleSave() {
     saving = true;
@@ -30,6 +34,11 @@
   }
   
   async function testConnection() {
+    if (!settings.geminiApiKey) {
+      toast.error('Please enter an API key first');
+      return;
+    }
+    
     toast.promise(
       new Promise(resolve => setTimeout(resolve, 1500)),
       {
@@ -38,6 +47,10 @@
         error: 'Invalid API key'
       }
     );
+  }
+
+  function updateSetting(key: keyof typeof settings, value: any) {
+    settingsStore.update({ [key]: value });
   }
 </script>
 
@@ -58,17 +71,17 @@
           <Label>Enable AI Features</Label>
           <p class="text-sm text-muted-foreground">Master switch for all AI functionality</p>
         </div>
-        <Switch bind:checked={aiEnabled} />
+        <Switch checked={settings.aiEnabled} onCheckedChange={(checked) => updateSetting('aiEnabled', checked)} />
       </div>
       
-      {#if aiEnabled}
+      {#if settings.aiEnabled}
         <div class="space-y-4 pl-6 border-l-2">
           <div class="flex items-center justify-between">
             <div class="space-y-0.5">
               <Label>Auto-summarize Reviews</Label>
               <p class="text-sm text-muted-foreground">Generate summaries automatically</p>
             </div>
-            <Switch bind:checked={autoSummarize} />
+            <Switch checked={settings.autoSummarize} onCheckedChange={(checked) => updateSetting('autoSummarize', checked)} />
           </div>
           
           <div class="flex items-center justify-between">
@@ -76,7 +89,7 @@
               <Label>Detect Code Smells</Label>
               <p class="text-sm text-muted-foreground">Identify potential issues</p>
             </div>
-            <Switch bind:checked={detectSmells} />
+            <Switch checked={settings.detectSmells} onCheckedChange={(checked) => updateSetting('detectSmells', checked)} />
           </div>
           
           <div class="flex items-center justify-between">
@@ -84,7 +97,7 @@
               <Label>Suggest Improvements</Label>
               <p class="text-sm text-muted-foreground">Get AI-powered suggestions</p>
             </div>
-            <Switch bind:checked={suggestImprovements} />
+            <Switch checked={settings.suggestImprovements} onCheckedChange={(checked) => updateSetting('suggestImprovements', checked)} />
           </div>
         </div>
       {/if}
@@ -112,7 +125,8 @@
             id="apiKey"
             type="password"
             placeholder="AIza..."
-            bind:value={apiKey}
+            value={settings.geminiApiKey}
+            oninput={(e) => updateSetting('geminiApiKey', e.currentTarget.value)}
             class="flex-1"
           />
           <Button variant="outline" onclick={testConnection}>

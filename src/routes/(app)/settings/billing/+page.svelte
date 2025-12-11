@@ -6,56 +6,33 @@
   import Check from '@lucide/svelte/icons/check';
   import CreditCard from '@lucide/svelte/icons/credit-card';
   import Download from '@lucide/svelte/icons/download';
+  import UpgradeDialog from '$lib/components/upgrade-dialog.svelte';
+  import { subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
+  import { auth } from '$lib/stores/auth.svelte';
+  import { plans } from '$lib/config';
+  import { onMount } from 'svelte';
   
-  const currentPlan = {
-    name: 'Free',
-    price: 0,
-    period: 'month'
-  };
+  let showUpgradeDialog = $state(false);
   
-  const usage = {
-    cloudReviews: { used: 4, limit: 10 },
-    storage: { used: 234, limit: 1024 }, // MB
-    aiCredits: { used: 153, limit: 1000 }
-  };
+  onMount(async () => {
+    await subscriptionsStore.load();
+    await aiUsageStore.load();
+  });
   
-  const plans = [
-    {
-      name: 'Free',
-      price: 0,
-      features: [
-        'Unlimited local reviews',
-        '10 cloud syncs/month',
-        '1GB storage',
-        '50 AI credits',
-        'Individual use'
-      ]
-    },
-    {
-      name: 'Pro',
-      price: 20,
-      popular: true,
-      features: [
-        'Unlimited local reviews',
-        'Unlimited cloud sync',
-        '50GB storage',
-        '1,000 AI credits',
-        'Priority support',
-        'Advanced AI features'
-      ]
-    },
-    {
-      name: 'Team',
-      price: 50,
-      features: [
-        'Everything in Pro',
-        '200GB storage',
-        '5,000 AI credits',
-        'Up to 10 team members',
-        'SSO & Admin controls',
-        'Analytics dashboard'
-      ]
-    }
+  const currentPlan = $derived(auth.currentUser?.plan || 'free');
+  const currentPlanDetails = $derived(plans[currentPlan as keyof typeof plans]);
+  const subscription = $derived(subscriptionsStore.current);
+  
+  const usage = $derived({
+    cloudReviews: { used: 4, limit: currentPlanDetails.limits.localReviews },
+    storage: { used: 234, limit: parseInt(currentPlanDetails.limits.storage) || 1024 }, // MB
+    aiCredits: { used: aiUsageStore.totalTokens, limit: currentPlanDetails.limits.aiCredits }
+  });
+  
+  const availablePlans = [
+    { ...plans.free, id: 'free' },
+    { ...plans.pro, id: 'pro', popular: true },
+    { ...plans.team, id: 'team' }
   ];
   
   const invoices = [
@@ -74,12 +51,21 @@
     <CardContent>
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-2xl font-bold">{currentPlan.name} Plan</p>
+          <p class="text-2xl font-bold">{currentPlanDetails.name} Plan</p>
           <p class="text-sm text-muted-foreground">
-            ${currentPlan.price}/{currentPlan.period}
+            ${currentPlanDetails.price.stripe}/month
           </p>
+          {#if subscription?.status}
+            <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'} class="mt-2">
+              {subscription.status}
+            </Badge>
+          {/if}
         </div>
-        <Button>Upgrade to Pro</Button>
+        {#if currentPlan === 'free'}
+          <Button onclick={() => showUpgradeDialog = true}>Upgrade to Pro</Button>
+        {:else}
+          <Button variant="outline" onclick={() => showUpgradeDialog = true}>Change Plan</Button>
+        {/if}
       </div>
     </CardContent>
   </Card>
@@ -93,15 +79,17 @@
       <div class="space-y-2">
         <div class="flex justify-between text-sm">
           <span>Cloud Reviews</span>
-          <span>{usage.cloudReviews.used} / {usage.cloudReviews.limit}</span>
+          <span>{usage.cloudReviews.used} / {usage.cloudReviews.limit === -1 ? 'Unlimited' : usage.cloudReviews.limit}</span>
         </div>
-        <Progress value={(usage.cloudReviews.used / usage.cloudReviews.limit) * 100} />
+        {#if usage.cloudReviews.limit !== -1}
+          <Progress value={(usage.cloudReviews.used / usage.cloudReviews.limit) * 100} />
+        {/if}
       </div>
       
       <div class="space-y-2">
         <div class="flex justify-between text-sm">
           <span>Storage</span>
-          <span>{usage.storage.used} MB / {usage.storage.limit} MB</span>
+          <span>{usage.storage.used} MB / {currentPlanDetails.limits.storage}</span>
         </div>
         <Progress value={(usage.storage.used / usage.storage.limit) * 100} />
       </div>
@@ -120,7 +108,7 @@
   <div>
     <h2 class="text-2xl font-bold mb-4">Available Plans</h2>
     <div class="grid gap-4 md:grid-cols-3">
-      {#each plans as plan}
+      {#each availablePlans as plan}
         <Card class={plan.popular ? 'border-primary' : ''}>
           {#if plan.popular}
             <div class="px-3 py-1 bg-primary text-primary-foreground text-xs font-medium text-center">
@@ -130,7 +118,7 @@
           <CardHeader>
             <CardTitle>{plan.name}</CardTitle>
             <div class="mt-4">
-              <span class="text-4xl font-bold">${plan.price}</span>
+              <span class="text-4xl font-bold">${plan.price.stripe}</span>
               <span class="text-muted-foreground">/month</span>
             </div>
           </CardHeader>
@@ -143,8 +131,16 @@
                 </li>
               {/each}
             </ul>
-            <Button class="w-full" variant={plan.name === currentPlan.name ? 'secondary' : 'default'}>
-              {plan.name === currentPlan.name ? 'Current Plan' : `Upgrade to ${plan.name}`}
+            <Button 
+              class="w-full" 
+              variant={plan.id === currentPlan ? 'secondary' : 'default'}
+              onclick={() => {
+                if (plan.id !== currentPlan) {
+                  showUpgradeDialog = true;
+                }
+              }}
+            >
+              {plan.id === currentPlan ? 'Current Plan' : `Upgrade to ${plan.name}`}
             </Button>
           </CardContent>
         </Card>
@@ -162,37 +158,41 @@
         <div class="flex items-center gap-3">
           <CreditCard class="h-5 w-5 text-muted-foreground" />
           <div>
-            <p class="font-medium">Visa ending in 4242</p>
-            <p class="text-sm text-muted-foreground">Expires 12/2025</p>
+            <p class="font-medium">No payment method on file</p>
+            <p class="text-sm text-muted-foreground">Add a payment method to upgrade</p>
           </div>
         </div>
-        <Button variant="outline">Update</Button>
+        <Button variant="outline">Add Payment Method</Button>
       </div>
     </CardContent>
   </Card>
 
   <!-- Billing History -->
-  <Card>
-    <CardHeader>
-      <CardTitle>Billing History</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div class="space-y-2">
-        {#each invoices as invoice}
-          <div class="flex items-center justify-between p-3 border rounded-lg">
-            <div>
-              <p class="font-medium">{invoice.date}</p>
-              <Badge variant="outline" class="badge-published">Paid</Badge>
+  {#if invoices.length > 0}
+    <Card>
+      <CardHeader>
+        <CardTitle>Billing History</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="space-y-2">
+          {#each invoices as invoice}
+            <div class="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p class="font-medium">{invoice.date}</p>
+                <Badge variant="outline" class="badge-published">Paid</Badge>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="font-medium">{invoice.amount}</span>
+                <Button variant="ghost" size="icon">
+                  <Download class="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div class="flex items-center gap-4">
-              <span class="font-medium">{invoice.amount}</span>
-              <Button variant="ghost" size="icon">
-                <Download class="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        {/each}
-      </div>
-    </CardContent>
-  </Card>
+          {/each}
+        </div>
+      </CardContent>
+    </Card>
+  {/if}
 </div>
+
+<UpgradeDialog bind:open={showUpgradeDialog} currentPlan={currentPlan as any} />

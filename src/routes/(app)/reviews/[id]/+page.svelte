@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { Button } from '$lib/components/ui/button';
   import { Badge } from '$lib/components/ui/badge';
   import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
@@ -12,85 +13,62 @@
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from '$lib/components/ui/dropdown-menu';
+  import CodeEditor from '$lib/components/code-editor.svelte';
+  import VideoPlayer from '$lib/components/video-player.svelte';
+  import P2PShareDialog from '$lib/components/p2p-share-dialog.svelte';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Share2 from '@lucide/svelte/icons/share-2';
   import MoreVertical from '@lucide/svelte/icons/more-vertical';
-  import Play from '@lucide/svelte/icons/play';
-  import Pause from '@lucide/svelte/icons/pause';
-  import Maximize from '@lucide/svelte/icons/maximize';
-  import Volume2 from '@lucide/svelte/icons/volume-2';
-  import VolumeX from '@lucide/svelte/icons/volume-x';
+  import Download from '@lucide/svelte/icons/download';
+  import Upload from '@lucide/svelte/icons/upload';
+  import Users from '@lucide/svelte/icons/users';
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import Send from '@lucide/svelte/icons/send';
   import VideoIcon from '@lucide/svelte/icons/video';
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Check from '@lucide/svelte/icons/check';
+  import Play from '@lucide/svelte/icons/play';
+  import { toast } from 'svelte-sonner';
+  import { reviewsStore, commentsStore } from '$lib/stores/index.svelte';
+  import { ReviewExporter } from '$lib/utils/export-import';
   
-  // Mock data
-  const review = {
-    id: '1',
-    title: 'Add JWT Authentication to API',
-    description: 'Implemented JWT-based authentication for all API endpoints with refresh token support.',
-    author: { name: 'John Doe', avatar: '' },
-    createdAt: '2 hours ago',
-    status: 'published',
+  const reviewId = $derived(page.params.id);
+  
+  // Load data from stores
+  $effect(() => {
+    reviewsStore.load();
+    commentsStore.load();
+  });
+  
+  // Get review from store
+  const review = $derived(reviewsStore.findById(reviewId) || {
+    id: reviewId,
+    title: 'Review Not Found',
+    description: 'This review could not be loaded',
+    authorName: 'Unknown',
+    authorAvatar: '',
+    createdAt: new Date(),
+    status: 'draft',
     videoUrl: '',
-    videoDuration: 272, // 4:32 in seconds
-    codeContent: `// Before
-app.get('/api/users', (req, res) => {
-  const users = db.getAllUsers();
-  res.json(users);
-});
-
-// After
-app.get('/api/users', authMiddleware, (req, res) => {
-  const users = db.getAllUsers();
-  res.json(users);
-});
-
-// New middleware
-const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+    videoDuration: 0,
+    codeContent: '',
+    language: 'text',
+  });
   
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
+  // Get comments for this review with threading
+  const threadedComments = $derived(commentsStore.getThreaded(reviewId));
   
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};`,
-    language: 'javascript',
-  };
-  
-  const comments = [
-    {
-      id: '1',
-      author: { name: 'Jane Smith', avatar: '' },
-      content: 'Great implementation! Have you considered adding rate limiting to prevent brute force attacks?',
-      timestamp: '1 hour ago',
-      videoTimestamp: 45,
-      isResolved: false,
-      replies: [
-        {
-          id: '2',
-          author: { name: 'John Doe', avatar: '' },
-          content: 'Good point! I\'ll add that in the next iteration.',
-          timestamp: '30 mins ago',
-        }
-      ]
-    }
-  ];
-  
-  let isPlaying = $state(false);
-  let isMuted = $state(false);
   let currentTime = $state(0);
   let newComment = $state('');
   let activeTab = $state('diff');
+  let showP2PShare = $state(false);
+  
+  // Prepare video markers from comments
+  const videoMarkers = $derived(
+    threadedComments
+      .filter(c => c.videoTimestamp)
+      .map(c => ({ time: c.videoTimestamp, label: c.authorName || 'User' }))
+  );
   
   function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -101,30 +79,59 @@ const authMiddleware = (req, res, next) => {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
-  
-  function togglePlay() {
-    isPlaying = !isPlaying;
+
+  function formatTimestamp(date: Date) {
+    const now = new Date();
+    const diff = now.getTime() - new Date(date).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+    return new Date(date).toLocaleDateString();
   }
   
-  function toggleMute() {
-    isMuted = !isMuted;
-  }
-  
-  function seekTo(seconds: number) {
-    currentTime = seconds;
-    // TODO: Seek video to timestamp
+  function handleTimeUpdate(time: number) {
+    currentTime = time;
   }
   
   async function postComment() {
     if (!newComment.trim()) return;
-    // TODO: Post comment
-    console.log('Posting comment:', newComment);
-    newComment = '';
+    
+    try {
+      await commentsStore.create({
+        reviewId: reviewId,
+        authorId: 'current-user-id', // TODO: Get from auth
+        authorName: 'Current User',
+        content: newComment,
+        videoTimestamp: currentTime > 0 ? Math.floor(currentTime) : undefined,
+      });
+      toast.success('Comment posted');
+      newComment = '';
+    } catch (error) {
+      toast.error('Failed to post comment');
+    }
+  }
+  
+  async function toggleResolve(commentId: string) {
+    try {
+      await commentsStore.toggleResolved(commentId);
+      toast.success('Comment resolved status updated');
+    } catch (error) {
+      toast.error('Failed to update comment');
+    }
   }
   
   async function explainCode() {
-    // TODO: Call AI to explain code
-    console.log('Explaining code...');
+    toast.promise(
+      new Promise(resolve => setTimeout(resolve, 2000)),
+      {
+        loading: 'AI is analyzing the code...',
+        success: 'Analysis complete!',
+        error: 'Failed to analyze code'
+      }
+    );
   }
 </script>
 
@@ -140,10 +147,10 @@ const authMiddleware = (req, res, next) => {
           <h1 class="text-xl font-semibold truncate">{review.title}</h1>
           <div class="flex items-center gap-2 text-sm text-muted-foreground">
             <Avatar class="h-5 w-5">
-              <AvatarImage src={review.author.avatar} />
-              <AvatarFallback class="text-xs">{getInitials(review.author.name)}</AvatarFallback>
+              <AvatarImage src={review.author?.avatar} />
+              <AvatarFallback class="text-xs">{getInitials(review.author?.name ||'')}</AvatarFallback>
             </Avatar>
-            <span>{review.author.name}</span>
+            <span>{review.author?.name}</span>
             <span>·</span>
             <span>{review.createdAt}</span>
           </div>
@@ -180,6 +187,14 @@ const authMiddleware = (req, res, next) => {
             {/snippet}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onclick={exportReview}>
+              <Download class="h-4 w-4 mr-2" />
+              Export Review
+            </DropdownMenuItem>
+            <DropdownMenuItem onclick={shareP2P}>
+              <Users class="h-4 w-4 mr-2" />
+              Share via P2P
+            </DropdownMenuItem>
             <DropdownMenuItem>Edit Review</DropdownMenuItem>
             <DropdownMenuItem>Archive</DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -212,79 +227,34 @@ const authMiddleware = (req, res, next) => {
       </div>
       
       <!-- Code Content -->
-      <div class="flex-1 overflow-auto">
-        <pre class="p-4 text-sm font-mono leading-relaxed"><code>{review.codeContent}</code></pre>
+      <div class="flex-1 overflow-auto p-4">
+        <CodeEditor
+          value={review.codeContent}
+          language={review.language}
+          readonly={true}
+          showLineNumbers={true}
+        />
       </div>
     </div>
 
     <!-- Right Panel: Video & Comments -->
     <div class="flex flex-col overflow-hidden">
       <!-- Video Player -->
-      <div class="border-b bg-black">
-        <div class="aspect-video bg-muted flex items-center justify-center">
-          <VideoIcon class="h-16 w-16 text-muted-foreground" />
-        </div>
-        
-        <!-- Video Controls -->
-        <div class="bg-black/90 p-3 space-y-2">
-          <!-- Timeline -->
-          <div class="relative h-1 bg-white/20 rounded-full cursor-pointer">
-            <div class="absolute h-full bg-primary rounded-full" style="width: {(currentTime / review.videoDuration) * 100}%"></div>
-            <!-- Timestamp markers -->
-            {#each comments as comment}
-              {#if comment.videoTimestamp}
-                <button
-                  class="absolute -top-1 w-3 h-3 bg-chart-2 rounded-full border-2 border-black"
-                  style="left: {(comment.videoTimestamp / review.videoDuration) * 100}%"
-                  onclick={() => seekTo(comment.videoTimestamp)}
-                ></button>
-              {/if}
-            {/each}
-          </div>
-          
-          <!-- Controls -->
-          <div class="flex items-center justify-between text-white">
-            <div class="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8 text-white hover:bg-white/20"
-                onclick={togglePlay}
-              >
-                {#if isPlaying}
-                  <Pause class="h-4 w-4" />
-                {:else}
-                  <Play class="h-4 w-4" />
-                {/if}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8 text-white hover:bg-white/20"
-                onclick={toggleMute}
-              >
-                {#if isMuted}
-                  <VolumeX class="h-4 w-4" />
-                {:else}
-                  <Volume2 class="h-4 w-4" />
-                {/if}
-              </Button>
-              
-              <span class="text-xs font-mono">
-                {formatTime(currentTime)} / {formatTime(review.videoDuration)}
-              </span>
+      <div class="border-b">
+        {#if review.videoUrl}
+          <VideoPlayer
+            src={review.videoUrl}
+            onTimeUpdate={handleTimeUpdate}
+            markers={videoMarkers}
+          />
+        {:else}
+          <div class="aspect-video bg-muted flex items-center justify-center">
+            <div class="text-center">
+              <VideoIcon class="h-16 w-16 text-muted-foreground mb-2 mx-auto" />
+              <p class="text-sm text-muted-foreground">No video available</p>
             </div>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              class="h-8 w-8 text-white hover:bg-white/20"
-            >
-              <Maximize class="h-4 w-4" />
-            </Button>
           </div>
-        </div>
+        {/if}
       </div>
       
       <!-- Comments Section -->
@@ -292,7 +262,7 @@ const authMiddleware = (req, res, next) => {
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-semibold flex items-center gap-2">
             <MessageSquare class="h-4 w-4" />
-            Comments ({comments.length})
+            Comments ({threadedComments.length})
           </h3>
           <Button size="sm" variant="outline" class="gap-2">
             <VideoIcon class="h-3 w-3" />
@@ -300,7 +270,7 @@ const authMiddleware = (req, res, next) => {
           </Button>
         </div>
         
-        {#if comments.length === 0}
+        {#if threadedComments.length === 0}
           <Card>
             <CardContent class="flex flex-col items-center justify-center p-8 text-center">
               <MessageSquare class="h-8 w-8 text-muted-foreground mb-2" />
@@ -308,20 +278,20 @@ const authMiddleware = (req, res, next) => {
             </CardContent>
           </Card>
         {:else}
-          {#each comments as comment}
+          {#each threadedComments as comment}
             <Card>
               <CardContent class="p-4 space-y-3">
                 <!-- Comment Header -->
                 <div class="flex items-start justify-between">
                   <div class="flex items-center gap-2">
                     <Avatar class="h-8 w-8">
-                      <AvatarImage src={comment.author.avatar} />
+                      <AvatarImage src={comment.author?.avatar} />
                       <AvatarFallback class="text-xs">
-                        {getInitials(comment.author.name)}
+                        {getInitials(comment.author?.name || '')}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p class="text-sm font-medium">{comment.author.name}</p>
+                      <p class="text-sm font-medium">{comment.author?.name}</p>
                       <p class="text-xs text-muted-foreground">{comment.timestamp}</p>
                     </div>
                   </div>
@@ -361,14 +331,14 @@ const authMiddleware = (req, res, next) => {
                     {#each comment.replies as reply}
                       <div class="flex items-start gap-2">
                         <Avatar class="h-6 w-6">
-                          <AvatarImage src={reply.author.avatar} />
+                          <AvatarImage src={reply.author?.avatar} />
                           <AvatarFallback class="text-xs">
-                            {getInitials(reply.author.name)}
+                            {getInitials(reply.author?.name || '')}
                           </AvatarFallback>
                         </Avatar>
                         <div class="flex-1">
                           <div class="flex items-center gap-2">
-                            <p class="text-sm font-medium">{reply.author.name}</p>
+                            <p class="text-sm font-medium">{reply.author?.name}</p>
                             <p class="text-xs text-muted-foreground">{reply.timestamp}</p>
                           </div>
                           <p class="text-sm mt-1">{reply.content}</p>
@@ -400,3 +370,9 @@ const authMiddleware = (req, res, next) => {
     </div>
   </div>
 </div>
+
+<P2PShareDialog
+  bind:open={showP2PShare}
+  onClose={() => showP2PShare = false}
+  reviewData={review}
+/>

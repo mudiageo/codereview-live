@@ -21,11 +21,11 @@ export const auth = betterAuth({
 		enabled: true,
 		requireEmailVerification: true,
 		sendVerificationEmail: async ({ user, url, token }) => {
-      await sendVerificationEmail(user.email, token);
+      void sendVerificationEmail(user.email, token);
     },
     sendResetPassword: async ({ user, url, token }) => {
 			console.log(`Password reset link for ${user.email}: ${url}`);
-      await sendPasswordResetEmail(user.email, token);
+      void sendPasswordResetEmail(user.email, token);
     },
 		minPasswordLength: 8,
 		maxPasswordLength: 128,
@@ -87,7 +87,7 @@ export const auth = betterAuth({
 		}
 	},
 	// User configuration
-  trustedOrigins: [process.env.PUBLIC_APP_URL!],
+  // trustedOrigins: [env.PUBLIC_APP_URL!],
 	user: {
 		additionalFields: {
 			plan: {
