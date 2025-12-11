@@ -24,6 +24,8 @@
   import MediaRecorder from '$lib/components/media-recorder.svelte';
   import VideoUploader from '$lib/components/video-uploader.svelte';
   import GitHubImportDialog from '$lib/components/github-import-dialog.svelte';
+  import GitLabImportDialog from '$lib/components/gitlab-import-dialog.svelte';
+  import LocalGitBrowser from '$lib/components/git-repo-browser.svelte';
   import { reviewsStore, projectsStore, subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
   import { auth } from '$lib/stores/auth.svelte';
   import { hasFeatureAccess, getLimit, isWithinLimit } from '$lib/config';
@@ -50,6 +52,8 @@
   let videoMethod = $state<'record' | 'upload'>('record');
   let reviewId = $state<string>('');
   let showGitHubImport = $state(false);
+  let showGitLabImport = $state(false);
+  let showLocalGitBrowser = $state(false);
   
   const userPlan = $derived(auth.currentUser?.plan || 'free');
   const reviewCount = $derived(reviewsStore.count);
@@ -102,6 +106,61 @@
     description = `Imported from: ${data.prUrl}`;
     showGitHubImport = false;
     toast.success('Pull request imported successfully');
+  }
+  
+  function handleGitLabImport(data: { title: string; code: string; language: string; mrUrl: string }) {
+    title = data.title;
+    code = data.code;
+    language = data.language;
+    description = `Imported from: ${data.mrUrl}`;
+    showGitLabImport = false;
+    toast.success('Merge request imported successfully');
+  }
+  
+  function handleLocalGitImport(data: { title: string; code: string; language: string; commitHash: string }) {
+    title = data.title;
+    code = data.code;
+    language = data.language;
+    description = `Imported from commit: ${data.commitHash}`;
+    showLocalGitBrowser = false;
+    toast.success('Git commit imported successfully');
+  }
+  
+  async function handleDiffFileUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    
+    const file = input.files[0];
+    const fileName = file.name;
+    
+    // Check if it's a .diff or .patch file
+    if (!fileName.endsWith('.diff') && !fileName.endsWith('.patch')) {
+      toast.error('Please upload a .diff or .patch file');
+      return;
+    }
+    
+    try {
+      const text = await file.text();
+      // Parse diff file using DiffParser utility
+      const { DiffParser } = await import('$lib/utils/diff-parser');
+      const parsed = DiffParser.parse(text);
+      
+      if (parsed.files && parsed.files.length > 0) {
+        // Use first file's language or auto-detect
+        language = parsed.language || 'javascript';
+        code = parsed.content || text;
+        title = parsed.title || `Imported from ${fileName}`;
+        description = parsed.stats ? `${parsed.stats.additions} additions, ${parsed.stats.deletions} deletions` : '';
+        toast.success('Diff file parsed successfully');
+      } else {
+        // Fallback: use raw content
+        code = text;
+        toast.success('File uploaded successfully');
+      }
+    } catch (error) {
+      toast.error('Failed to parse diff file');
+      console.error(error);
+    }
   }
   
   async function saveDraft() {
@@ -283,10 +342,11 @@
       </CardHeader>
       <CardContent>
         <Tabs value="paste" class="w-full">
-          <TabsList class="grid w-full grid-cols-4">
+          <TabsList class="grid w-full grid-cols-5">
             <TabsTrigger value="paste">Paste</TabsTrigger>
             <TabsTrigger value="upload">Upload</TabsTrigger>
             <TabsTrigger value="github">GitHub</TabsTrigger>
+            <TabsTrigger value="gitlab">GitLab</TabsTrigger>
             <TabsTrigger value="git">Local Git</TabsTrigger>
           </TabsList>
           
@@ -316,12 +376,25 @@
           </TabsContent>
           
           <TabsContent value="upload" class="space-y-4">
-            <div class="border-2 border-dashed rounded-lg p-12 text-center hover:border-primary/50 transition-colors cursor-pointer">
+            <div class="border-2 border-dashed rounded-lg p-12 text-center hover:border-primary/50 transition-colors">
               <Upload class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <p class="text-sm text-muted-foreground mb-2">
                 Drag & drop files or click to browse
               </p>
-              <Button variant="outline" size="sm">Choose Files</Button>
+              <input
+                type="file"
+                id="file-upload"
+                class="hidden"
+                accept=".js,.ts,.py,.diff,.patch,.java,.go,.rs,.rb,.php,.c,.cpp,.cs,.html,.css"
+                onchange={handleDiffFileUpload}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onclick={() => document.getElementById('file-upload')?.click()}
+              >
+                Choose Files
+              </Button>
               <p class="text-xs text-muted-foreground mt-2">
                 Supports .js, .ts, .py, .diff, .patch and more
               </p>
@@ -340,14 +413,26 @@
             </div>
           </TabsContent>
           
+          <TabsContent value="gitlab">
+            <div class="space-y-4">
+              <Button variant="outline" class="w-full gap-2" onclick={() => showGitLabImport = true}>
+                <FolderGit2 class="h-4 w-4" />
+                Connect GitLab
+              </Button>
+              <p class="text-sm text-muted-foreground text-center">
+                Connect your GitLab account to import merge requests
+              </p>
+            </div>
+          </TabsContent>
+          
           <TabsContent value="git">
             <div class="space-y-4">
-              <Button variant="outline" class="w-full gap-2">
+              <Button variant="outline" class="w-full gap-2" onclick={() => showLocalGitBrowser = true}>
                 <FolderGit2 class="h-4 w-4" />
                 Browse Local Repository
               </Button>
               <p class="text-sm text-muted-foreground text-center">
-                Select a local git repository to import changes
+                Select a local git repository to import changes (Chrome/Edge only)
               </p>
             </div>
           </TabsContent>
@@ -490,4 +575,16 @@
   bind:open={showGitHubImport}
   onClose={() => showGitHubImport = false}
   onImport={handleGitHubImport}
+/>
+
+<GitLabImportDialog
+  bind:open={showGitLabImport}
+  onClose={() => showGitLabImport = false}
+  onImport={handleGitLabImport}
+/>
+
+<LocalGitBrowser
+  bind:open={showLocalGitBrowser}
+  onClose={() => showLocalGitBrowser = false}
+  onImport={handleLocalGitImport}
 />

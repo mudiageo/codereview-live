@@ -33,9 +33,9 @@
 				status = 'success';
 				message = 'Your email has been successfully verified!';
 
-				// Redirect to dashboard after 2 seconds
+				// Redirect to onboarding after 2 seconds
 				setTimeout(() => {
-					goto('/dashboard');
+					goto('/onboarding');
 				}, 2000);
 			} else {
 				status = 'error';
