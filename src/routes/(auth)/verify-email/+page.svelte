@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
 	import CheckCircle from '@lucide/svelte/icons/check-circle';
 	import XCircle from '@lucide/svelte/icons/x-circle';
@@ -12,7 +12,7 @@
 	let message = $state('Verifying your email...');
 
 	onMount(async () => {
-		const token = $page.url.searchParams.get('token');
+		const token = page.url.searchParams.get('token');
 
 		if (!token) {
 			status = 'error';

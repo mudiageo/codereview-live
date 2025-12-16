@@ -27,7 +27,7 @@
   let searchQuery = $state('');
   let loading = $state(false);
   
-  const projects = $state(projectsStore.data)
+  const projects = $state(projectsStore.data || [])
   
   const filteredProjects = $derived(
     searchQuery 

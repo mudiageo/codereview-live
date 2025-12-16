@@ -30,15 +30,13 @@
   import Play from '@lucide/svelte/icons/play';
   import { toast } from 'svelte-sonner';
   import { reviewsStore, commentsStore } from '$lib/stores/index.svelte';
+  import { auth } from '$lib/stores/auth.svelte';
   import { ReviewExporter } from '$lib/utils/export-import';
   
   const reviewId = $derived(page.params.id);
   
   // Load data from stores
-  $effect(() => {
-    reviewsStore.load();
-    commentsStore.load();
-  });
+
   
   // Get review from store
   const review = $derived(reviewsStore.findById(reviewId) || {
@@ -102,14 +100,15 @@
     try {
       await commentsStore.create({
         reviewId: reviewId,
-        authorId: 'current-user-id', // TODO: Get from auth
-        authorName: 'Current User',
+        authorId: auth.currentUser?.id,
+        authorName: auth.currentUser?.name,
         content: newComment,
         videoTimestamp: currentTime > 0 ? Math.floor(currentTime) : undefined,
       });
       toast.success('Comment posted');
       newComment = '';
     } catch (error) {
+      console.log(errorl)
       toast.error('Failed to post comment');
     }
   }
@@ -152,7 +151,7 @@
             </Avatar>
             <span>{review.author?.name}</span>
             <span>·</span>
-            <span>{review.createdAt}</span>
+            <span class="truncate">{review.createdAt}</span>
           </div>
         </div>
       </div>
