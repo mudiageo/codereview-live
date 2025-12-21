@@ -341,7 +341,7 @@
     ></div>
     
     <!-- Sidebar -->
-    <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar border-r animate-slide-left"
+    <aside class="fixed inset-y-0 left-0 w-64 bg-sidebar border-r animate-slide-left">
       <!-- Logo -->
       <div class="flex h-16 items-center gap-2 border-b px-6">
         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
