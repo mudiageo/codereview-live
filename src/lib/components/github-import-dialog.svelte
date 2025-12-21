@@ -10,8 +10,10 @@
   import Search from '@lucide/svelte/icons/search';
   import GitPullRequest from '@lucide/svelte/icons/git-pull-request';
   import ExternalLink from '@lucide/svelte/icons/external-link';
+  import Settings from '@lucide/svelte/icons/settings';
   import { GitHubImporter, type Repository, type PullRequest } from '$lib/utils/github-import';
   import { toast } from 'svelte-sonner';
+  import { onMount } from 'svelte';
 
   interface Props {
     open: boolean;
@@ -21,7 +23,7 @@
 
   let { open = $bindable(), onClose, onImport }: Props = $props();
 
-  let step = $state<'auth' | 'repos' | 'prs' | 'import'>('auth');
+  let step = $state<'check' | 'connect' | 'auth' | 'repos' | 'prs' | 'import'>('check');
   let accessToken = $state('');
   let loading = $state(false);
   let repositories = $state<Repository[]>([]);
@@ -30,6 +32,50 @@
   let selectedPr = $state<PullRequest | null>(null);
   let searchQuery = $state('');
   let importer = $state<GitHubImporter | null>(null);
+  let connectedAccount = $state<{username: string; avatar_url?: string} | null>(null);
+  let checkingConnection = $state(true);
+
+  // Check for stored GitHub connection when dialog opens
+  $effect(() => {
+    if (open) {
+      checkStoredConnection();
+    }
+  });
+
+  async function checkStoredConnection() {
+    checkingConnection = true;
+    try {
+      const response = await fetch('/api/oauth/connected');
+      if (response.ok) {
+        const accounts = await response.json();
+        const githubAccount = accounts.find((acc: any) => acc.provider === 'github');
+        
+        if (githubAccount && githubAccount.accessToken) {
+          // Use stored token
+          accessToken = githubAccount.accessToken;
+          connectedAccount = {
+            username: githubAccount.username,
+            avatar_url: githubAccount.avatar_url
+          };
+          
+          // Initialize importer and fetch repos
+          importer = new GitHubImporter(accessToken);
+          repositories = await importer.getUserRepos(50);
+          step = 'repos';
+        } else {
+          // No connection, show connect screen
+          step = 'connect';
+        }
+      } else {
+        step = 'connect';
+      }
+    } catch (error) {
+      console.error('Failed to check GitHub connection:', error);
+      step = 'connect';
+    } finally {
+      checkingConnection = false;
+    }
+  }
 
   const filteredRepos = $derived(
     repositories.filter(repo =>
@@ -136,14 +182,13 @@
     onClose();
     // Reset state after animation
     setTimeout(() => {
-      step = 'auth';
-      accessToken = '';
+      step = 'check';
       repositories = [];
       pullRequests = [];
       selectedRepo = null;
       selectedPr = null;
       searchQuery = '';
-      importer = null;
+      checkingConnection = true;
     }, 300);
   }
 
@@ -154,10 +199,15 @@
       pullRequests = [];
       searchQuery = '';
     } else if (step === 'repos') {
-      step = 'auth';
+      step = 'connect';
       repositories = [];
       searchQuery = '';
     }
+  }
+
+  function goToSettings() {
+    handleClose();
+    window.location.href = '/settings/integrations';
   }
 </script>
 
@@ -167,9 +217,18 @@
       <DialogTitle class="flex items-center gap-2">
         <Github class="h-5 w-5" />
         Import from GitHub
+        {#if connectedAccount}
+          <Badge variant="secondary" class="ml-auto">
+            Connected as {connectedAccount.username}
+          </Badge>
+        {/if}
       </DialogTitle>
       <DialogDescription>
-        {#if step === 'auth'}
+        {#if step === 'check'}
+          Checking your GitHub connection...
+        {:else if step === 'connect'}
+          Connect your GitHub account to import pull requests
+        {:else if step === 'auth'}
           Enter your GitHub access token to import pull requests
         {:else if step === 'repos'}
           Select a repository to import from
@@ -180,7 +239,30 @@
     </DialogHeader>
 
     <div class="space-y-4">
-      {#if step === 'auth'}
+      {#if step === 'check'}
+        <div class="py-12 text-center">
+          <div class="animate-spin mx-auto h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          <p class="mt-4 text-sm text-muted-foreground">Checking GitHub connection...</p>
+        </div>
+      {:else if step === 'connect'}
+        <div class="space-y-4">
+          <div class="text-center py-8">
+            <Github class="mx-auto h-16 w-16 text-muted-foreground opacity-50" />
+            <h3 class="mt-4 text-lg font-medium">Connect GitHub</h3>
+            <p class="mt-2 text-sm text-muted-foreground">
+              Connect your GitHub account in settings to import pull requests
+            </p>
+          </div>
+          
+          <div class="flex gap-2">
+            <Button onclick={goToSettings} class="flex-1">
+              <Settings class="mr-2 h-4 w-4" />
+              Go to Settings
+            </Button>
+            <Button variant="outline" onclick={handleClose}>Cancel</Button>
+          </div>
+        </div>
+      {:else if step === 'auth'}
         <div class="space-y-4">
           <div class="space-y-2">
             <Label for="token">GitHub Access Token</Label>
