@@ -63,6 +63,19 @@
   
   let availableAudioInputs = $state<MediaDeviceInfo[]>([]);
   
+  // Check if getDisplayMedia is supported (Chrome Android issue)
+  const supportsScreenCapture = $derived(
+    typeof navigator !== 'undefined' &&
+    'mediaDevices' in navigator &&
+    'getDisplayMedia' in navigator.mediaDevices
+  );
+  
+  // Detect mobile
+  const isMobile = $derived(
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  );
+  
   // Load available devices
   $effect(() => {
     if (typeof navigator !== 'undefined') {
@@ -360,6 +373,29 @@
 
 <Card>
   <CardContent class="p-6 space-y-4">
+    {#if !supportsScreenCapture && isMobile}
+      <!-- Mobile Fallback UI -->
+      <div class="flex flex-col items-center justify-center py-12 space-y-4 text-center">
+        <div class="relative">
+          <Monitor class="h-20 w-20 text-muted-foreground" />
+          <div class="absolute -bottom-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <h3 class="text-lg font-semibold">Screen Recording Not Supported</h3>
+          <p class="text-sm text-muted-foreground max-w-md">
+            Chrome on Android doesn't currently support screen recording.
+          </p>
+          <p class="text-sm text-muted-foreground">
+            Please use the <strong>Upload Video</strong> option instead.
+          </p>
+        </div>
+        <Badge variant="outline" class="mt-2">
+          Tip: Record on desktop or upload an existing video
+        </Badge>
+      </div>
+    {:else}
     <!-- Preview Area -->
     <div class="relative aspect-video bg-muted rounded-lg overflow-hidden">
       {#if countdown > 0}
@@ -580,5 +616,6 @@
         Duration: {formatTime(recordingTime)} • Size: {(videoBlob.size / 1024 / 1024).toFixed(2)} MB
       </div>
     {/if}
+    {/if} <!-- End of supportsScreenCapture check -->
   </CardContent>
 </Card>

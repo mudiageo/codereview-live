@@ -134,54 +134,43 @@
   }
 </script>
 
-<div class="h-[calc(100vh-8rem)] flex flex-col">
+<div class="flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-8rem)]">
   <!-- Header -->
-  <div class="border-b p-4 space-y-2">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3 flex-1 min-w-0">
-        <Button variant="ghost" size="icon" href="/reviews">
-          <ArrowLeft class="h-5 w-5" />
+  <div class="border-b p-3 md:p-4 space-y-2">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+        <Button variant="ghost" size="icon" href="/reviews" class="shrink-0">
+          <ArrowLeft class="h-4 w-4 md:h-5 md:w-5" />
         </Button>
         <div class="flex-1 min-w-0">
-          <h1 class="text-xl font-semibold truncate">{review.title}</h1>
-          <div class="flex items-center gap-2 text-sm text-muted-foreground">
-            <Avatar class="h-5 w-5">
+          <h1 class="text-base md:text-xl font-semibold truncate">{review.title}</h1>
+          <div class="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+            <Avatar class="h-4 w-4 md:h-5 md:w-5">
               <AvatarImage src={review.author?.avatar} />
-              <AvatarFallback class="text-xs">{getInitials(review.author?.name ||'')}</AvatarFallback>
+              <AvatarFallback class="text-[10px] md:text-xs">{getInitials(review.author?.name ||'')}</AvatarFallback>
             </Avatar>
-            <span>{review.author?.name}</span>
-            <span>·</span>
+            <span class="hidden sm:inline">{review.author?.name}</span>
+            <span class="hidden sm:inline">·</span>
             <span class="truncate">{review.createdAt}</span>
           </div>
         </div>
       </div>
       
-      <div class="flex items-center gap-2">
-        <Badge variant="outline" class="badge-published">
+      <div class="flex items-center gap-1 md:gap-2 shrink-0">
+        <Badge variant="outline" class="badge-published text-xs">
           {review.status}
         </Badge>
         
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            {#snippet child(props)}
-            <Button {...props} variant="outline" size="sm" class="gap-2">
-              <Share2 class="h-4 w-4" />
-              Share
-            </Button>
-            {/snippet}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Copy Link</DropdownMenuItem>
-            <DropdownMenuItem>Export as File</DropdownMenuItem>
-            <DropdownMenuItem>P2P Transfer</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="outline" size="sm" class="gap-1 hidden sm:flex text-xs">
+          <Share2 class="h-3 w-3 md:h-4 md:w-4" />
+          <span class="hidden md:inline">Share</span>
+        </Button>
         
         <DropdownMenu>
           <DropdownMenuTrigger>
             {#snippet child(props)}
-            <Button {...props} variant="ghost" size="icon">
-              <MoreVertical class="h-5 w-5" />
+            <Button {...props} variant="ghost" size="icon" class="h-8 w-8 md:h-10 md:w-10">
+              <MoreVertical class="h-4 w-4 md:h-5 md:w-5" />
             </Button>
             {/snippet}
           </DropdownMenuTrigger>
@@ -204,50 +193,164 @@
     </div>
   </div>
 
-  <!-- Split View -->
-  <div class="flex-1 grid lg:grid-cols-2 overflow-hidden">
-    <!-- Left Panel: Code Viewer -->
-    <div class="flex flex-col border-r overflow-hidden">
-      <!-- Code Header -->
-      <div class="border-b p-2 flex items-center justify-between bg-muted/30">
-        <Tabs bind:value={activeTab}>
-          <TabsList class="h-8">
-            <TabsTrigger value="diff" class="text-xs">Diff View</TabsTrigger>
-            <TabsTrigger value="full" class="text-xs">Full Code</TabsTrigger>
-          </TabsList>
-        </Tabs>
+  <!-- Content Area - Responsive Layout -->
+  <div class="flex-1 overflow-hidden">
+    <!-- Mobile & Tablet: Tabs -->
+    <div class="lg:hidden h-full">
+      <Tabs bind:value={activeTab} class="h-full flex flex-col">
+        <TabsList class="grid w-full grid-cols-3 shrink-0">
+          <TabsTrigger value="video" class="text-xs md:text-sm">
+            <VideoIcon class="h-3 w-3 md:h-4 md:w-4 mr-1" />
+            Video
+          </TabsTrigger>
+          <TabsTrigger value="code" class="text-xs md:text-sm">
+            <svg class="h-3 w-3 md:h-4 md:w-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            Code
+          </TabsTrigger>
+          <TabsTrigger value="comments" class="text-xs md:text-sm">
+            <MessageSquare class="h-3 w-3 md:h-4 md:w-4 mr-1" />
+            Comments
+          </TabsTrigger>
+        </TabsList>
         
-        <div class="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onclick={explainCode} class="gap-2 h-8 text-xs">
-            <Sparkles class="h-3 w-3" />
-            AI Explain
-          </Button>
+        <TabsContent value="video" class="flex-1 overflow-auto mt-0">
+          {#if review.videoUrl}
+            <VideoPlayer
+              src={review.videoUrl}
+              onTimeUpdate={handleTimeUpdate}
+              markers={videoMarkers}
+            />
+          {:else}
+            <div class="aspect-video bg-muted flex items-center justify-center">
+              <div class="text-center text-muted-foreground">
+                <VideoIcon class="h-12 w-12 mx-auto mb-2" />
+                <p>No video available</p>
+              </div>
+            </div>
+          {/if}
+        </TabsContent>
+        
+        <TabsContent value="code" class="flex-1 overflow-auto mt-0 p-2 md:p-4">
+          <div class="mb-2 flex items-center justify-between">
+            <Badge variant="outline">{review.language}</Badge>
+            <Button variant="ghost" size="sm" onclick={explainCode} class="gap-1 text-xs">
+              <Sparkles class="h-3 w-3" />
+              AI Explain
+            </Button>
+          </div>
+          <CodeEditor
+            value={review.codeContent}
+            language={review.language}
+            readonly={true}
+            showLineNumbers={true}
+          />
+        </TabsContent>
+        
+        <TabsContent value="comments" class="flex-1 flex flex-col mt-0">
+          <div class="flex-1 overflow-auto p-3 md:p-4 space-y-4">
+            {#if threadedComments.length === 0}
+              <div class="text-center py-8 text-muted-foreground">
+                <MessageSquare class="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No comments yet</p>
+                <p class="text-sm">Be the first to comment!</p>
+              </div>
+            {:else}
+              {#each threadedComments as comment}
+                <Card class="p-3">
+                  <div class="flex gap-2">
+                    <Avatar class="h-8 w-8 shrink-0">
+                      <AvatarImage src={comment.authorAvatar} />
+                      <AvatarFallback class="text-xs">{getInitials(comment.authorName)}</AvatarFallback>
+                    </Avatar>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-start justify-between gap-2 mb-1">
+                        <div class="flex-1 min-w-0">
+                          <span class="font-medium text-sm truncate block">{comment.authorName}</span>
+                          <span class="text-xs text-muted-foreground">{formatTimestamp(comment.createdAt)}</span>
+                        </div>
+                        <Button variant="ghost" size="icon" class="h-6 w-6 shrink-0" onclick={() => toggleResolved(comment.id)}>
+                          <Check class="h-3 w-3 {comment.isResolved ? 'text-green-600' : 'text-muted-foreground'}" />
+                        </Button>
+                      </div>
+                      <p class="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
+                      {#if comment.videoTimestamp}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          class="mt-2 h-7 text-xs gap-1"
+                          onclick={() => currentTime = comment.videoTimestamp}
+                        >
+                          <Play class="h-3 w-3" />
+                          {formatTime(comment.videoTimestamp)}
+                        </Button>
+                      {/if}
+                    </div>
+                  </div>
+                </Card>
+              {/each}
+            {/if}
+          </div>
+          
+          <div class="border-t p-3 md:p-4 bg-background">
+            <div class="flex gap-2">
+              <Textarea 
+                bind:value={newComment}
+                placeholder="Add a comment..."
+                class="min-h-[60px] text-sm"
+              />
+              <Button onclick={postComment} size="icon" class="shrink-0">
+                <Send class="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+    
+    <!-- Desktop: Split View -->
+    <div class="hidden lg:grid lg:grid-cols-2 h-full">
+      <!-- Left Panel: Code Viewer -->
+      <div class="flex flex-col border-r overflow-hidden">
+        <!-- Code Header -->
+        <div class="border-b p-2 flex items-center justify-between bg-muted/30">
+          <Tabs bind:value={activeTab}>
+            <TabsList class="h-8">
+              <TabsTrigger value="diff" class="text-xs">Diff View</TabsTrigger>
+              <TabsTrigger value="full" class="text-xs">Full Code</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          <div class="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onclick={explainCode} class="gap-2 h-8 text-xs">
+              <Sparkles class="h-3 w-3" />
+              AI Explain
+            </Button>
+          </div>
+        </div>
+        
+        <!-- Code Content -->
+        <div class="flex-1 overflow-auto p-4">
+          <CodeEditor
+            value={review.codeContent}
+            language={review.language}
+            readonly={true}
+            showLineNumbers={true}
+          />
         </div>
       </div>
-      
-      <!-- Code Content -->
-      <div class="flex-1 overflow-auto p-4">
-        <CodeEditor
-          value={review.codeContent}
-          language={review.language}
-          readonly={true}
-          showLineNumbers={true}
-        />
-      </div>
-    </div>
 
-    <!-- Right Panel: Video & Comments -->
-    <div class="flex flex-col overflow-hidden">
-      <!-- Video Player -->
-      <div class="border-b">
-        {#if review.videoUrl}
-          <VideoPlayer
-            src={review.videoUrl}
-            onTimeUpdate={handleTimeUpdate}
-            markers={videoMarkers}
-          />
-        {:else}
-          <div class="aspect-video bg-muted flex items-center justify-center">
+      <!-- Right Panel: Video & Comments -->
+      <div class="flex flex-col overflow-hidden">
+        <!-- Video Player -->
+        <div class="border-b">
+          {#if review.videoUrl}
+            <VideoPlayer
+              src={review.videoUrl}
+              onTimeUpdate={handleTimeUpdate}
+              markers={videoMarkers}
+            />
+          {:else}
+            <div class="aspect-video bg-muted flex items-center justify-center">
             <div class="text-center">
               <VideoIcon class="h-16 w-16 text-muted-foreground mb-2 mx-auto" />
               <p class="text-sm text-muted-foreground">No video available</p>
@@ -366,9 +469,10 @@
           </Button>
         </div>
       </div>
-    </div>
-  </div>
-</div>
+    </div> <!-- End Right Panel -->
+  </div> <!-- End Desktop Grid -->
+  </div> <!-- End Content Area -->
+</div> <!-- End Main Container -->
 
 <P2PShareDialog
   bind:open={showP2PShare}
