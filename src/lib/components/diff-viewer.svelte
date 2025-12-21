@@ -12,9 +12,10 @@
     diff: string;
     filename?: string;
     viewMode?: 'unified' | 'split';
+    onLineClick?: (lineNumber: number) => void;
   }
 
-  let { diff, filename = 'changes.diff', viewMode = $bindable('unified') }: Props = $props();
+  let { diff, filename = 'changes.diff', viewMode = $bindable('unified'), onLineClick }: Props = $props();
 
   interface DiffLine {
     type: 'add' | 'remove' | 'context' | 'header';
@@ -158,7 +159,11 @@
         <div class="font-mono text-xs">
           {#each parsedDiff() as line, i (i)}
             <div class="flex {getLineClass(line.type)}">
-              <div class="w-16 flex-shrink-0 text-center text-muted-foreground/60 border-r px-2 py-1">
+              <button
+                class="w-16 flex-shrink-0 text-center text-muted-foreground/60 border-r px-2 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                onclick={() => onLineClick && line.lineNumber?.new && onLineClick(line.lineNumber.new)}
+                type="button"
+              >
                 {#if line.lineNumber}
                   <span class="inline-block w-8 text-right">
                     {line.lineNumber.old || ''}
@@ -167,7 +172,7 @@
                     {line.lineNumber.new || ''}
                   </span>
                 {/if}
-              </div>
+              </button>
               <div class="flex-1 px-4 py-1 whitespace-pre-wrap break-all">
                 <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
               </div>
@@ -181,9 +186,13 @@
             {#each parsedDiff() as line, i (i)}
               {#if line.type !== 'add'}
                 <div class="flex {getLineClass(line.type)}">
-                  <div class="w-12 flex-shrink-0 text-center text-muted-foreground/60 border-r px-2 py-1">
+                  <button
+                    class="w-12 flex-shrink-0 text-center text-muted-foreground/60 border-r px-2 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                    onclick={() => onLineClick && line.lineNumber?.old && onLineClick(line.lineNumber.old)}
+                    type="button"
+                  >
                     {line.lineNumber?.old || ''}
-                  </div>
+                  </button>
                   <div class="flex-1 px-4 py-1 whitespace-pre-wrap break-all">
                     <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
                   </div>
@@ -198,9 +207,13 @@
             {#each parsedDiff() as line, i (i)}
               {#if line.type !== 'remove'}
                 <div class="flex {getLineClass(line.type)}">
-                  <div class="w-12 flex-shrink-0 text-center text-muted-foreground/60 border-r px-2 py-1">
+                  <button
+                    class="w-12 flex-shrink-0 text-center text-muted-foreground/60 border-r px-2 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                    onclick={() => onLineClick && line.lineNumber?.new && onLineClick(line.lineNumber.new)}
+                    type="button"
+                  >
                     {line.lineNumber?.new || ''}
-                  </div>
+                  </button>
                   <div class="flex-1 px-4 py-1 whitespace-pre-wrap break-all">
                     <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
                   </div>
