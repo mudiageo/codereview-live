@@ -6,15 +6,14 @@
   import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
   import { Slider } from '$lib/components/ui/slider';
   import { toast } from 'svelte-sonner';
+  import { settingsStore } from '$lib/stores/index.svelte';
   
-  let autoCompress = $state(true);
-  let quality = $state('high');
-  let maxSize = $state([100]);
-  let includeAudio = $state(true);
-  let countdown = $state('3');
-  let defaultSpeed = $state('1');
-  let autoplay = $state(false);
+  const settings = $derived(settingsStore.settings);
   let saving = $state(false);
+  
+  function updateSetting(key: keyof typeof settings, value: any) {
+    settingsStore.update({ [key]: value });
+  }
   
   async function handleSave() {
     saving = true;
@@ -44,14 +43,14 @@
           <Label>Auto-compress Videos</Label>
           <p class="text-sm text-muted-foreground">Reduce file size after recording</p>
         </div>
-        <Switch bind:checked={autoCompress} />
+        <Switch checked={settings.autoCompress} onCheckedChange={(checked) => updateSetting('autoCompress', checked)} />
       </div>
       
       <div class="space-y-2">
         <Label>Video Quality</Label>
-        <Select bind:value={quality}>
+        <Select value={settings.videoQuality} onValueChange={(value) => updateSetting('videoQuality', value as 'low' | 'medium' | 'high')}>
           <SelectTrigger>
-            {quality || ""}
+            {settings.videoQuality || ""}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="high">High (best quality)</SelectItem>
@@ -64,8 +63,15 @@
       <div class="space-y-2">
         <Label>Max Video Size</Label>
         <div class="flex items-center gap-4">
-          <Slider bind:value={maxSize} max={500} min={50} step={10} class="flex-1" />
-          <span class="text-sm w-16 text-right">{maxSize[0]} MB</span>
+          <Slider 
+            value={[settings.maxVideoSize]} 
+            onValueChange={(value) => updateSetting('maxVideoSize', value[0])}
+            max={500} 
+            min={50} 
+            step={10} 
+            class="flex-1" 
+          />
+          <span class="text-sm w-16 text-right">{settings.maxVideoSize} MB</span>
         </div>
       </div>
       
@@ -74,14 +80,14 @@
           <Label>Include Audio by Default</Label>
           <p class="text-sm text-muted-foreground">Record system and microphone audio</p>
         </div>
-        <Switch bind:checked={includeAudio} />
+        <Switch checked={settings.includeAudio} onCheckedChange={(checked) => updateSetting('includeAudio', checked)} />
       </div>
       
       <div class="space-y-2">
         <Label>Countdown Duration</Label>
-        <Select bind:value={countdown}>
+        <Select value={settings.countdown.toString()} onValueChange={(value) => updateSetting('countdown', parseInt(value))}>
           <SelectTrigger>
-            {countdown || ""}
+            {settings.countdown.toString() || ""}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="0">No countdown</SelectItem>
@@ -102,9 +108,9 @@
     <CardContent class="space-y-6">
       <div class="space-y-2">
         <Label>Default Playback Speed</Label>
-        <Select bind:value={defaultSpeed}>
+        <Select value={settings.defaultSpeed.toString()} onValueChange={(value) => updateSetting('defaultSpeed', parseFloat(value))}>
           <SelectTrigger>
-            {defaultSpeed || ""}
+            {settings.defaultSpeed.toString() || ""}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="0.5">0.5x</SelectItem>
@@ -120,7 +126,7 @@
           <Label>Auto-play Next Review</Label>
           <p class="text-sm text-muted-foreground">Automatically play next review in queue</p>
         </div>
-        <Switch bind:checked={autoplay} />
+        <Switch checked={settings.autoplay} onCheckedChange={(checked) => updateSetting('autoplay', checked)} />
       </div>
 
       <Button onclick={handleSave} disabled={saving}>

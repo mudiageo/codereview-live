@@ -10,13 +10,15 @@ const protectedRoutes = [
   '/reviews',
   '/team',
   '/settings',
+  '/onboarding',
 ];
 
 const authRoutes = ['/login', '/signup'];
 
 export const handle: Handle = async ({ event, resolve }) => {
   // Rate limiting
-  if (await rateLimit(event)) {
+  const ip = building ? '' : event.getClientAddress();
+  if (await rateLimit(ip)) {
     return new Response('Too many requests', { status: 429 });
   }
 
@@ -49,7 +51,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     !session?.user &&
     protectedRoutes.some((route) => pathname.startsWith(route))
   ) {
-    // redirect(303, `/login?redirect=${pathname}`);
+    if(!building) redirect(303, `/login?redirect=${pathname}`);
   }
 
   // Add security headers
@@ -57,7 +59,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     'X-Frame-Options': 'DENY',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Permissions-Policy': 'camera=(self), microphone=(self), fullscreen=(self)',
     ...(process.env.NODE_ENV === 'production' && {
       'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
     })  // CSP for production
