@@ -10,7 +10,7 @@
 	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import { toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
-
+	import { authClient } from '$lib/auth-client';
 	interface ConnectedAccount {
 		id: string;
 		provider: 'github' | 'gitlab' | 'google';
@@ -30,10 +30,8 @@
 
 	async function loadConnectedAccounts() {
 		try {
-			const response = await fetch('/api/oauth/connected');
-			if (response.ok) {
-				connectedAccounts = await response.json();
-			}
+			const { data: accounts } = await authClient.listAccounts();
+			connectedAccounts = accounts;
 		} catch (error) {
 			console.error('Failed to load connected accounts:', error);
 		}
@@ -45,13 +43,10 @@
 
 		try {
 			// Start OAuth flow
-			const response = await fetch(`/api/oauth/authorize?provider=${provider}`);
-			if (response.ok) {
-				const { authUrl } = await response.json();
-				window.location.href = authUrl;
-			} else {
-				toast.error(`Failed to initiate ${provider} connection`);
-			}
+		await authClient.linkSocial({
+			provider,
+		});
+		
 		} catch (error) {
 			toast.error(`Error connecting to ${provider}`);
 			console.error(error);
@@ -85,11 +80,11 @@
 	}
 
 	function isConnected(provider: string) {
-		return connectedAccounts.some((acc) => acc.provider === provider);
+		return connectedAccounts.some((acc) => acc.providerId === provider);
 	}
 
 	function getConnectedAccount(provider: string) {
-		return connectedAccounts.find((acc) => acc.provider === provider);
+		return connectedAccounts.find((acc) => acc.providerId === provider);
 	}
 
 	const providers = [

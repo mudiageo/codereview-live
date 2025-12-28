@@ -38,12 +38,14 @@ export const auth = betterAuth({
 			enabled: !!env.GOOGLE_CLIENT_ID && !!env.GOOGLE_CLIENT_SECRET
 		},
 		github: { 
-      clientId: process.env.GITHUB_CLIENT_ID as string, 
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string, 
+      clientId: env.GITHUB_CLIENT_ID as string, 
+      clientSecret: env.GITHUB_CLIENT_SECRET as string,
+      scope: ["user", "repo", "read:user"]
+            
     },
     gitlab: { 
-      clientId: process.env.GITLAB_CLIENT_ID as string, 
-      clientSecret: process.env.GITLAB_CLIENT_SECRET as string, 
+      clientId: env.GITLAB_CLIENT_ID as string, 
+      clientSecret: env.GITLAB_CLIENT_SECRET as string, 
     }, 
 	},
 	// Email verification configuration
@@ -69,12 +71,12 @@ export const auth = betterAuth({
 	account: {
 		accountLinking: {
 			enabled: true,
-			trustedProviders: ['google']
+			trustedProviders: ['google', 'github']
 		}
 	},
 	// Security settings
 	rateLimit: {
-		enabled: true,
+		enabled: false,
 		window: 60, // 1 minute
 		max: 10 // 10 requests per window
 	},

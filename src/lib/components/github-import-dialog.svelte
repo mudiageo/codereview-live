@@ -14,6 +14,8 @@
   import { GitHubImporter, type Repository, type PullRequest } from '$lib/utils/github-import';
   import { toast } from 'svelte-sonner';
   import { onMount } from 'svelte';
+  import { authClient } from '$lib/auth-client'
+  import { goto } from '$app/navigation'
 
   interface Props {
     open: boolean;
@@ -45,10 +47,12 @@
   async function checkStoredConnection() {
     checkingConnection = true;
     try {
-      const response = await fetch('/api/oauth/connected');
-      if (response.ok) {
-        const accounts = await response.json();
-        const githubAccount = accounts.find((acc: any) => acc.provider === 'github');
+      const { data: accounts } = await authClient.listAccounts();
+      let { data } = await authClient.getAccessToken({ providerId: 'github'});
+      if (accounts) {
+    
+        const githubAccount = accounts.find((acc) => acc.providerId === 'github');
+        githubAccount.accessToken = data.accessToken
         
         if (githubAccount && githubAccount.accessToken) {
           // Use stored token
@@ -207,7 +211,7 @@
 
   function goToSettings() {
     handleClose();
-    window.location.href = '/settings/integrations';
+    goto('/settings/integrations');
   }
 </script>
 

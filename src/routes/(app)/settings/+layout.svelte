@@ -19,6 +19,7 @@
     { name: 'Video', href: '/settings/video', icon: Video },
     { name: 'AI Features', href: '/settings/ai', icon: Sparkles },
     { name: 'Notifications', href: '/settings/notifications', icon: Bell },
+    { name: 'Integrations', href: '/settings/integrations', icon: Bell },
     { name: 'Billing', href: '/settings/billing', icon: CreditCard },
     { name: 'Team', href: '/settings/team', icon: Users },
     { name: 'Security', href: '/settings/security', icon: Shield },

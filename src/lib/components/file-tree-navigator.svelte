@@ -136,14 +136,14 @@
           {#if expandedDirs.has(node.path) && node.children}
             <div class="ml-4">
               {#each node.children as child}
+                {@const icon = getFileIcon(child.name)}
                 <button
                   type="button"
                   class="flex w-full items-center gap-1 rounded px-2 py-1 text-sm hover:bg-accent"
                   class:bg-accent={currentFile === child.path}
                   onclick={() => onFileSelect(child.path)}
                 >
-                  {@const icon = getFileIcon(child.name)}
-                  <svelte:component this={icon.component} class={icon.class} />
+                  <icon.component class={icon.class} />
                   <span class="flex-1 truncate text-left">{child.name}</span>
                   {#if child.additions || child.deletions}
                     <span class="flex gap-1 text-xs">
@@ -161,14 +161,14 @@
           {/if}
         </div>
       {:else}
+          {@const icon = getFileIcon(node.name)}
         <button
           type="button"
           class="flex w-full items-center gap-1 rounded px-2 py-1 text-sm hover:bg-accent"
           class:bg-accent={currentFile === node.path}
           onclick={() => onFileSelect(node.path)}
         >
-          {@const icon = getFileIcon(node.name)}
-          <svelte:component this={icon.component} class={icon.class} />
+          <icon.component class={icon.class} />
           <span class="flex-1 truncate text-left">{node.name}</span>
           {#if node.additions || node.deletions}
             <span class="flex gap-1 text-xs">
