@@ -13,14 +13,19 @@
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from '$lib/components/ui/dropdown-menu';
+  
   import CodeEditor from '$lib/components/code-editor.svelte';
+  import DiffViewer from '$lib/components/diff-viewer.svelte';
+  import FileTreeNavigator from '$lib/components/file-tree-navigator.svelte';
+  import InlineCommentThread from '$lib/components/inline-comment-thread.svelte';
+  import MentionAutocomplete from '$lib/components/mention-autocomplete.svelte';
   import VideoPlayer from '$lib/components/video-player.svelte';
   import P2PShareDialog from '$lib/components/p2p-share-dialog.svelte';
+
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Share2 from '@lucide/svelte/icons/share-2';
   import MoreVertical from '@lucide/svelte/icons/more-vertical';
   import Download from '@lucide/svelte/icons/download';
-  import Upload from '@lucide/svelte/icons/upload';
   import Users from '@lucide/svelte/icons/users';
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import Send from '@lucide/svelte/icons/send';
@@ -28,17 +33,15 @@
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Check from '@lucide/svelte/icons/check';
   import Play from '@lucide/svelte/icons/play';
+
   import { toast } from 'svelte-sonner';
-  import { reviewsStore, commentsStore } from '$lib/stores/index.svelte';
+  import { reviewsStore, commentsStore, teamsStore } from '$lib/stores/index.svelte';
   import { auth } from '$lib/stores/auth.svelte';
   import { ReviewExporter } from '$lib/utils/export-import';
   
   const reviewId = $derived(page.params.id);
-  
-  // Load data from stores
+  const isMobile = $derived(typeof window !== 'undefined' && window.innerWidth < 1024);
 
-  
-  // Get review from store
   const review = $derived(reviewsStore.findById(reviewId) || {
     id: reviewId,
     title: 'Review Not Found',
@@ -51,25 +54,135 @@
     videoDuration: 0,
     codeContent: '',
     language: 'text',
+    files: [],
+    teamId: null
   });
-  
-  // Get comments for this review with threading
+
   const threadedComments = $derived(commentsStore.getThreaded(reviewId));
-  
+  const teamMembers = $derived(review.teamId ? teamsStore.findById(review.teamId)?.members || [] : []);
+
   let currentTime = $state(0);
   let newComment = $state('');
-  let activeTab = $state('diff');
+  let activeTab = $state('diff'); 
   let showP2PShare = $state(false);
+
+  // --- File Tree Integration ---
+  const fileTree = $derived(buildFileTree(review?.files || []));
+  let currentFilePath = $state(fileTree[0]?.path || '');
   
-  // Prepare video markers from comments
+  function buildFileTree(files: any[]) {
+    if (!files || files.length === 0) return [];
+    const tree: any[] = [];
+ 
+    for (const file of files) {
+      tree.push({
+        name: file.filename.split('/').pop() || file.filename,
+        path: file.filename,
+        type: 'file',
+        additions: file.additions || 0,
+        deletions: file.deletions || 0
+      });
+
+    }
+  }
+  
+  function handleFileSelect(filePath: string) {
+    currentFilePath = filePath;
+  }
+  
+  const currentFile = $derived(
+    review?.files?.find((f: any) => f.filename === currentFilePath) || {
+      content: review.codeContent,
+      language: review.language,
+      filename: 'main'
+    }
+  );
+
+  // --- Inline Comments Integration ---
+  let activeCommentLine = $state<number | null>(null);
+
+  function handleLineClick(lineNumber: number, filePath: string) {
+    activeCommentLine = lineNumber;
+  }
+
+  function getCommentsForLine(lineNumber: number) {
+    return commentsStore
+      .findByReview(review.id)
+      .filter(c => c.lineNumber === lineNumber && c.filePath === currentFilePath);
+  }
+
+  async function handleAddInlineComment(content: string, lineNumber: number, parentId?: string) {
+    try {
+      await commentsStore.create({
+        reviewId: review.id,
+        filePath: currentFilePath,
+        lineNumber,
+        content,
+        parentId,
+        authorId: auth.currentUser?.id,
+        authorName: auth.currentUser?.name,
+        createdAt: new Date(),
+        resolved: false
+      });
+      toast.success('Comment added');
+    } catch (e) {
+      toast.error('Failed to add comment');
+    }
+  }
+
+  async function handleResolveThread(lineNumber: number) {
+    const comments = getCommentsForLine(lineNumber);
+    for (const comment of comments) {
+      await commentsStore.toggleResolved(comment.id);
+    }
+    toast.success('Thread resolved');
+  }
+
+  // --- Mentions Integration ---
+  let showMentions = $state(false);
+  let mentionSearch = $state('');
+  let mentionPosition = $state({ top: 0, left: 0 });
+  let textareaRef: HTMLTextAreaElement;
+
+  function handleCommentInput(e: Event) {
+    const input = e.target as HTMLTextAreaElement;
+    newComment = input.value;
+    
+    const cursorPos = input.selectionStart;
+    const textBeforeCursor = input.value.substring(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch) {
+      showMentions = true;
+      mentionSearch = mentionMatch[1];
+      const rect = input.getBoundingClientRect();
+      mentionPosition = {
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX + (mentionMatch.index || 0) * 8 
+      };
+    } else {
+      showMentions = false;
+    }
+  }
+  
+  function handleMentionSelect(member: any) {
+    const cursorPos = textareaRef.selectionStart;
+    const textBefore = newComment.substring(0, cursorPos);
+    const textAfter = newComment.substring(cursorPos);
+    newComment = textBefore.replace(/@\w*$/, `@${member.username} `) + textAfter;
+    showMentions = false;
+    textareaRef.focus();
+  }
+
+  // --- Helpers ---
   const videoMarkers = $derived(
     threadedComments
       .filter(c => c.videoTimestamp)
       .map(c => ({ time: c.videoTimestamp, label: c.authorName || 'User' }))
   );
-  
+
   function getInitials(name: string) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
   }
   
   function formatTime(seconds: number) {
@@ -79,6 +192,7 @@
   }
 
   function formatTimestamp(date: Date) {
+    if (!date) return '';
     const now = new Date();
     const diff = now.getTime() - new Date(date).getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -96,7 +210,6 @@
   
   async function postComment() {
     if (!newComment.trim()) return;
-    
     try {
       await commentsStore.create({
         reviewId: reviewId,
@@ -108,7 +221,6 @@
       toast.success('Comment posted');
       newComment = '';
     } catch (error) {
-      console.log(errorl)
       toast.error('Failed to post comment');
     }
   }
@@ -132,10 +244,12 @@
       }
     );
   }
+
+  function exportReview() { ReviewExporter.export(review); }
+  function shareP2P() { showP2PShare = true; }
 </script>
 
 <div class="flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-8rem)]">
-  <!-- Header -->
   <div class="border-b p-3 md:p-4 space-y-2">
     <div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
@@ -150,22 +264,17 @@
               <AvatarFallback class="text-[10px] md:text-xs">{getInitials(review.author?.name ||'')}</AvatarFallback>
             </Avatar>
             <span class="hidden sm:inline">{review.author?.name}</span>
-            <span class="hidden sm:inline">·</span>
-            <span class="truncate">{review.createdAt}</span>
+            <span class="truncate">{formatTimestamp(review.createdAt)}</span>
           </div>
         </div>
       </div>
       
       <div class="flex items-center gap-1 md:gap-2 shrink-0">
-        <Badge variant="outline" class="badge-published text-xs">
-          {review.status}
-        </Badge>
-        
+        <Badge variant="outline" class="badge-published text-xs">{review.status}</Badge>
         <Button variant="outline" size="sm" class="gap-1 hidden sm:flex text-xs">
           <Share2 class="h-3 w-3 md:h-4 md:w-4" />
           <span class="hidden md:inline">Share</span>
         </Button>
-        
         <DropdownMenu>
           <DropdownMenuTrigger>
             {#snippet child(props)}
@@ -176,15 +285,12 @@
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onclick={exportReview}>
-              <Download class="h-4 w-4 mr-2" />
-              Export Review
+              <Download class="h-4 w-4 mr-2" /> Export Review
             </DropdownMenuItem>
             <DropdownMenuItem onclick={shareP2P}>
-              <Users class="h-4 w-4 mr-2" />
-              Share via P2P
+              <Users class="h-4 w-4 mr-2" /> Share via P2P
             </DropdownMenuItem>
             <DropdownMenuItem>Edit Review</DropdownMenuItem>
-            <DropdownMenuItem>Archive</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem class="text-destructive">Delete</DropdownMenuItem>
           </DropdownMenuContent>
@@ -193,286 +299,200 @@
     </div>
   </div>
 
-  <!-- Content Area - Responsive Layout -->
-  <div class="flex-1 overflow-hidden">
-    <!-- Mobile & Tablet: Tabs -->
-    <div class="lg:hidden h-full">
-      <Tabs bind:value={activeTab} class="h-full flex flex-col">
-        <TabsList class="grid w-full grid-cols-3 shrink-0">
-          <TabsTrigger value="video" class="text-xs md:text-sm">
-            <VideoIcon class="h-3 w-3 md:h-4 md:w-4 mr-1" />
-            Video
-          </TabsTrigger>
-          <TabsTrigger value="code" class="text-xs md:text-sm">
-            <svg class="h-3 w-3 md:h-4 md:w-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-            Code
-          </TabsTrigger>
-          <TabsTrigger value="comments" class="text-xs md:text-sm">
-            <MessageSquare class="h-3 w-3 md:h-4 md:w-4 mr-1" />
-            Comments
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="video" class="flex-1 overflow-auto mt-0">
-          {#if review.videoUrl}
-            <VideoPlayer
-              src={review.videoUrl}
-              onTimeUpdate={handleTimeUpdate}
-              markers={videoMarkers}
-            />
-          {:else}
-            <div class="aspect-video bg-muted flex items-center justify-center">
-              <div class="text-center text-muted-foreground">
-                <VideoIcon class="h-12 w-12 mx-auto mb-2" />
-                <p>No video available</p>
-              </div>
-            </div>
-          {/if}
-        </TabsContent>
-        
-        <TabsContent value="code" class="flex-1 overflow-auto mt-0 p-2 md:p-4">
-          <div class="mb-2 flex items-center justify-between">
-            <Badge variant="outline">{review.language}</Badge>
-            <Button variant="ghost" size="sm" onclick={explainCode} class="gap-1 text-xs">
-              <Sparkles class="h-3 w-3" />
-              AI Explain
-            </Button>
-          </div>
-          <CodeEditor
-            value={review.codeContent}
-            language={review.language}
-            readonly={true}
-            showLineNumbers={true}
-          />
-        </TabsContent>
-        
-        <TabsContent value="comments" class="flex-1 flex flex-col mt-0">
-          <div class="flex-1 overflow-auto p-3 md:p-4 space-y-4">
-            {#if threadedComments.length === 0}
-              <div class="text-center py-8 text-muted-foreground">
-                <MessageSquare class="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No comments yet</p>
-                <p class="text-sm">Be the first to comment!</p>
-              </div>
+  <div class="flex-1 overflow-hidden flex">
+    
+    {#if !isMobile && fileTree.length > 0}
+    <aside class="w-64 border-r overflow-y-auto hidden lg:block bg-background">
+      <FileTreeNavigator
+        files={fileTree}
+        currentFile={currentFilePath}
+        onFileSelect={handleFileSelect}
+      />
+    </aside>
+    {/if}
+
+    <div class="flex-1 flex flex-col min-w-0">
+      
+      <div class="lg:hidden h-full">
+        <Tabs bind:value={activeTab} class="h-full flex flex-col">
+          <TabsList class="grid w-full grid-cols-3 shrink-0">
+            <TabsTrigger value="video" class="text-xs md:text-sm"><VideoIcon class="h-3 w-3 mr-1"/>Video</TabsTrigger>
+            <TabsTrigger value="diff" class="text-xs md:text-sm"><MessageSquare class="h-3 w-3 mr-1"/>Code</TabsTrigger>
+            <TabsTrigger value="comments" class="text-xs md:text-sm"><MessageSquare class="h-3 w-3 mr-1"/>Discuss</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="video" class="flex-1 overflow-auto mt-0">
+            {#if review.videoUrl}
+              <VideoPlayer src={review.videoUrl} onTimeUpdate={handleTimeUpdate} markers={videoMarkers} />
             {:else}
-              {#each threadedComments as comment}
-                <Card class="p-3">
-                  <div class="flex gap-2">
-                    <Avatar class="h-8 w-8 shrink-0">
-                      <AvatarImage src={comment.authorAvatar} />
-                      <AvatarFallback class="text-xs">{getInitials(comment.authorName)}</AvatarFallback>
-                    </Avatar>
-                    <div class="flex-1 min-w-0">
-                      <div class="flex items-start justify-between gap-2 mb-1">
-                        <div class="flex-1 min-w-0">
-                          <span class="font-medium text-sm truncate block">{comment.authorName}</span>
-                          <span class="text-xs text-muted-foreground">{formatTimestamp(comment.createdAt)}</span>
-                        </div>
-                        <Button variant="ghost" size="icon" class="h-6 w-6 shrink-0" onclick={() => toggleResolved(comment.id)}>
-                          <Check class="h-3 w-3 {comment.isResolved ? 'text-green-600' : 'text-muted-foreground'}" />
-                        </Button>
-                      </div>
-                      <p class="text-sm whitespace-pre-wrap break-words">{comment.content}</p>
-                      {#if comment.videoTimestamp}
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          class="mt-2 h-7 text-xs gap-1"
-                          onclick={() => currentTime = comment.videoTimestamp}
-                        >
-                          <Play class="h-3 w-3" />
-                          {formatTime(comment.videoTimestamp)}
-                        </Button>
-                      {/if}
+              <div class="aspect-video bg-muted flex items-center justify-center p-8 text-center text-muted-foreground">
+                <div><VideoIcon class="h-8 w-8 mx-auto mb-2"/>No video available</div>
+              </div>
+            {/if}
+          </TabsContent>
+          
+          <TabsContent value="diff" class="flex-1 overflow-auto mt-0 p-2">
+             <div class="mb-2 flex items-center justify-between">
+                <Badge variant="outline">{currentFile?.language}</Badge>
+                <Button variant="ghost" size="sm" onclick={explainCode} class="gap-1 text-xs"><Sparkles class="h-3 w-3"/> AI Explain</Button>
+             </div>
+             <DiffViewer
+                diff={currentFile?.content || ''}
+                filename={currentFile?.filename || 'code'}
+                onLineClick={() => {}}
+             />
+          </TabsContent>
+          
+          <TabsContent value="comments" class="flex-1 flex flex-col mt-0">
+             <div class="flex-1 overflow-auto p-3 space-y-4">
+               {#each threadedComments as comment}
+                 <Card class="p-3">
+                    <div class="flex gap-2">
+                       <Avatar class="h-8 w-8"><AvatarImage src={comment.authorAvatar} /><AvatarFallback>{getInitials(comment.authorName)}</AvatarFallback></Avatar>
+                       <div class="flex-1">
+                          <div class="flex justify-between">
+                             <span class="font-medium text-sm">{comment.authorName}</span>
+                             <span class="text-xs text-muted-foreground">{formatTimestamp(comment.createdAt)}</span>
+                          </div>
+                          <p class="text-sm">{comment.content}</p>
+                       </div>
                     </div>
-                  </div>
-                </Card>
-              {/each}
+                 </Card>
+               {/each}
+             </div>
+             <div class="border-t p-3 bg-background">
+                <div class="flex gap-2">
+                   <Textarea bind:value={newComment} placeholder="Comment..." class="min-h-[60px] text-sm"/>
+                   <Button onclick={postComment} size="icon"><Send class="h-4 w-4"/></Button>
+                </div>
+             </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <div class="hidden lg:grid lg:grid-cols-2 h-full">
+        <div class="flex flex-col border-r overflow-hidden">
+          <div class="border-b p-2 flex items-center justify-between bg-muted/30">
+            <Tabs bind:value={activeTab}>
+              <TabsList class="h-8">
+                <TabsTrigger value="diff" class="text-xs">Diff View</TabsTrigger>
+                <TabsTrigger value="full" class="text-xs">Full Code</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div class="flex items-center gap-1">
+              <span class="text-xs text-muted-foreground mr-2">{currentFilePath}</span>
+              <Button variant="ghost" size="sm" onclick={explainCode} class="gap-2 h-8 text-xs"><Sparkles class="h-3 w-3"/> AI Explain</Button>
+            </div>
+          </div>
+          
+          <div class="flex-1 overflow-auto relative">
+            {#if activeTab === 'diff'}
+              <DiffViewer
+                diff={currentFile?.content || ''}
+                filename={currentFile?.filename || currentFilePath}
+                onLineClick={(line) => handleLineClick(line, currentFilePath)}
+              />
+              
+              {#if activeCommentLine !== null}
+                <div class="absolute left-10 right-10 z-20 bg-background border rounded-md shadow-lg p-2 animate-in fade-in zoom-in-95" 
+                     style="top: {activeCommentLine * 24 + 40}px">
+                   <div class="flex justify-between items-center mb-2 px-2 border-b pb-1">
+                      <span class="text-xs font-bold flex items-center gap-1"><MessageSquare class="h-3 w-3"/> Line {activeCommentLine}</span>
+                      <Button variant="ghost" size="icon" class="h-5 w-5" onclick={() => activeCommentLine = null}>✕</Button>
+                   </div>
+                   <InlineCommentThread
+                      lineNumber={activeCommentLine}
+                      filePath={currentFilePath}
+                      comments={getCommentsForLine(activeCommentLine)}
+                      resolved={getCommentsForLine(activeCommentLine).some(c => c.resolved)}
+                      onAddComment={(content, parentId) => handleAddInlineComment(content, activeCommentLine!, parentId)}
+                      onResolve={() => handleResolveThread(activeCommentLine!)}
+                    />
+                </div>
+              {/if}
+            {:else}
+              <CodeEditor
+                value={currentFile?.content || ''}
+                language={currentFile?.language || 'text'}
+                readonly={true}
+                showLineNumbers={true}
+              />
+            {/if}
+          </div>
+        </div>
+
+        <div class="flex flex-col overflow-hidden">
+          <div class="border-b">
+            {#if review.videoUrl}
+              <VideoPlayer src={review.videoUrl} onTimeUpdate={handleTimeUpdate} markers={videoMarkers} />
+            {:else}
+              <div class="aspect-video bg-muted flex items-center justify-center">
+                 <div class="text-center text-muted-foreground"><VideoIcon class="h-12 w-12 mx-auto mb-2"/><p>No video available</p></div>
+              </div>
             {/if}
           </div>
           
-          <div class="border-t p-3 md:p-4 bg-background">
-            <div class="flex gap-2">
-              <Textarea 
-                bind:value={newComment}
-                placeholder="Add a comment..."
-                class="min-h-[60px] text-sm"
-              />
-              <Button onclick={postComment} size="icon" class="shrink-0">
-                <Send class="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-    
-    <!-- Desktop: Split View -->
-    <div class="hidden lg:grid lg:grid-cols-2 h-full">
-      <!-- Left Panel: Code Viewer -->
-      <div class="flex flex-col border-r overflow-hidden">
-        <!-- Code Header -->
-        <div class="border-b p-2 flex items-center justify-between bg-muted/30">
-          <Tabs bind:value={activeTab}>
-            <TabsList class="h-8">
-              <TabsTrigger value="diff" class="text-xs">Diff View</TabsTrigger>
-              <TabsTrigger value="full" class="text-xs">Full Code</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          
-          <div class="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onclick={explainCode} class="gap-2 h-8 text-xs">
-              <Sparkles class="h-3 w-3" />
-              AI Explain
-            </Button>
-          </div>
-        </div>
-        
-        <!-- Code Content -->
-        <div class="flex-1 overflow-auto p-4">
-          <CodeEditor
-            value={review.codeContent}
-            language={review.language}
-            readonly={true}
-            showLineNumbers={true}
-          />
-        </div>
-      </div>
-
-      <!-- Right Panel: Video & Comments -->
-      <div class="flex flex-col overflow-hidden">
-        <!-- Video Player -->
-        <div class="border-b">
-          {#if review.videoUrl}
-            <VideoPlayer
-              src={review.videoUrl}
-              onTimeUpdate={handleTimeUpdate}
-              markers={videoMarkers}
-            />
-          {:else}
-            <div class="aspect-video bg-muted flex items-center justify-center">
-            <div class="text-center">
-              <VideoIcon class="h-16 w-16 text-muted-foreground mb-2 mx-auto" />
-              <p class="text-sm text-muted-foreground">No video available</p>
-            </div>
-          </div>
-        {/if}
-      </div>
-      
-      <!-- Comments Section -->
-      <div class="flex-1 overflow-auto p-4 space-y-4">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold flex items-center gap-2">
-            <MessageSquare class="h-4 w-4" />
-            Comments ({threadedComments.length})
-          </h3>
-          <Button size="sm" variant="outline" class="gap-2">
-            <VideoIcon class="h-3 w-3" />
-            Video Reply
-          </Button>
-        </div>
-        
-        {#if threadedComments.length === 0}
-          <Card>
-            <CardContent class="flex flex-col items-center justify-center p-8 text-center">
-              <MessageSquare class="h-8 w-8 text-muted-foreground mb-2" />
-              <p class="text-sm text-muted-foreground">No comments yet</p>
-            </CardContent>
-          </Card>
-        {:else}
-          {#each threadedComments as comment}
-            <Card>
-              <CardContent class="p-4 space-y-3">
-                <!-- Comment Header -->
-                <div class="flex items-start justify-between">
-                  <div class="flex items-center gap-2">
-                    <Avatar class="h-8 w-8">
-                      <AvatarImage src={comment.author?.avatar} />
-                      <AvatarFallback class="text-xs">
-                        {getInitials(comment.author?.name || '')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p class="text-sm font-medium">{comment.author?.name}</p>
-                      <p class="text-xs text-muted-foreground">{comment.timestamp}</p>
-                    </div>
-                  </div>
-                  
-                  {#if comment.videoTimestamp}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      class="gap-1 h-6 text-xs"
-                      onclick={() => seekTo(comment.videoTimestamp)}
-                    >
-                      <Play class="h-3 w-3" />
-                      {formatTime(comment.videoTimestamp)}
-                    </Button>
-                  {/if}
-                </div>
-                
-                <!-- Comment Content -->
-                <p class="text-sm">{comment.content}</p>
-                
-                <!-- Comment Actions -->
-                <div class="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" class="h-7 text-xs">
-                    Reply
-                  </Button>
-                  {#if !comment.isResolved}
-                    <Button variant="ghost" size="sm" class="h-7 text-xs gap-1">
-                      <Check class="h-3 w-3" />
-                      Resolve
-                    </Button>
-                  {/if}
-                </div>
-                
-                <!-- Replies -->
-                {#if comment.replies?.length > 0}
-                  <div class="ml-6 space-y-3 pt-3 border-t">
-                    {#each comment.replies as reply}
-                      <div class="flex items-start gap-2">
-                        <Avatar class="h-6 w-6">
-                          <AvatarImage src={reply.author?.avatar} />
-                          <AvatarFallback class="text-xs">
-                            {getInitials(reply.author?.name || '')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div class="flex-1">
-                          <div class="flex items-center gap-2">
-                            <p class="text-sm font-medium">{reply.author?.name}</p>
-                            <p class="text-xs text-muted-foreground">{reply.timestamp}</p>
-                          </div>
-                          <p class="text-sm mt-1">{reply.content}</p>
+          <div class="flex-1 overflow-auto p-4 space-y-4">
+             <div class="flex items-center justify-between mb-2">
+                <h3 class="font-semibold flex items-center gap-2"><MessageSquare class="h-4 w-4"/> Comments ({threadedComments.length})</h3>
+             </div>
+             
+             {#if threadedComments.length === 0}
+               <div class="text-center text-muted-foreground py-8">No comments yet</div>
+             {:else}
+               {#each threadedComments as comment}
+                 <Card>
+                   <CardContent class="p-4 space-y-3">
+                     <div class="flex justify-between">
+                        <div class="flex items-center gap-2">
+                           <Avatar class="h-8 w-8"><AvatarImage src={comment.authorAvatar} /><AvatarFallback>{getInitials(comment.authorName)}</AvatarFallback></Avatar>
+                           <div>
+                              <p class="text-sm font-medium">{comment.authorName}</p>
+                              <p class="text-xs text-muted-foreground">{formatTimestamp(comment.createdAt)}</p>
+                           </div>
                         </div>
-                      </div>
-                    {/each}
-                  </div>
-                {/if}
-              </CardContent>
-            </Card>
-          {/each}
-        {/if}
-      </div>
-      
-      <!-- New Comment Input -->
-      <div class="border-t p-4">
-        <div class="flex gap-2">
-          <Textarea
-            placeholder="Add a comment..."
-            class="flex-1 resize-none"
-            rows={2}
-            bind:value={newComment}
-          />
-          <Button size="icon" onclick={postComment} disabled={!newComment.trim()}>
-            <Send class="h-4 w-4" />
-          </Button>
+                        <Button variant="ghost" size="icon" class="h-6 w-6" onclick={() => toggleResolve(comment.id)}>
+                           <Check class="h-3 w-3 {comment.isResolved ? 'text-green-600' : 'text-muted-foreground'}" />
+                        </Button>
+                     </div>
+                     <p class="text-sm">{comment.content}</p>
+                     {#if comment.videoTimestamp}
+                       <Button variant="ghost" size="sm" class="h-6 text-xs gap-1" onclick={() => currentTime = comment.videoTimestamp}>
+                          <Play class="h-3 w-3"/> {formatTime(comment.videoTimestamp)}
+                       </Button>
+                     {/if}
+                   </CardContent>
+                 </Card>
+               {/each}
+             {/if}
+          </div>
+          
+          <div class="border-t p-4 relative">
+             <div class="flex gap-2">
+                <Textarea 
+                  bind:this={textareaRef}
+                  bind:value={newComment}
+                  oninput={handleCommentInput}
+                  placeholder="Add a comment... (Type @ to mention)"
+                  class="flex-1 resize-none min-h-[60px]"
+                />
+                <Button size="icon" onclick={postComment} disabled={!newComment.trim()}><Send class="h-4 w-4"/></Button>
+             </div>
+             {#if showMentions}
+                <div style="position: fixed; top: {mentionPosition.top}px; left: {mentionPosition.left}px; z-index: 50;">
+                  <MentionAutocomplete
+                    members={teamMembers}
+                    search={mentionSearch}
+                    onSelect={handleMentionSelect}
+                  />
+                </div>
+             {/if}
+          </div>
         </div>
       </div>
-    </div> <!-- End Right Panel -->
-  </div> <!-- End Desktop Grid -->
-  </div> <!-- End Content Area -->
-</div> <!-- End Main Container -->
+    </div>
+  </div>
+</div>
 
 <P2PShareDialog
   bind:open={showP2PShare}

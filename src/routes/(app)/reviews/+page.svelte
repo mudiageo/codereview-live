@@ -105,7 +105,7 @@
 
   <!-- Reviews Grid -->
   <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-    {#each reviews as review}
+    {#each filteredReviews as review}
       <a href="/reviews/{review.id}" class="group">
         <Card class="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
           <!-- Thumbnail -->
