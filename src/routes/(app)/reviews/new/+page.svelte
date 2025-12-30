@@ -26,13 +26,18 @@
   import GitHubImportDialog from '$lib/components/github-import-dialog.svelte';
   import GitLabImportDialog from '$lib/components/gitlab-import-dialog.svelte';
   import LocalGitBrowser from '$lib/components/git-repo-browser.svelte';
+  import AIAnalysisPanel from '$lib/components/ai-analysis-panel.svelte';
+  import ReviewChecklist from '$lib/components/review-checklist.svelte';
   import { reviewsStore, projectsStore, subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
   import { auth } from '$lib/stores/auth.svelte';
+  import { analyzeCodeAI, checkReviewItemsAI } from '$lib/ai.remote';
+  import { checklistTemplates, getTemplate } from '$lib/config/checklist-templates';
   import { hasFeatureAccess, getLimit, isWithinLimit } from '$lib/config';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { toast } from 'svelte-sonner';
   import { page } from '$app/state';
+  import type { CodeAnalysis } from '$lib/server/ai';
 
   let step = $state(1);
   let title = $state('');
@@ -54,6 +59,14 @@
   let showGitHubImport = $state(false);
   let showGitLabImport = $state(false);
   let showLocalGitBrowser = $state(false);
+  let analysis = $state<CodeAnalysis | null>(null);
+  let analysisLoading = $state(false);
+  let recordingEvents = $state<{type: string, time: number, scrollTop: number}[]>([]);
+  let recordingStartTime = $state(0);
+  let checklistTemplate = $state('general');
+  let checklistItems = $state<Record<string, boolean>>({});
+  let checklistNotes = $state<Record<string, string>>({});
+  let checklistLoading = $state(false);
   
   const userPlan = $derived(auth.currentUser?.plan || 'free');
   const reviewCount = $derived(reviewsStore.count);
@@ -72,30 +85,74 @@
     'rust', 'php', 'ruby', 'c', 'cpp', 'csharp', 'html', 'css'
   ];
   
-  async function generateAISummary() {
+  async function runAIAnalysis() {
     if (!hasAI) {
       showPaywall = true;
       return;
     }
     
-    loading = true;
+    if (!code) {
+      toast.error('Please add some code first');
+      return;
+    }
+
+    analysisLoading = true;
     try {
-      // TODO: Call Gemini API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      aiSummary = 'This code implements JWT-based authentication for the API endpoints. Key changes include adding token generation, validation middleware, and secure session management.';
-      
-      // Track AI usage
-      await aiUsageStore.create({
-        userId: auth.currentUser?.id,
-        reviewId: null,
-        feature: 'summary',
-        tokensUsed: 150,
-        success: true
+      analysis = await analyzeCodeAI({
+        code,
+        language,
+        reviewId: reviewId || undefined
       });
-    } catch (error) {
-      toast.error('Failed to generate AI summary');
+      
+      if (analysis) {
+        aiSummary = analysis.summary;
+        // Auto-save summary if we have a draft
+        if (reviewId) {
+          await reviewsStore.update(reviewId, { aiSummary });
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to analyze code');
     } finally {
-      loading = false;
+      analysisLoading = false;
+    }
+  }
+
+  async function handleAutoCheck() {
+    if (!hasAI) {
+      showPaywall = true;
+      return;
+    }
+
+    if (!code) {
+      toast.error('Please add some code first');
+      return;
+    }
+
+    checklistLoading = true;
+    try {
+      const template = getTemplate(checklistTemplate);
+      if (!template) return;
+
+      const result = await checkReviewItemsAI({
+        code,
+        language,
+        reviewId: reviewId || undefined,
+        checklistItems: template.items
+      });
+
+      const newChecked: Record<string, boolean> = { ...checklistItems };
+      result.checkedItems.forEach(id => {
+        newChecked[id] = true;
+      });
+      checklistItems = newChecked;
+      checklistNotes = result.notes;
+
+      toast.success(`AI verified ${result.checkedItems.length} items`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to check items');
+    } finally {
+      checklistLoading = false;
     }
   }
   
@@ -124,6 +181,23 @@
     description = `Imported from commit: ${data.commitHash}`;
     showLocalGitBrowser = false;
     toast.success('Git commit imported successfully');
+  }
+
+  function handleRecordingStart() {
+    isRecording = true;
+    recordingStartTime = Date.now();
+    recordingEvents = [];
+  }
+
+  function handleEditorScroll(e: Event) {
+    if (isRecording) {
+      const target = e.target as HTMLElement;
+      recordingEvents.push({
+        type: 'scroll',
+        time: Date.now() - recordingStartTime,
+        scrollTop: target.scrollTop
+      });
+    }
   }
   
   async function handleDiffFileUpload(event: Event) {
@@ -182,7 +256,7 @@
           isPublic: false,
           status: 'draft',
           aiSummary,
-          metadata: null,
+          metadata: { recordingEvents },
         });
         reviewId = draft.id;
       } else {
@@ -193,6 +267,7 @@
           codeContent: code,
           codeLanguage: language,
           aiSummary,
+          metadata: { recordingEvents },
         });
       }
       toast.success('Draft saved');
@@ -217,6 +292,7 @@
           codeContent: code,
           codeLanguage: language,
           aiSummary,
+          metadata: { recordingEvents },
         });
       } else {
         // Create new published review
@@ -235,7 +311,7 @@
           isPublic: false,
           status: 'published',
           aiSummary,
-          metadata: null,
+          metadata: { recordingEvents },
         });
       }
       
@@ -372,6 +448,7 @@
               language={language}
               readonly={false}
               showLineNumbers={true}
+              onscroll={handleEditorScroll}
             />
           </TabsContent>
 
@@ -477,7 +554,9 @@
                   onRecordingComplete={(blob, thumb) => {
                     videoBlob = blob;
                     thumbnail = thumb;
+                    isRecording = false;
                   }}
+                  onStart={handleRecordingStart}
                   maxDuration={600}
                   quality="high"
                 />
@@ -520,41 +599,20 @@
 
       <!-- AI Panel -->
       <div class="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle class="flex items-center gap-2">
-              <Sparkles class="h-5 w-5 text-primary" />
-              AI Features
-            </CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-3">
-            <Button
-              variant="outline"
-              class="w-full justify-start"
-              onclick={generateAISummary}
-              disabled={loading || !code}
-            >
-              {loading ? 'Generating...' : 'Generate Summary'}
-            </Button>
+        <AIAnalysisPanel
+          {analysis}
+          loading={analysisLoading}
+          onAnalyze={runAIAnalysis}
+          code={code}
+        />
 
-            {#if aiSummary}
-              <div class="rounded-lg bg-muted p-3 text-sm">
-                <p class="font-medium mb-1">AI Summary:</p>
-                <p class="text-muted-foreground">{aiSummary}</p>
-              </div>
-            {/if}
-
-            <Button variant="outline" class="w-full justify-start" disabled={!code}>
-              Explain Code
-            </Button>
-            <Button variant="outline" class="w-full justify-start" disabled={!code}>
-              Detect Code Smells
-            </Button>
-            <Button variant="outline" class="w-full justify-start" disabled={!code}>
-              Suggest Improvements
-            </Button>
-          </CardContent>
-        </Card>
+        <ReviewChecklist
+          bind:selectedTemplate={checklistTemplate}
+          bind:checkedItems={checklistItems}
+          aiNotes={checklistNotes}
+          loading={checklistLoading}
+          onAutoCheck={handleAutoCheck}
+        />
       </div>
     </div>
   {/if}

@@ -121,6 +121,34 @@
           </ul>
         </AccordionContent>
       </AccordionItem>
+
+      <AccordionItem value="ai-assistant">
+        <AccordionTrigger>How do I use the AI Assistant?</AccordionTrigger>
+        <AccordionContent>
+          <p class="text-sm">Our AI Code Review Assistant helps you find bugs and improve code quality:</p>
+          <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+            <li>Paste your code in the review editor</li>
+            <li>The AI panel will appear on the right (or bottom on mobile)</li>
+            <li>Click <strong>"Analyze Code"</strong> to get a full report</li>
+            <li>Review bugs, security issues, and suggestions</li>
+            <li>Use the <strong>Smart Checklist</strong> to auto-verify common requirements</li>
+          </ul>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="voice-nav">
+        <AccordionTrigger>What is Voice-Over Code Navigation?</AccordionTrigger>
+        <AccordionContent>
+          <p class="text-sm">We sync your voice with your code navigation:</p>
+          <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+            <li>Start recording your review</li>
+            <li>Scroll through the code as you explain it</li>
+            <li>We record your scroll position automatically</li>
+            <li>When viewers watch your video, the code editor scrolls automatically to match your explanation!</li>
+            <li>No more saying "if you look at line 50..." - just go there!</li>
+          </ul>
+        </AccordionContent>
+      </AccordionItem>
     </Accordion>
   </section>
   

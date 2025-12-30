@@ -20,12 +20,14 @@
 
   interface Props {
     onRecordingComplete?: (blob: Blob, thumbnail: string) => void;
+    onStart?: () => void;
     maxDuration?: number;
     quality?: 'low' | 'medium' | 'high';
   }
   
   let {
     onRecordingComplete,
+    onStart,
     maxDuration = 600,
     quality = 'high'
   }: Props = $props();
@@ -247,6 +249,7 @@
       mediaRecorder.start(1000);
       isRecording = true;
       recordingTime = 0;
+      onStart?.();
       
       recordingInterval = window.setInterval(() => {
         recordingTime++;
