@@ -32,6 +32,7 @@ export interface UploadOptions {
   filename: string;
   contentType: string;
   folder?: string;
+  provider?: 'local' | 'cloud' | 'r2' | 's3';
 }
 
 export interface UploadResult {
@@ -41,17 +42,32 @@ export interface UploadResult {
 }
 
 export async function uploadFile(options: UploadOptions): Promise<UploadResult> {
-  const { file, filename, contentType, folder = 'videos' } = options;
+  const { file, filename, contentType, folder = 'videos', provider } = options;
   const key = `${folder}/${Date.now()}-${filename}`;
 
-  if (config.storage.provider === 'local') {
+  // Resolve provider: explicit override > config > default error
+  // Map 'cloud' to configured cloud provider (r2 or s3)
+  let targetProvider = provider || config.storage.provider;
+
+  if (targetProvider === 'cloud') {
+    // If generic 'cloud' requested, use configured cloud provider or fallback to r2 if local is configured
+    if (config.storage.provider === 'local') {
+       // Ideally should be configured, but for hybrid we might want to default to r2/s3 if credentials exist
+       // For now, assume r2 if not specified
+       targetProvider = 'r2';
+    } else {
+       targetProvider = config.storage.provider;
+    }
+  }
+
+  if (targetProvider === 'local') {
     return await uploadToLocal(file, key, contentType);
-  } else if (config.storage.provider === 'r2') {
+  } else if (targetProvider === 'r2') {
     return await uploadToR2(file, key, contentType);
-  } else if (config.storage.provider === 's3') {
+  } else if (targetProvider === 's3') {
     return await uploadToS3(file, key, contentType);
   } else {
-    throw new Error(`Unsupported storage provider: ${config.storage.provider}`);
+    throw new Error(`Unsupported storage provider: ${targetProvider}`);
   }
 }
 

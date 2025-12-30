@@ -4,15 +4,21 @@
   import { Input } from '$lib/components/ui/input';
   import { Textarea } from '$lib/components/ui/textarea';
   import { Label } from '$lib/components/ui/label';
+  import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+  import { toast } from 'svelte-sonner';
   import Play from '@lucide/svelte/icons/play';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import Save from '@lucide/svelte/icons/save';
+  import UploadCloud from '@lucide/svelte/icons/upload-cloud';
   import X from '@lucide/svelte/icons/x';
+  import { uploadVideo } from '$lib/video.remote';
+  import { settingsStore } from '$lib/stores/index.svelte';
 
   interface Props {
     open: boolean;
     videoUrl: string;
-    onSave: (metadata: VideoMetadata) => void;
+    reviewId: string;
+    onSave: (metadata: VideoMetadata & { videoUrl: string; thumbnailUrl: string; metadata: any }) => void;
     onReRecord: () => void;
     onDiscard: () => void;
   }
@@ -24,7 +30,7 @@
     trimEnd: number;
   }
 
-  let { open = $bindable(), videoUrl, onSave, onReRecord, onDiscard }: Props = $props();
+  let { open = $bindable(), videoUrl, reviewId, onSave, onReRecord, onDiscard }: Props = $props();
 
   let videoElement: HTMLVideoElement;
   let title = $state('');
@@ -32,6 +38,8 @@
   let trimStart = $state(0);
   let trimEnd = $state(0);
   let videoDuration = $state(0);
+  let storageProvider = $state<'local' | 'cloud'>(settingsStore.settings.storageProvider || 'local');
+  let isUploading = $state(false);
 
   function handleVideoLoad() {
     if (videoElement) {
@@ -40,14 +48,44 @@
     }
   }
 
-  function handleSave() {
-    onSave({
-      title,
-      description,
-      trimStart,
-      trimEnd
-    });
-    open = false;
+  async function handleSave() {
+    if (!reviewId) {
+      toast.error('Cannot save video without a review ID');
+      return;
+    }
+
+    isUploading = true;
+    try {
+      // Fetch blob from URL
+      const response = await fetch(videoUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'recording.webm', { type: 'video/webm' });
+
+      const result = await uploadVideo({
+        video: file,
+        reviewId,
+        storageProvider
+      });
+
+      if (result.success && result.videoUrl) {
+        onSave({
+          title,
+          description,
+          trimStart,
+          trimEnd,
+          videoUrl: result.videoUrl,
+          thumbnailUrl: result.thumbnailUrl || '',
+          metadata: result.metadata
+        });
+        toast.success('Video uploaded successfully');
+        open = false;
+      }
+    } catch (error: any) {
+      console.error('Upload failed:', error);
+      toast.error(error.message || 'Failed to upload video');
+    } finally {
+      isUploading = false;
+    }
   }
 
   function handleReRecord() {
@@ -133,21 +171,45 @@
             </p>
           </div>
         {/if}
+
+        <!-- Storage Selection -->
+        <div class="space-y-2">
+          <Label>Storage Location</Label>
+          <Select type="single" bind:value={storageProvider}>
+            <SelectTrigger>
+              {storageProvider === 'local' ? 'Local Storage' : 'Cloud Storage'}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="local">Local Storage</SelectItem>
+              <SelectItem value="cloud">Cloud Storage (S3/R2)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p class="text-xs text-muted-foreground">
+            {storageProvider === 'local'
+              ? 'Video will be stored on your local server disk.'
+              : 'Video will be uploaded to configured cloud storage.'}
+          </p>
+        </div>
       </div>
     </div>
 
     <DialogFooter class="gap-2">
-      <Button variant="outline" onclick={handleDiscard}>
+      <Button variant="outline" onclick={handleDiscard} disabled={isUploading}>
         <X class="mr-2 h-4 w-4" />
         Discard
       </Button>
-      <Button variant="outline" onclick={handleReRecord}>
+      <Button variant="outline" onclick={handleReRecord} disabled={isUploading}>
         <RotateCcw class="mr-2 h-4 w-4" />
         Re-record
       </Button>
-      <Button onclick={handleSave}>
-        <Save class="mr-2 h-4 w-4" />
-        Save Video
+      <Button onclick={handleSave} disabled={isUploading}>
+        {#if isUploading}
+          <UploadCloud class="mr-2 h-4 w-4 animate-bounce" />
+          Uploading...
+        {:else}
+          <Save class="mr-2 h-4 w-4" />
+          Save & Upload
+        {/if}
       </Button>
     </DialogFooter>
   </DialogContent>

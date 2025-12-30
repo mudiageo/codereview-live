@@ -14,8 +14,9 @@ export const uploadVideo = command(
   v.object({
     video: v.custom<File>((val) => val instanceof File, 'Video file is required'),
     reviewId: v.string(),
+    storageProvider: v.optional(v.union([v.literal('local'), v.literal('cloud')])),
   }),
-  async ({ video, reviewId }) => {
+  async ({ video, reviewId, storageProvider }) => {
     const user = await getUser();
 
     // Validate file size
@@ -24,8 +25,9 @@ export const uploadVideo = command(
     }
 
     // Validate file type
-    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-    if (!allowedTypes.includes(video.type)) {
+    // Allow empty type as some browsers don't set it for blobs properly sometimes
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', ''];
+    if (video.type && !allowedTypes.includes(video.type)) {
       throw new Error('Invalid video format. Supported: MP4, WebM, MOV');
     }
 
@@ -54,11 +56,16 @@ export const uploadVideo = command(
       const metadata = await getVideoMetadata(processedPath);
 
       // Upload processed video
+      // Use webm extension since that's what we record
+      const extension = video.name.endsWith('.mp4') ? 'mp4' : 'webm';
+      const contentType = extension === 'mp4' ? 'video/mp4' : 'video/webm';
+
       const videoResult = await uploadFile({
         file: new Blob([await fs.readFile(processedPath)]),
-        filename: `${reviewId}-${Date.now()}.mp4`,
-        contentType: 'video/mp4',
+        filename: `${reviewId}-${Date.now()}.${extension}`,
+        contentType: contentType,
         folder: 'videos',
+        provider: storageProvider,
       });
 
       // Upload thumbnail if generated
@@ -69,6 +76,7 @@ export const uploadVideo = command(
           filename: `${reviewId}-thumb-${Date.now()}.jpg`,
           contentType: 'image/jpeg',
           folder: 'thumbnails',
+          provider: storageProvider,
         });
         thumbnailUrl = thumbnailResult.url;
         await unlink(thumbnail);

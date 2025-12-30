@@ -1,6 +1,6 @@
 /**
  * Review Checklist Templates
- * 
+ *
  * Predefined templates for different types of code reviews
  */
 

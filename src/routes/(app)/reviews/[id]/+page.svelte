@@ -65,6 +65,7 @@
   let newComment = $state('');
   let activeTab = $state('diff'); 
   let showP2PShare = $state(false);
+  let codeEditorRef = $state<ReturnType<typeof CodeEditor>>();
 
   // --- File Tree Integration ---
   const fileTree = $derived(buildFileTree(review?.files || []));
@@ -206,6 +207,19 @@
   
   function handleTimeUpdate(time: number) {
     currentTime = time;
+
+    // Sync code scrolling
+    if (review.metadata?.recordingEvents && codeEditorRef) {
+      const events = review.metadata.recordingEvents as any[];
+      // Find last event before current time
+      const event = events
+        .filter(e => e.time <= time * 1000)
+        .sort((a, b) => b.time - a.time)[0];
+
+      if (event) {
+        codeEditorRef.scrollTo(event.scrollTop);
+      }
+    }
   }
   
   async function postComment() {
@@ -412,6 +426,7 @@
               {/if}
             {:else}
               <CodeEditor
+                bind:this={codeEditorRef}
                 value={currentFile?.content || ''}
                 language={currentFile?.language || 'text'}
                 readonly={true}

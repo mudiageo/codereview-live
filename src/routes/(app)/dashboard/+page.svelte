@@ -51,6 +51,13 @@
       change: `${aiUsageStore.totalTokens} used this month`,
       icon: Sparkles,
       color: 'text-chart-4'
+    },
+    {
+      title: 'Avg. Duration',
+      value: formatDuration(Math.round(reviewsStore.data.reduce((acc, r) => acc + (r.videoDuration || 0), 0) / (reviewsStore.count || 1))),
+      change: 'Per review',
+      icon: Clock,
+      color: 'text-chart-5'
     }
   ]);
   
