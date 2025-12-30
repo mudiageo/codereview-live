@@ -21,11 +21,11 @@ export const auth = betterAuth({
 		enabled: true,
 		requireEmailVerification: true,
 		sendVerificationEmail: async ({ user, url, token }) => {
-      await sendVerificationEmail(user.email, token);
+      void sendVerificationEmail(user.email, token);
     },
     sendResetPassword: async ({ user, url, token }) => {
 			console.log(`Password reset link for ${user.email}: ${url}`);
-      await sendPasswordResetEmail(user.email, token);
+      void sendPasswordResetEmail(user.email, token);
     },
 		minPasswordLength: 8,
 		maxPasswordLength: 128,
@@ -38,12 +38,14 @@ export const auth = betterAuth({
 			enabled: !!env.GOOGLE_CLIENT_ID && !!env.GOOGLE_CLIENT_SECRET
 		},
 		github: { 
-      clientId: process.env.GITHUB_CLIENT_ID as string, 
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string, 
+      clientId: env.GITHUB_CLIENT_ID as string, 
+      clientSecret: env.GITHUB_CLIENT_SECRET as string,
+      scope: ["user", "repo", "read:user"]
+            
     },
     gitlab: { 
-      clientId: process.env.GITLAB_CLIENT_ID as string, 
-      clientSecret: process.env.GITLAB_CLIENT_SECRET as string, 
+      clientId: env.GITLAB_CLIENT_ID as string, 
+      clientSecret: env.GITLAB_CLIENT_SECRET as string, 
     }, 
 	},
 	// Email verification configuration
@@ -69,12 +71,12 @@ export const auth = betterAuth({
 	account: {
 		accountLinking: {
 			enabled: true,
-			trustedProviders: ['google']
+			trustedProviders: ['google', 'github']
 		}
 	},
 	// Security settings
 	rateLimit: {
-		enabled: true,
+		enabled: false,
 		window: 60, // 1 minute
 		max: 10 // 10 requests per window
 	},
@@ -87,7 +89,7 @@ export const auth = betterAuth({
 		}
 	},
 	// User configuration
-  trustedOrigins: [process.env.PUBLIC_APP_URL!],
+  // trustedOrigins: [env.PUBLIC_APP_URL!],
 	user: {
 		additionalFields: {
 			plan: {

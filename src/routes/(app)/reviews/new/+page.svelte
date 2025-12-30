@@ -16,100 +16,248 @@
   import Circle from '@lucide/svelte/icons/circle';
   import Square from '@lucide/svelte/icons/square';
   import Sparkles from '@lucide/svelte/icons/sparkles';
-  
+  import AuthGuard from '$lib/components/auth-guard.svelte';
+  import PaywallDialog from '$lib/components/paywall-dialog.svelte';
+  import LimitReached from '$lib/components/limit-reached.svelte';
+  import UpgradeDialog from '$lib/components/upgrade-dialog.svelte';
+  import CodeEditor from '$lib/components/code-editor.svelte';
+  import MediaRecorder from '$lib/components/media-recorder.svelte';
+  import VideoUploader from '$lib/components/video-uploader.svelte';
+  import GitHubImportDialog from '$lib/components/github-import-dialog.svelte';
+  import GitLabImportDialog from '$lib/components/gitlab-import-dialog.svelte';
+  import LocalGitBrowser from '$lib/components/git-repo-browser.svelte';
+  import { reviewsStore, projectsStore, subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
+  import { auth } from '$lib/stores/auth.svelte';
+  import { hasFeatureAccess, getLimit, isWithinLimit } from '$lib/config';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { toast } from 'svelte-sonner';
+  import { page } from '$app/state';
+
   let step = $state(1);
   let title = $state('');
   let description = $state('');
-  let projectId = $state('');
+  let projectId = $state(page.url.searchParams.get('project') || '');
   let code = $state('');
   let language = $state('javascript');
   let isRecording = $state(false);
   let recordingTime = $state(0);
   let videoBlob = $state<Blob | null>(null);
+  let thumbnail = $state<string>('');
   let aiSummary = $state('');
   let loading = $state(false);
+  let showPaywall = $state(false);
+  let showUpgrade = $state(false);
+  let showLimitReached = $state(false);
+  let videoMethod = $state<'record' | 'upload'>('record');
+  let reviewId = $state<string>('');
+  let showGitHubImport = $state(false);
+  let showGitLabImport = $state(false);
+  let showLocalGitBrowser = $state(false);
   
-  const projects = [
+  const userPlan = $derived(auth.currentUser?.plan || 'free');
+  const reviewCount = $derived(reviewsStore.count);
+  const reviewLimit = $derived(getLimit(userPlan as any, 'localReviews'));
+  const canCreateReview = $derived(isWithinLimit(reviewCount, reviewLimit));
+  const hasAI = $derived(hasFeatureAccess(userPlan as any, 'advancedAI'));
+  
+  const projects = $derived(projectsStore.data || [
     { id: '1', name: 'My Awesome App' },
     { id: '2', name: 'Backend API' },
     { id: '3', name: 'Mobile App' }
-  ];
+  ]);
   
   const languages = [
     'javascript', 'typescript', 'python', 'java', 'go', 
     'rust', 'php', 'ruby', 'c', 'cpp', 'csharp', 'html', 'css'
   ];
   
-  let recordingInterval: number;
-  
-  function startRecording() {
-    isRecording = true;
-    recordingTime = 0;
-    recordingInterval = window.setInterval(() => {
-      recordingTime++;
-    }, 1000);
-    
-    // TODO: Implement actual screen recording
-    console.log('Starting recording...');
-  }
-  
-  function stopRecording() {
-    isRecording = false;
-    clearInterval(recordingInterval);
-    
-    // TODO: Save recorded video
-    console.log('Stopping recording...');
-  }
-  
-  function formatTime(seconds: number) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  
   async function generateAISummary() {
+    if (!hasAI) {
+      showPaywall = true;
+      return;
+    }
+    
     loading = true;
     try {
       // TODO: Call Gemini API
       await new Promise(resolve => setTimeout(resolve, 1500));
       aiSummary = 'This code implements JWT-based authentication for the API endpoints. Key changes include adding token generation, validation middleware, and secure session management.';
+      
+      // Track AI usage
+      await aiUsageStore.create({
+        userId: auth.currentUser?.id,
+        reviewId: null,
+        feature: 'summary',
+        tokensUsed: 150,
+        success: true
+      });
+    } catch (error) {
+      toast.error('Failed to generate AI summary');
     } finally {
       loading = false;
     }
   }
   
+  function handleGitHubImport(data: { title: string; code: string; language: string; prUrl: string }) {
+    title = data.title;
+    code = data.code;
+    language = data.language;
+    description = `Imported from: ${data.prUrl}`;
+    showGitHubImport = false;
+    toast.success('Pull request imported successfully');
+  }
+  
+  function handleGitLabImport(data: { title: string; code: string; language: string; mrUrl: string }) {
+    title = data.title;
+    code = data.code;
+    language = data.language;
+    description = `Imported from: ${data.mrUrl}`;
+    showGitLabImport = false;
+    toast.success('Merge request imported successfully');
+  }
+  
+  function handleLocalGitImport(data: { title: string; code: string; language: string; commitHash: string }) {
+    title = data.title;
+    code = data.code;
+    language = data.language;
+    description = `Imported from commit: ${data.commitHash}`;
+    showLocalGitBrowser = false;
+    toast.success('Git commit imported successfully');
+  }
+  
+  async function handleDiffFileUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    
+    const file = input.files[0];
+    const fileName = file.name;
+    
+    // Check if it's a .diff or .patch file
+    if (!fileName.endsWith('.diff') && !fileName.endsWith('.patch')) {
+      toast.error('Please upload a .diff or .patch file');
+      return;
+    }
+    
+    try {
+      const text = await file.text();
+      // Parse diff file using DiffParser utility
+      const { DiffParser } = await import('$lib/utils/diff-parser');
+      const parsed = DiffParser.parse(text);
+      
+      if (parsed.files && parsed.files.length > 0) {
+        // Use first file's language or auto-detect
+        language = parsed.language || 'javascript';
+        code = parsed.content || text;
+        title = parsed.title || `Imported from ${fileName}`;
+        description = parsed.stats ? `${parsed.stats.additions} additions, ${parsed.stats.deletions} deletions` : '';
+        toast.success('Diff file parsed successfully');
+      } else {
+        // Fallback: use raw content
+        code = text;
+        toast.success('File uploaded successfully');
+      }
+    } catch (error) {
+      toast.error('Failed to parse diff file');
+      console.error(error);
+    }
+  }
+  
   async function saveDraft() {
-    // TODO: Save to local storage
-    console.log('Saving draft...');
+    try {
+      if (!reviewId) {
+        // Create a new draft review
+        const draft = await reviewsStore.create({
+          title: title || 'Untitled Review',
+          description,
+          projectId,
+          authorId: auth.currentUser?.id || '',
+          codeContent: code,
+          codeLanguage: language,
+          videoUrl: null,
+          videoSize: null,
+          videoDuration: null,
+          thumbnailUrl: null,
+          shareToken: crypto.randomUUID(),
+          isPublic: false,
+          status: 'draft',
+          aiSummary,
+          metadata: null,
+        });
+        reviewId = draft.id;
+      } else {
+        // Update existing draft
+        await reviewsStore.update(reviewId, {
+          title,
+          description,
+          codeContent: code,
+          codeLanguage: language,
+          aiSummary,
+        });
+      }
+      toast.success('Draft saved');
+    } catch (error) {
+      toast.error('Failed to save draft');
+    }
   }
   
   async function publishReview() {
-    // TODO: Publish review
-    console.log('Publishing review...');
-    window.location.href = '/reviews';
-  }
-  import AuthGuard from '$lib/components/auth-guard.svelte';
-  import PaywallDialog from '$lib/components/paywall-dialog.svelte';
-  import { page } from '$app/state';
-  
-  let showPaywall = $state(false);
-  
-  const user = $derived(page.data.user);
-  const canCreateReview = $derived(() => {
-    // Check if user has reached their review limit
-    return user.plan !== 'free' || user.reviewCount < 10;
-  });
-  
-  function handleCreateAttempt() {
-    if (!canCreateReview()) {
-      showPaywall = true;
-    } else {
-      // Proceed with creation
+    if (!canCreateReview) {
+      showLimitReached = true;
+      return;
+    }
+    
+    try {
+      if (reviewId) {
+        // Update existing draft to published
+        await reviewsStore.update(reviewId, {
+          status: 'published',
+          title,
+          description,
+          codeContent: code,
+          codeLanguage: language,
+          aiSummary,
+        });
+      } else {
+        // Create new published review
+        await reviewsStore.create({
+          title,
+          description,
+          projectId,
+          authorId: auth.currentUser?.id || '',
+          codeContent: code,
+          codeLanguage: language,
+          videoUrl: null,
+          videoSize: null,
+          videoDuration: null,
+          thumbnailUrl: null,
+          shareToken: crypto.randomUUID(),
+          isPublic: false,
+          status: 'published',
+          aiSummary,
+          metadata: null,
+        });
+      }
+      
+      toast.success('Review published!');
+      goto('/reviews');
+    } catch (error) {
+      toast.error('Failed to publish review');
     }
   }
 </script>
 
 <AuthGuard requireAuth requirePlan="free">
+{#if !canCreateReview}
+  <div class="max-w-4xl mx-auto space-y-6 py-8">
+    <LimitReached 
+      type="cloud-reviews" 
+      current={reviewCount} 
+      limit={reviewLimit}
+      onUpgrade={() => showUpgrade = true}
+    />
+  </div>
+{:else}
 <div class="max-w-4xl mx-auto space-y-6">
   <!-- Header -->
   <div class="flex items-center gap-4">
@@ -147,7 +295,7 @@
             required
           />
         </div>
-        
+
         <div class="space-y-2">
           <Label for="description">Description (optional)</Label>
           <Textarea
@@ -157,12 +305,12 @@
             bind:value={description}
           />
         </div>
-        
+
         <div class="space-y-2">
           <Label for="project">Project</Label>
-          <Select bind:value={projectId}>
+          <Select type="single" bind:value={projectId}>
             <SelectTrigger>
-              {projectId || "Select project"}
+              {projects.find(p => p.id === projectId)?.name || "Select project"}
             </SelectTrigger>
             <SelectContent>
               {#each projects as project}
@@ -171,7 +319,7 @@
             </SelectContent>
           </Select>
         </div>
-        
+
         <div class="flex justify-end gap-2 pt-4">
           <Button variant="outline" onclick={saveDraft}>
             <Save class="h-4 w-4 mr-2" />
@@ -194,13 +342,14 @@
       </CardHeader>
       <CardContent>
         <Tabs value="paste" class="w-full">
-          <TabsList class="grid w-full grid-cols-4">
+          <TabsList class="grid w-full grid-cols-5">
             <TabsTrigger value="paste">Paste</TabsTrigger>
             <TabsTrigger value="upload">Upload</TabsTrigger>
             <TabsTrigger value="github">GitHub</TabsTrigger>
+            <TabsTrigger value="gitlab">GitLab</TabsTrigger>
             <TabsTrigger value="git">Local Git</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="paste" class="space-y-4">
             <div class="space-y-2">
               <Label>Language</Label>
@@ -217,31 +366,44 @@
                 </SelectContent>
               </Select>
             </div>
-            
-            <Textarea
-              placeholder="Paste your code here..."
-              rows={15}
-              class="font-mono text-sm"
+
+            <CodeEditor
               bind:value={code}
+              language={language}
+              readonly={false}
+              showLineNumbers={true}
             />
           </TabsContent>
-          
+
           <TabsContent value="upload" class="space-y-4">
-            <div class="border-2 border-dashed rounded-lg p-12 text-center hover:border-primary/50 transition-colors cursor-pointer">
+            <div class="border-2 border-dashed rounded-lg p-12 text-center hover:border-primary/50 transition-colors">
               <Upload class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <p class="text-sm text-muted-foreground mb-2">
                 Drag & drop files or click to browse
               </p>
-              <Button variant="outline" size="sm">Choose Files</Button>
+              <input
+                type="file"
+                id="file-upload"
+                class="hidden"
+                accept=".js,.ts,.py,.diff,.patch,.java,.go,.rs,.rb,.php,.c,.cpp,.cs,.html,.css"
+                onchange={handleDiffFileUpload}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onclick={() => document.getElementById('file-upload')?.click()}
+              >
+                Choose Files
+              </Button>
               <p class="text-xs text-muted-foreground mt-2">
                 Supports .js, .ts, .py, .diff, .patch and more
               </p>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="github">
             <div class="space-y-4">
-              <Button variant="outline" class="w-full gap-2">
+              <Button variant="outline" class="w-full gap-2" onclick={() => showGitHubImport = true}>
                 <Github class="h-4 w-4" />
                 Connect GitHub
               </Button>
@@ -250,20 +412,32 @@
               </p>
             </div>
           </TabsContent>
-          
+
+          <TabsContent value="gitlab">
+            <div class="space-y-4">
+              <Button variant="outline" class="w-full gap-2" onclick={() => showGitLabImport = true}>
+                <FolderGit2 class="h-4 w-4" />
+                Connect GitLab
+              </Button>
+              <p class="text-sm text-muted-foreground text-center">
+                Connect your GitLab account to import merge requests
+              </p>
+            </div>
+          </TabsContent>
+
           <TabsContent value="git">
             <div class="space-y-4">
-              <Button variant="outline" class="w-full gap-2">
+              <Button variant="outline" class="w-full gap-2" onclick={() => showLocalGitBrowser = true}>
                 <FolderGit2 class="h-4 w-4" />
                 Browse Local Repository
               </Button>
               <p class="text-sm text-muted-foreground text-center">
-                Select a local git repository to import changes
+                Select a local git repository to import changes (Chrome/Edge only)
               </p>
             </div>
           </TabsContent>
         </Tabs>
-        
+
         <div class="flex justify-between gap-2 pt-4">
           <Button variant="ghost" onclick={() => step = 1}>
             Back
@@ -283,64 +457,49 @@
   {/if}
 
   {#if step === 3}
-    <!-- Step 3: Record Video -->
+    <!-- Step 3: Add Video -->
     <div class="grid gap-4 lg:grid-cols-3">
       <div class="lg:col-span-2">
         <Card>
           <CardHeader>
             <CardTitle>Video Walkthrough</CardTitle>
-            <CardDescription>Record yourself explaining the changes</CardDescription>
+            <CardDescription>Record or upload a video explaining the changes</CardDescription>
           </CardHeader>
           <CardContent class="space-y-4">
-            <!-- Recording Area -->
-            <div class="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center">
-              {#if !isRecording && !videoBlob}
-                <div class="text-center">
-                  <VideoIcon class="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p class="text-sm text-muted-foreground mb-4">
-                    Click the button below to start recording
-                  </p>
-                </div>
-              {:else if isRecording}
-                <div class="text-center">
-                  <div class="relative mb-4">
-                    <Circle class="h-16 w-16 text-video-recording animate-pulse" />
-                    <div class="absolute inset-0 flex items-center justify-center">
-                      <div class="h-8 w-8 rounded-full bg-video-recording"></div>
-                    </div>
+            <Tabs bind:value={videoMethod} class="w-full">
+              <TabsList class="grid w-full grid-cols-2">
+                <TabsTrigger value="record">Record</TabsTrigger>
+                <TabsTrigger value="upload">Upload</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="record" class="space-y-4">
+                <MediaRecorder
+                  onRecordingComplete={(blob, thumb) => {
+                    videoBlob = blob;
+                    thumbnail = thumb;
+                  }}
+                  maxDuration={600}
+                  quality="high"
+                />
+              </TabsContent>
+
+              <TabsContent value="upload" class="space-y-4">
+                {#if reviewId}
+                  <VideoUploader
+                    reviewId={reviewId}
+                    onUploadComplete={(result) => {
+                      toast.success('Video uploaded successfully!');
+                      // You can handle the uploaded video URL here if needed
+                    }}
+                  />
+                {:else}
+                  <div class="text-center py-8 text-muted-foreground">
+                    <p>Save draft first to enable video upload</p>
                   </div>
-                  <p class="text-2xl font-mono font-bold mb-2">{formatTime(recordingTime)}</p>
-                  <Badge variant="destructive" class="animate-pulse">Recording</Badge>
-                </div>
-              {:else}
-                <div class="text-center">
-                  <VideoIcon class="h-12 w-12 mx-auto text-primary mb-4" />
-                  <p class="text-sm text-muted-foreground">
-                    Recording complete! Preview or re-record.
-                  </p>
-                </div>
-              {/if}
-            </div>
-            
-            <!-- Recording Controls -->
-            <div class="flex items-center justify-center gap-2">
-              {#if !isRecording && !videoBlob}
-                <Button onclick={startRecording} size="lg" class="gap-2">
-                  <Circle class="h-5 w-5" />
-                  Start Recording
-                </Button>
-              {:else if isRecording}
-                <Button onclick={stopRecording} size="lg" variant="destructive" class="gap-2">
-                  <Square class="h-5 w-5" />
-                  Stop Recording
-                </Button>
-              {:else}
-                <Button variant="outline" onclick={() => videoBlob = null}>
-                  Re-record
-                </Button>
-              {/if}
-            </div>
-            
+                {/if}
+              </TabsContent>
+            </Tabs>
+
             <div class="flex justify-between gap-2 pt-4">
               <Button variant="ghost" onclick={() => step = 2}>
                 Back
@@ -350,7 +509,7 @@
                   <Save class="h-4 w-4 mr-2" />
                   Save Draft
                 </Button>
-                <Button onclick={publishReview} disabled={!videoBlob}>
+                <Button onclick={publishReview} disabled={!videoBlob && videoMethod === 'record'}>
                   Publish Review
                 </Button>
               </div>
@@ -358,7 +517,7 @@
           </CardContent>
         </Card>
       </div>
-      
+
       <!-- AI Panel -->
       <div class="space-y-4">
         <Card>
@@ -377,14 +536,14 @@
             >
               {loading ? 'Generating...' : 'Generate Summary'}
             </Button>
-            
+
             {#if aiSummary}
               <div class="rounded-lg bg-muted p-3 text-sm">
                 <p class="font-medium mb-1">AI Summary:</p>
                 <p class="text-muted-foreground">{aiSummary}</p>
               </div>
             {/if}
-            
+
             <Button variant="outline" class="w-full justify-start" disabled={!code}>
               Explain Code
             </Button>
@@ -400,10 +559,32 @@
     </div>
   {/if}
 </div>
+{/if}
 </AuthGuard>
 
 <PaywallDialog
   bind:open={showPaywall}
-  feature="Unlimited Reviews"
+  feature="Advanced AI Features"
   requiredPlan="pro"
+  onUpgrade={() => showUpgrade = true}
+/>
+
+<UpgradeDialog bind:open={showUpgrade} currentPlan={userPlan as any} />
+
+<GitHubImportDialog
+  bind:open={showGitHubImport}
+  onClose={() => showGitHubImport = false}
+  onImport={handleGitHubImport}
+/>
+
+<GitLabImportDialog
+  bind:open={showGitLabImport}
+  onClose={() => showGitLabImport = false}
+  onImport={handleGitLabImport}
+/>
+
+<LocalGitBrowser
+  bind:open={showLocalGitBrowser}
+  onClose={() => showLocalGitBrowser = false}
+  onImport={handleLocalGitImport}
 />

@@ -18,49 +18,29 @@
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Eye from '@lucide/svelte/icons/eye';
   import Clock from '@lucide/svelte/icons/clock';
+  import { reviewsStore } from '$lib/stores/index.svelte';
+  import { SearchEngine } from '$lib/utils/search';
+  import VirtualList from '$lib/components/virtual-list.svelte';
   
   let searchQuery = $state('');
   let statusFilter = $state('all');
   let sortBy = $state('recent');
   
-  const reviews = [
-    {
-      id: '1',
-      title: 'Add JWT Authentication to API',
-      author: { name: 'John Doe', avatar: '' },
-      project: 'My Awesome App',
-      status: 'published',
-      commentCount: 5,
-      viewCount: 12,
-      duration: '4:32',
-      thumbnail: '',
-      createdAt: '2 hours ago'
-    },
-    {
-      id: '2',
-      title: 'Refactor User Dashboard Component',
-      author: { name: 'Jane Smith', avatar: '' },
-      project: 'Frontend',
-      status: 'published',
-      commentCount: 8,
-      viewCount: 24,
-      duration: '6:15',
-      thumbnail: '',
-      createdAt: '5 hours ago'
-    },
-    {
-      id: '3',
-      title: 'Fix Payment Processing Bug',
-      author: { name: 'Mike Johnson', avatar: '' },
-      project: 'Backend API',
-      status: 'draft',
-      commentCount: 2,
-      viewCount: 5,
-      duration: '3:48',
-      thumbnail: '',
-      createdAt: '1 day ago'
+  const allReviews = $derived(reviewsStore.data || []);
+  
+  const filteredReviews = $derived.by(() => {
+    let results = searchQuery 
+      ? SearchEngine.searchReviews(allReviews, searchQuery).map(r => r.item) || []
+      : allReviews;
+    if (statusFilter !== 'all') {
+      results = results.filter(r => r.status === statusFilter);
     }
-  ];
+    
+    return results;
+  });
+  
+  
+  const shouldUseVirtualList = $derived(filteredReviews().length > 50);
   
   function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -110,7 +90,7 @@
       </TabsList>
     </Tabs>
     
-    <Select bind:value={sortBy}>
+    <Select type="single" bind:value={sortBy}>
       <SelectTrigger class="w-[180px]">
         {sortBy || "Sort by"}
       </SelectTrigger>
@@ -125,7 +105,7 @@
 
   <!-- Reviews Grid -->
   <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-    {#each reviews as review}
+    {#each filteredReviews as review}
       <a href="/reviews/{review.id}" class="group">
         <Card class="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
           <!-- Thumbnail -->
@@ -151,12 +131,12 @@
             
             <div class="flex items-center space-x-2 text-sm text-muted-foreground">
               <Avatar class="h-6 w-6">
-                <AvatarImage src={review.author.avatar} />
+                <AvatarImage src={review.author?.avatar} />
                 <AvatarFallback class="text-xs">
-                  {getInitials(review.author.name)}
+                  {getInitials(review.author?.name || 'User')}
                 </AvatarFallback>
               </Avatar>
-              <span class="truncate">{review.author.name}</span>
+              <span class="truncate">{review.author?.name}</span>
               <span>·</span>
               <span>{review.createdAt}</span>
             </div>

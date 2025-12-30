@@ -10,10 +10,10 @@ interface RateLimitStore {
 
 const store: RateLimitStore = {};
 
-export async function rateLimit(event: RequestEvent): Promise<boolean> {
+export async function rateLimit(ip): Promise<boolean> {
   if (!config.rateLimit.enabled) return false;
 
-  const ip = event.getClientAddress();
+
   const now = Date.now();
 
   if (!store[ip] || now > store[ip].resetTime) {

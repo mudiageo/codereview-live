@@ -1,8 +1,6 @@
 import { auth } from '$lib/server/auth';
-import { command, getRequestEvent } from 'app/server';
+import { command, getRequestEvent } from '$app/server';
 import { redirect } from '@sveltejs/kit';
-
-
 
 export const verifyEmail = command(async () => {
   
@@ -29,3 +27,4 @@ export const verifyEmail = command(async () => {
     };
   }
 })
+

@@ -20,6 +20,22 @@ export const syncEngine = new ServerSyncEngine(adapter, {
       table: 'comments',
       columns: ['id', 'reviewId', 'authorId', 'parentId', 'description', 'videoUrl', 'textContent' , 'videoTimestamp', 'codeLineStart', 'codeLineEnd', 'isResolved', 'createdAt', 'updatedAt', '_version', '_updatedAt'],
     },
+    subscriptions: {
+      table: 'subscriptions',
+      columns: ['id', 'userId', 'plan', 'status', 'stripeSubscriptionId', 'paystackSubscriptionId', 'currentPeriodStart', 'currentPeriodEnd', 'cancelAtPeriodEnd', 'createdAt', 'updatedAt', '_version', '_updatedAt'],
+    },
+    teams: {
+      table: 'teams',
+      columns: ['id', 'name', 'ownerId', 'plan', 'maxMembers', 'createdAt', 'updatedAt', '_version', '_updatedAt'],
+    },
+    teamInvitations: {
+      table: 'teamInvitations',
+      columns: ['id', 'teamId', 'email', 'role', 'invitedBy', 'token', 'expiresAt', 'createdAt', '_version', '_updatedAt'],
+    },
+    aiUsage: {
+      table: 'aiUsage',
+      columns: ['id', 'userId', 'reviewId', 'feature', 'tokensUsed', 'success', 'createdAt'],
+    },
   },
   batchSize: 100,
   enableRealtime: true

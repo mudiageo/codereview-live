@@ -4,7 +4,8 @@
   import Video from '@lucide/svelte/icons/video';
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Sparkles from '@lucide/svelte/icons/sparkles';
-  
+  import { auth } from '$lib/stores/auth.svelte'
+
   const features = [
     {
       icon: Video,
@@ -43,7 +44,7 @@
         {#each features as feature}
           <div class="flex flex-col items-center text-center space-y-2 p-4 rounded-lg bg-muted/50">
             <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-              <svelte:component this={feature.icon} class="h-6 w-6 text-primary" />
+              <feature.icon class="h-6 w-6 text-primary" />
             </div>
             <h3 class="font-semibold">{feature.title}</h3>
             <p class="text-sm text-muted-foreground">{feature.description}</p>
@@ -60,7 +61,7 @@
     </CardContent>
     
     <CardFooter class="flex justify-between">
-      <Button variant="ghost" href="/login">Skip</Button>
+      <Button variant="ghost" href="/dashboard">Skip</Button>
       <Button href="/onboarding/profile">Get Started</Button>
     </CardFooter>
   </Card>

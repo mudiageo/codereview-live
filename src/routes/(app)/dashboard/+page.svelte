@@ -15,76 +15,46 @@
   import TrendingUp from '@lucide/svelte/icons/trending-up';
   import Eye from '@lucide/svelte/icons/eye';
   import Clock from '@lucide/svelte/icons/clock';
-
-  // Mock data - replace with actual data fetching
+  import { reviewsStore, commentsStore, teamsStore, aiUsageStore, subscriptionsStore } from '$lib/stores/index.svelte';
+  import { initDb } from '$lib/db';
+  import { getLimit } from '$lib/config';
+  import { browser } from '$app/environment'; 
   let loading = $state(false);
-  
-  const stats = [
+
+
+  // Compute stats from real data
+  const stats = $derived([
     {
       title: 'Total Reviews',
-      value: '24',
-      change: '+3 from last week',
+      value: reviewsStore.count.toString(),
+      change: `${reviewsStore.published.length} published`,
       icon: FileVideo,
       color: 'text-chart-1'
     },
     {
       title: 'Comments',
-      value: '142',
-      change: '+12 this week',
+      value: commentsStore.count.toString(),
+      change: `${commentsStore.data.filter(c => !c.parentId).length} top-level`,
       icon: MessageSquare,
       color: 'text-chart-2'
     },
     {
       title: 'Team Members',
-      value: '8',
-      change: '3 active now',
+      value: (teamsStore.current?.memberCount || 1).toString(),
+      change: teamsStore.current ? 'Team active' : 'Personal',
       icon: Users,
       color: 'text-chart-3'
     },
     {
       title: 'AI Credits',
-      value: '847',
-      change: '152 used this month',
+      value: (getLimit(subscriptionsStore.current?.plan || 'free', 'aiCredits') - aiUsageStore.totalTokens).toString(),
+      change: `${aiUsageStore.totalTokens} used this month`,
       icon: Sparkles,
       color: 'text-chart-4'
     }
-  ];
+  ]);
   
-  const recentReviews = [
-    {
-      id: '1',
-      title: 'Add JWT Authentication to API',
-      author: { name: 'John Doe', avatar: '' },
-      timestamp: '2 hours ago',
-      status: 'published',
-      commentCount: 5,
-      viewCount: 12,
-      duration: '4:32',
-      thumbnail: ''
-    },
-    {
-      id: '2',
-      title: 'Refactor User Dashboard Component',
-      author: { name: 'Jane Smith', avatar: '' },
-      timestamp: '5 hours ago',
-      status: 'published',
-      commentCount: 8,
-      viewCount: 24,
-      duration: '6:15',
-      thumbnail: ''
-    },
-    {
-      id: '3',
-      title: 'Fix Payment Processing Bug',
-      author: { name: 'Mike Johnson', avatar: '' },
-      timestamp: '1 day ago',
-      status: 'draft',
-      commentCount: 2,
-      viewCount: 5,
-      duration: '3:48',
-      thumbnail: ''
-    }
-  ];
+  const recentReviews = $derived(reviewsStore.sortByDate().slice(0, 3));
   
   const quickActions = [
     { icon: Upload, label: 'Import from GitHub', href: '/reviews/new?source=github' },
@@ -103,6 +73,25 @@
       case 'archived': return 'badge-archived';
       default: return '';
     }
+  }
+
+  function formatDuration(seconds?: number) {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  function formatTimestamp(date: Date) {
+    const now = new Date();
+    const diff = now.getTime() - new Date(date).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+    return new Date(date).toLocaleDateString();
   }
 </script>
 
@@ -204,10 +193,12 @@
                 {/if}
                 
                 <!-- Duration Badge -->
-                <Badge class="absolute bottom-2 right-2 bg-black/80 hover:bg-black/80">
-                  <Clock class="h-3 w-3 mr-1" />
-                  {review.duration}
-                </Badge>
+                {#if review.videoDuration}
+                  <Badge class="absolute bottom-2 right-2 bg-black/80 hover:bg-black/80">
+                    <Clock class="h-3 w-3 mr-1" />
+                    {formatDuration(review.videoDuration)}
+                  </Badge>
+                {/if}
               </div>
 
               <CardHeader class="space-y-2">
@@ -217,14 +208,14 @@
                 
                 <div class="flex items-center space-x-2 text-sm text-muted-foreground">
                   <Avatar class="h-6 w-6">
-                    <AvatarImage src={review.author.avatar} />
+                    <AvatarImage src={review.authorAvatar} />
                     <AvatarFallback class="text-xs">
-                      {getInitials(review.author.name)}
+                      {getInitials(review.authorName || 'User')}
                     </AvatarFallback>
                   </Avatar>
-                  <span class="truncate">{review.author.name}</span>
+                  <span class="truncate">{review.authorName || 'Unknown'}</span>
                   <span>·</span>
-                  <span>{review.timestamp}</span>
+                  <span>{formatTimestamp(review.createdAt)}</span>
                 </div>
 
                 <!-- Stats & Status -->
@@ -232,11 +223,11 @@
                   <div class="flex items-center space-x-3 text-sm text-muted-foreground">
                     <div class="flex items-center space-x-1">
                       <MessageSquare class="h-4 w-4" />
-                      <span>{review.commentCount}</span>
+                      <span>{commentsStore.findByReview(review.id).length}</span>
                     </div>
                     <div class="flex items-center space-x-1">
                       <Eye class="h-4 w-4" />
-                      <span>{review.viewCount}</span>
+                      <span>{review.viewCount || 0}</span>
                     </div>
                   </div>
                   <Badge variant="outline" class={getStatusColor(review.status)}>
