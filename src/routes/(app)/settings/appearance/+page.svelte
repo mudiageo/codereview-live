@@ -109,7 +109,7 @@
       
       <div class="space-y-2">
         <Label>Editor Theme</Label>
-        <Select value={settings.editorTheme} onValueChange={(value) => updateSetting('editorTheme', value)}>
+        <Select type="single" value={settings.editorTheme} onValueChange={(value) => updateSetting('editorTheme', value)}>
           <SelectTrigger>
             {settings.editorTheme || ""}
           </SelectTrigger>
