@@ -15,7 +15,7 @@
   import Copy from '@lucide/svelte/icons/copy';
   import Check from '@lucide/svelte/icons/check';
   import { toast } from 'svelte-sonner';
-  import type { CodeAnalysis, BugReport, Suggestion, SecurityIssue, PerformanceNote, CodeSmell } from '$lib/ai';
+  import type { CodeAnalysis, BugReport, Suggestion, SecurityIssue, PerformanceNote, CodeSmell } from '$lib/server/ai';
 
   interface Props {
     analysis: CodeAnalysis | null;

@@ -27,13 +27,14 @@
   let searchQuery = $state('');
   let loading = $state(false);
   
-  const projects = $state(projectsStore.data || [])
+  const projects = $derived(projectsStore.data || [])
   
   const filteredProjects = $derived(
     searchQuery 
-      ? SearchEngine.searchProjects(projects, searchQuery)
+      ? SearchEngine.searchProjects(projects, searchQuery).map(p => p.item) || []
       : projects
-  );
+      );
+  
 </script>
 
 <div class="space-y-6">

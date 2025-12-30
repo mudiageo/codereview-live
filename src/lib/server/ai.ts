@@ -81,7 +81,7 @@ interface AIParams {
 // Initialize Gemini client
 function getModel(apiKey: string): GenerativeModel {
     const genAI = new GoogleGenerativeAI(apiKey);
-    return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    return genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 }
 
 // Track AI usage

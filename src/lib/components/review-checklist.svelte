@@ -41,14 +41,14 @@
 
   const template = $derived(getTemplate(selectedTemplate));
   
-  const progress = $derived(() => {
+  const progress = $derived.by(() => {
     if (!template) return 0;
     const total = template.items.length;
     const checked = template.items.filter(item => checkedItems[item.id]).length;
     return Math.round((checked / total) * 100);
   });
 
-  const checkedCount = $derived(() => {
+  const checkedCount = $derived.by(() => {
     if (!template) return 0;
     return template.items.filter(item => checkedItems[item.id]).length;
   });

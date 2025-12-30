@@ -39,9 +39,8 @@ class ReviewsStore {
     
     try {
       this.collection = syncEngine.collection('reviews'); 
-      this.collection.load();
+      await this.collection.load();
       
-      // await this.collection.load();
       this.data = this.collection.data as Review[];
     } catch (err) {
       this.error = err as Error;
@@ -134,7 +133,7 @@ export const reviewsStore = new ReviewsStore();
 class ProjectsStore {
   private collection = {id: null};
   
-  data = $derived<Project[]>(browser ? this.collection?.data : [] );
+  data = $derived<Project[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
   activeProject = $state<Project | null>(null);
@@ -162,7 +161,8 @@ class ProjectsStore {
     this.error = null;
     
     try {
-      this.collection = syncEngine.collection('projects'); this.collection.load();
+      this.collection = syncEngine.collection('projects'); 
+      await this.collection.load();
       
       this.data = this.collection.data as Project[];
     } catch (err) {
@@ -270,7 +270,9 @@ class CommentsStore {
     this.error = null;
     
     try {
-       this.collection = syncEngine.collection('comments'); this.collection.load();
+      this.collection = syncEngine.collection('comments'); 
+      await this.collection.load();
+       
       this.data = this.collection.data as Comment[];
     } catch (err) {
       this.error = err as Error;
@@ -364,7 +366,7 @@ export const commentsStore = new CommentsStore();
 class SubscriptionsStore {
   private collection = {id: null};
   
-  data = $state<import('$lib/server/db/schema').Subscription[]>([]);
+  data = $state<Subscription[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
   
@@ -383,8 +385,10 @@ class SubscriptionsStore {
     this.error = null;
     
     try {
-      this.collection = syncEngine.collection('subscriptions'); this.collection.load();
-      this.data = this.collection.data as import('$lib/server/db/schema').Subscription[];
+      this.collection = syncEngine.collection('subscriptions'); 
+      await this.collection.load();
+      
+      this.data = this.collection.data as Subscription[];
     } catch (err) {
       this.error = err as Error;
       console.error('Failed to load subscriptions:', err);
@@ -437,8 +441,10 @@ class TeamsStore {
     this.error = null;
     
     try {
-      this.collection = syncEngine.collection('teams'); this.collection.load();
-      this.data = this.collection.data as import('$lib/server/db/schema').Team[];
+      this.collection = syncEngine.collection('teams'); 
+      await this.collection.load();
+      
+      this.data = this.collection.data as Team[];
     } catch (err) {
       this.error = err as Error;
       console.error('Failed to load teams:', err);
@@ -603,7 +609,8 @@ class AIUsageStore {
     this.error = null;
     
     try {
-      this.collection = syncEngine.collection('aiUsage'); this.collection.load();
+      this.collection = syncEngine.collection('aiUsage'); 
+      await this.collection.load();
   
       this.data = this.collection.data;
     } catch (err) {

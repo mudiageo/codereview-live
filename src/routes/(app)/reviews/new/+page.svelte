@@ -295,7 +295,7 @@
             required
           />
         </div>
-        
+
         <div class="space-y-2">
           <Label for="description">Description (optional)</Label>
           <Textarea
@@ -305,7 +305,7 @@
             bind:value={description}
           />
         </div>
-        
+
         <div class="space-y-2">
           <Label for="project">Project</Label>
           <Select type="single" bind:value={projectId}>
@@ -319,7 +319,7 @@
             </SelectContent>
           </Select>
         </div>
-        
+
         <div class="flex justify-end gap-2 pt-4">
           <Button variant="outline" onclick={saveDraft}>
             <Save class="h-4 w-4 mr-2" />
@@ -349,7 +349,7 @@
             <TabsTrigger value="gitlab">GitLab</TabsTrigger>
             <TabsTrigger value="git">Local Git</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="paste" class="space-y-4">
             <div class="space-y-2">
               <Label>Language</Label>
@@ -366,7 +366,7 @@
                 </SelectContent>
               </Select>
             </div>
-            
+
             <CodeEditor
               bind:value={code}
               language={language}
@@ -374,7 +374,7 @@
               showLineNumbers={true}
             />
           </TabsContent>
-          
+
           <TabsContent value="upload" class="space-y-4">
             <div class="border-2 border-dashed rounded-lg p-12 text-center hover:border-primary/50 transition-colors">
               <Upload class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -400,7 +400,7 @@
               </p>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="github">
             <div class="space-y-4">
               <Button variant="outline" class="w-full gap-2" onclick={() => showGitHubImport = true}>
@@ -412,7 +412,7 @@
               </p>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="gitlab">
             <div class="space-y-4">
               <Button variant="outline" class="w-full gap-2" onclick={() => showGitLabImport = true}>
@@ -424,7 +424,7 @@
               </p>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="git">
             <div class="space-y-4">
               <Button variant="outline" class="w-full gap-2" onclick={() => showLocalGitBrowser = true}>
@@ -437,7 +437,7 @@
             </div>
           </TabsContent>
         </Tabs>
-        
+
         <div class="flex justify-between gap-2 pt-4">
           <Button variant="ghost" onclick={() => step = 1}>
             Back
@@ -471,7 +471,7 @@
                 <TabsTrigger value="record">Record</TabsTrigger>
                 <TabsTrigger value="upload">Upload</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="record" class="space-y-4">
                 <MediaRecorder
                   onRecordingComplete={(blob, thumb) => {
@@ -482,7 +482,7 @@
                   quality="high"
                 />
               </TabsContent>
-              
+
               <TabsContent value="upload" class="space-y-4">
                 {#if reviewId}
                   <VideoUploader
@@ -499,7 +499,7 @@
                 {/if}
               </TabsContent>
             </Tabs>
-            
+
             <div class="flex justify-between gap-2 pt-4">
               <Button variant="ghost" onclick={() => step = 2}>
                 Back
@@ -517,7 +517,7 @@
           </CardContent>
         </Card>
       </div>
-      
+
       <!-- AI Panel -->
       <div class="space-y-4">
         <Card>
@@ -536,14 +536,14 @@
             >
               {loading ? 'Generating...' : 'Generate Summary'}
             </Button>
-            
+
             {#if aiSummary}
               <div class="rounded-lg bg-muted p-3 text-sm">
                 <p class="font-medium mb-1">AI Summary:</p>
                 <p class="text-muted-foreground">{aiSummary}</p>
               </div>
             {/if}
-            
+
             <Button variant="outline" class="w-full justify-start" disabled={!code}>
               Explain Code
             </Button>

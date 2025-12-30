@@ -90,10 +90,10 @@
   let searchOpen = $state(false);
   let shortcutsOpen = $state(false);
   
-  onMount(async () => {
+  onMount(() => {
     try {
       // Initialize database
-      await initDb();
+      initDb();
       
       // Load initial data
      

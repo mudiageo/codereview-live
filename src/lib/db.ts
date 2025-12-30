@@ -48,8 +48,8 @@ export async function initDb() {
     await syncEngine.init();
     
      await Promise.all([
-        reviewsStore.load(),
         projectsStore.load(),
+        reviewsStore.load(),
         commentsStore.load(),
         teamsStore.load(),
         aiUsageStore.load(),
@@ -62,3 +62,4 @@ export async function initDb() {
     throw error;
   }
 }
+

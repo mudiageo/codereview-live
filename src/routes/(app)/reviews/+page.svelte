@@ -26,19 +26,19 @@
   let statusFilter = $state('all');
   let sortBy = $state('recent');
   
-  const allReviews = $derived(reviewsStore.data);
+  const allReviews = $derived(reviewsStore.data || []);
   
-  const filteredReviews = $derived(() => {
+  const filteredReviews = $derived.by(() => {
     let results = searchQuery 
-      ? SearchEngine.searchReviews(allReviews, searchQuery)
+      ? SearchEngine.searchReviews(allReviews, searchQuery).map(r => r.item) || []
       : allReviews;
-    
     if (statusFilter !== 'all') {
       results = results.filter(r => r.status === statusFilter);
     }
     
     return results;
   });
+  
   
   const shouldUseVirtualList = $derived(filteredReviews().length > 50);
   
@@ -90,7 +90,7 @@
       </TabsList>
     </Tabs>
     
-    <Select bind:value={sortBy}>
+    <Select type="single" bind:value={sortBy}>
       <SelectTrigger class="w-[180px]">
         {sortBy || "Sort by"}
       </SelectTrigger>
@@ -131,12 +131,12 @@
             
             <div class="flex items-center space-x-2 text-sm text-muted-foreground">
               <Avatar class="h-6 w-6">
-                <AvatarImage src={review.author.avatar} />
+                <AvatarImage src={review.author?.avatar} />
                 <AvatarFallback class="text-xs">
-                  {getInitials(review.author.name)}
+                  {getInitials(review.author?.name || 'User')}
                 </AvatarFallback>
               </Avatar>
-              <span class="truncate">{review.author.name}</span>
+              <span class="truncate">{review.author?.name}</span>
               <span>·</span>
               <span>{review.createdAt}</span>
             </div>
