@@ -14,7 +14,7 @@ import {
 import { db } from '$lib/server/db';
 import { aiUsage, users } from '$lib/server/db/schema';
 import { eq, sql } from 'drizzle-orm';
-
+import { env } from '$env/dynamic/private'
 // Check AI credits and user limits
 async function checkAICredits(userId: string): Promise<boolean> {
   const result = await db
@@ -47,7 +47,7 @@ async function getApiKey(userId: string): Promise<string> {
     where: eq(users.id, userId),
   });
 
-  const apiKey = userRecord?.apiKey || process.env.GEMINI_API_KEY;
+  const apiKey = userRecord?.apiKey || env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('Gemini API key not configured. Add your key in Settings > AI.');
   }

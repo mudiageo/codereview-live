@@ -50,6 +50,7 @@ export const planLimits = {
 	},
 	team: {
 		maxReviews: -1,
+		localReviews: -1, // unlimited
 		maxProjects: -1,
 		maxStorageBytes: 200 * 1024 * 1024 * 1024, // 200GB
 		aiCreditsPerMonth: 5000,
