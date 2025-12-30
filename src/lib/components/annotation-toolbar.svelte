@@ -118,14 +118,12 @@
   <!-- Color Picker -->
   <Popover>
     <PopoverTrigger asChild let:builder>
-       {#snippet child(props)}
-      <Button {...props} size="icon" variant="outline">
+      <Button builders={[builder]} size="icon" variant="outline">
         <div
           class="w-4 h-4 rounded border"
           style="background-color: {currentTool.color}"
         />
       </Button>
-      {/snippet}
     </PopoverTrigger>
     <PopoverContent class="w-48">
       <div class="grid grid-cols-5 gap-2">
@@ -144,12 +142,10 @@
 
   <!-- Stroke Width -->
   <Popover>
-    <PopoverTrigger>
-      {#snippet child(props)}
-      <Button {...props} size="sm" variant="outline">
+    <PopoverTrigger asChild let:builder>
+      <Button builders={[builder]} size="sm" variant="outline">
         {currentTool.strokeWidth}px
       </Button>
-      {/snippet}
     </PopoverTrigger>
     <PopoverContent class="w-64">
       <div class="space-y-2">

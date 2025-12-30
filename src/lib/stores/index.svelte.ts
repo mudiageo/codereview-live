@@ -675,6 +675,7 @@ export interface AppSettings {
   detectSmells: boolean;
   suggestImprovements: boolean;
   geminiApiKey: string;
+  storageProvider: 'local' | 'cloud';
 }
 
 const defaultSettings: AppSettings = {
@@ -693,6 +694,7 @@ const defaultSettings: AppSettings = {
   detectSmells: true,
   suggestImprovements: true,
   geminiApiKey: '',
+  storageProvider: 'local',
 };
 
 class SettingsStore {

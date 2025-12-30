@@ -19,14 +19,16 @@
   import VideoPreviewModal from './video-preview-modal.svelte';
 
   interface Props {
-    onRecordingComplete?: (blob: Blob, thumbnail: string) => void;
+    reviewId: string;
+    onUploadComplete?: (result: { videoUrl: string; thumbnailUrl: string; metadata: any }) => void;
     onStart?: () => void;
     maxDuration?: number;
     quality?: 'low' | 'medium' | 'high';
   }
   
   let {
-    onRecordingComplete,
+    reviewId,
+    onUploadComplete,
     onStart,
     maxDuration = 600,
     quality = 'high'
@@ -375,8 +377,16 @@
   }
 
   function handleSaveVideo(metadata: any) {
-     if (videoBlob && thumbnail) {
-         onRecordingComplete?.(videoBlob, thumbnail);
+     if (metadata.videoUrl) {
+         onUploadComplete?.({
+           videoUrl: metadata.videoUrl,
+           thumbnailUrl: metadata.thumbnailUrl,
+           metadata: {
+             ...metadata.metadata,
+             title: metadata.title,
+             description: metadata.description
+           }
+         });
          showPreviewModal = false;
      }
   }
@@ -418,7 +428,8 @@
 
   function handleUseRecording() {
     if (videoBlob && thumbnail) {
-      onRecordingComplete?.(videoBlob, thumbnail);
+      // Just open preview modal for upload
+      showPreviewModal = true;
      }
   }
   
@@ -666,7 +677,7 @@
   <VideoPreviewModal
      bind:open={showPreviewModal}
      videoUrl={recordedVideoUrl}
-     duration={videoDuration}
+     reviewId={reviewId}
      onSave={handleSaveVideo}
      onReRecord={() => { handleDiscard(); startRecording(); }}
      onDiscard={handleDiscard}

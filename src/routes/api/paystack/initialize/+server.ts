@@ -1,8 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { initializeTransaction } from '$lib/server/payments/paystack';
-import { env } from '$env/dynamic/public';
-
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
@@ -18,7 +16,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json({ error: 'Amount and plan are required' }, { status: 400 });
 		}
 
-		const publicAppUrl = env.PUBLIC_APP_URL || 'http://localhost:3232';
+		const publicAppUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
 		const callbackUrl = `${publicAppUrl}/api/paystack/verify`;
 
 		const transaction = await initializeTransaction({

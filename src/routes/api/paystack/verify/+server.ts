@@ -1,4 +1,4 @@
-import { redirect, isRedirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { verifyTransaction } from '$lib/server/payments/paystack';
 import { db } from '$lib/server/db';
@@ -10,14 +10,14 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		const reference = url.searchParams.get('reference');
 
 		if (!reference) {
-			redirect(303, '/settings/billing?error=missing_reference');
+			throw redirect(303, '/settings/billing?error=missing_reference');
 		}
 
 		// Verify the transaction
 		const transaction = await verifyTransaction(reference);
 
 		if (transaction.status !== 'success') {
-			redirect(303, '/settings/billing?error=payment_failed');
+			throw redirect(303, '/settings/billing?error=payment_failed');
 		}
 
 		// Get user from metadata
@@ -25,13 +25,13 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		const plan = transaction.metadata?.plan;
 
 		if (!userId || !plan) {
-			redirect(303, '/settings/billing?error=invalid_metadata');
+			throw redirect(303, '/settings/billing?error=invalid_metadata');
 		}
 
 		// Check if user is authenticated and matches
 		const session = await locals.auth();
 		if (!session?.user || session.user.id !== userId) {
-			redirect(303, '/login?redirect=/settings/billing');
+			throw redirect(303, '/login?redirect=/settings/billing');
 		}
 
 		// Update user and subscription
@@ -64,13 +64,13 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			});
 		}
 
-		redirect(303, `/settings/billing?success=true&plan=${plan}`);
+		throw redirect(303, `/settings/billing?success=true&plan=${plan}`);
 	} catch (error) {
-		if (error instanceof Response || isRedirect(error)) {
+		if (error instanceof Response) {
 			throw error;
 		}
 
 		console.error('Failed to verify transaction:', error);
-		redirect(303, '/settings/billing?error=verification_failed');
+		throw redirect(303, '/settings/billing?error=verification_failed');
 	}
 };

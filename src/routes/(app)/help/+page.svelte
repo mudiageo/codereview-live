@@ -149,6 +149,18 @@
           </ul>
         </AccordionContent>
       </AccordionItem>
+
+      <AccordionItem value="storage">
+        <AccordionTrigger>Where are my videos stored?</AccordionTrigger>
+        <AccordionContent>
+          <p class="text-sm">We support flexible storage options:</p>
+          <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+            <li><strong>Local Storage:</strong> Default. Videos are stored directly on the server. Good for privacy and low cost.</li>
+            <li><strong>Cloud Storage:</strong> Configure S3 or R2 buckets in Settings. Ideal for teams and scaling.</li>
+            <li>You can choose your storage preference before uploading each video review.</li>
+          </ul>
+        </AccordionContent>
+      </AccordionItem>
     </Accordion>
   </section>
   

@@ -16,7 +16,7 @@
 	} = $props();
 
 	let selectedPlan = $state<PlanId>('pro');
-	let paymentProvider = $state<'stripe' | 'paystack'>('paystack');
+	let paymentProvider = $state<'stripe' | 'paystack'>('stripe');
 	let isLoading = $state(false);
 
 	const availablePlans = ['pro', 'team'] as const;

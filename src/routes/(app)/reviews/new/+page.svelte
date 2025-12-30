@@ -47,8 +47,9 @@
   let language = $state('javascript');
   let isRecording = $state(false);
   let recordingTime = $state(0);
-  let videoBlob = $state<Blob | null>(null);
-  let thumbnail = $state<string>('');
+  let uploadedVideoUrl = $state<string>('');
+  let uploadedThumbnailUrl = $state<string>('');
+  let uploadedMetadata = $state<any>(null);
   let aiSummary = $state('');
   let loading = $state(false);
   let showPaywall = $state(false);
@@ -266,6 +267,10 @@
           description,
           codeContent: code,
           codeLanguage: language,
+          videoUrl: uploadedVideoUrl || undefined,
+          videoSize: uploadedMetadata?.size || undefined,
+          videoDuration: uploadedMetadata?.duration || undefined,
+          thumbnailUrl: uploadedThumbnailUrl || undefined,
           aiSummary,
           metadata: { recordingEvents },
         });
@@ -303,10 +308,10 @@
           authorId: auth.currentUser?.id || '',
           codeContent: code,
           codeLanguage: language,
-          videoUrl: null,
-          videoSize: null,
-          videoDuration: null,
-          thumbnailUrl: null,
+          videoUrl: uploadedVideoUrl || null,
+          videoSize: uploadedMetadata?.size || null,
+          videoDuration: uploadedMetadata?.duration || null,
+          thumbnailUrl: uploadedThumbnailUrl || null,
           shareToken: crypto.randomUUID(),
           isPublic: false,
           status: 'published',
@@ -550,16 +555,28 @@
               </TabsList>
 
               <TabsContent value="record" class="space-y-4">
-                <MediaRecorder
-                  onRecordingComplete={(blob, thumb) => {
-                    videoBlob = blob;
-                    thumbnail = thumb;
-                    isRecording = false;
-                  }}
-                  onStart={handleRecordingStart}
-                  maxDuration={600}
-                  quality="high"
-                />
+                {#if reviewId}
+                  <MediaRecorder
+                    reviewId={reviewId}
+                    onUploadComplete={(result) => {
+                      uploadedVideoUrl = result.videoUrl;
+                      uploadedThumbnailUrl = result.thumbnailUrl;
+                      uploadedMetadata = result.metadata;
+                      isRecording = false;
+                      toast.success('Video attached to review');
+                    }}
+                    onStart={handleRecordingStart}
+                    maxDuration={600}
+                    quality="high"
+                  />
+                {:else}
+                  <div class="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg">
+                    <p>Please save draft first to enable recording</p>
+                    <Button variant="outline" size="sm" onclick={saveDraft} class="mt-2">
+                      <Save class="h-4 w-4 mr-2" /> Save Draft
+                    </Button>
+                  </div>
+                {/if}
               </TabsContent>
 
               <TabsContent value="upload" class="space-y-4">
@@ -588,7 +605,7 @@
                   <Save class="h-4 w-4 mr-2" />
                   Save Draft
                 </Button>
-                <Button onclick={publishReview} disabled={!videoBlob && videoMethod === 'record'}>
+                <Button onclick={publishReview} disabled={!uploadedVideoUrl && videoMethod === 'record'}>
                   Publish Review
                 </Button>
               </div>
