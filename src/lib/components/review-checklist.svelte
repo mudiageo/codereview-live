@@ -181,9 +181,8 @@
           {@const hasNote = !!aiNotes[item.id]}
 
           <div
-            class="group relative flex items-start gap-3 p-3 rounded-lg border transition-all hover:bg-muted/30"
-            class:bg-green-500/5={isChecked}
-            class:border-green-500/30={isChecked}
+            class={["group relative flex items-start gap-3 p-3 rounded-lg border transition-all hover:bg-muted/30", {
+            "bg-green-500/5 border-green-500/30": isChecked }]}
           >
             <Checkbox
               id={item.id}

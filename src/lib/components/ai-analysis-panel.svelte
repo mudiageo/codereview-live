@@ -241,8 +241,8 @@
             {:else}
               {#each analysis.bugs as bug}
                 <div
-                  class="rounded-lg border overflow-hidden"
-                  class:border-red-500/30={bug.severity === 'critical' || bug.severity === 'high'}
+                  class={["rounded-lg border overflow-hidden",
+                  { "border-red-500/30": bug.severity === 'critical' || bug.severity === 'high']}
                 >
                   <button
                     class="w-full p-3 flex items-start gap-3 text-left hover:bg-muted/30 transition-colors"
@@ -303,8 +303,8 @@
             {:else}
               {#each analysis.securityIssues as issue}
                 <div
-                  class="rounded-lg border overflow-hidden"
-                  class:border-red-500/30={issue.severity === 'critical' || issue.severity === 'high'}
+                  class={["rounded-lg border overflow-hidden",
+                  {"border-red-500/30" : issue.severity === 'critical' || issue.severity === 'high'}]}
                 >
                   <button
                     class="w-full p-3 flex items-start gap-3 text-left hover:bg-muted/30 transition-colors"
