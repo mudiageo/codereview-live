@@ -148,11 +148,11 @@
       <div class="space-y-2">
         <div class="flex items-center justify-between text-sm">
           <span class="text-muted-foreground">Progress</span>
-          <span class="font-medium">{checkedCount()}/{template.items.length} items</span>
+          <span class="font-medium">{checkedCount}/{template.items.length} items</span>
         </div>
-        <Progress value={progress()} class="h-2" />
+        <Progress value={progress} class="h-2" />
         
-        {#if progress() === 100}
+        {#if progress === 100}
           <div class="flex items-center gap-2 text-sm text-green-500">
             <Check class="h-4 w-4" />
             <span>All items checked!</span>
@@ -181,9 +181,8 @@
           {@const hasNote = !!aiNotes[item.id]}
           
           <div 
-            class="group relative flex items-start gap-3 p-3 rounded-lg border transition-all hover:bg-muted/30"
-            class:bg-green-500/5={isChecked}
-            class:border-green-500/30={isChecked}
+            class="group relative flex items-start gap-3 p-3 rounded-lg border transition-all hover:bg-muted/30 { isChecked ? 'bg-green-500/5 border-green-500/30' : ''}"
+            
           >
             <Checkbox
               id={item.id}
@@ -245,4 +244,3 @@
     {/if}
   </CardContent>
 </Card>
-</script>

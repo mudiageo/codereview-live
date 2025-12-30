@@ -25,7 +25,7 @@
   
   let copied = $state(false);
   let containerRef = $state<HTMLDivElement>();
-  let textareaRef = $state<HTMLTextAreaElement>();
+  let textareaRef: HTMLTextAreaElement | null = $state(null);
 
   export function scrollTo(top: number) {
     if (containerRef) {
