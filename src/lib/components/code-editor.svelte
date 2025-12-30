@@ -11,6 +11,7 @@
     readonly?: boolean;
     showLineNumbers?: boolean;
     class?: string;
+    onscroll?: (e: Event) => void;
   }
   
   let {
@@ -18,10 +19,22 @@
     language = 'javascript',
     readonly = false,
     showLineNumbers = true,
-    class: className = ''
+    class: className = '',
+    onscroll
   }: Props = $props();
   
   let copied = $state(false);
+  let containerRef = $state<HTMLDivElement>();
+  let textareaRef = $state<HTMLTextAreaElement>();
+
+  export function scrollTo(top: number) {
+    if (containerRef) {
+      containerRef.scrollTop = top;
+    }
+    if (textareaRef) {
+      textareaRef.scrollTop = top;
+    }
+  }
   
   const lines = $derived(value.split('\n'));
   
@@ -65,14 +78,20 @@
       </div>
     {/if}
     
-    <div class="flex-1 overflow-x-auto">
+    <div
+      bind:this={containerRef}
+      class="flex-1 overflow-x-auto"
+      onscroll={readonly ? onscroll : undefined}
+    >
       {#if readonly}
         <pre class="p-4 font-mono text-sm leading-6"><code>{value}</code></pre>
       {:else}
         <Textarea
+          bind:ref={textareaRef}
           bind:value
           class="min-h-[400px] resize-none border-0 bg-transparent font-mono text-sm focus-visible:ring-0"
           placeholder="Paste your code here..."
+          onscroll={onscroll}
         />
       {/if}
     </div>
