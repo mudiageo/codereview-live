@@ -130,7 +130,7 @@
 					<div class="flex items-start justify-between">
 						<div class="flex items-center gap-3">
 							<div class="p-2 rounded-lg {provider.color} text-white">
-								<svelte:component this={provider.icon} class="h-5 w-5" />
+								<provider.icon class="h-5 w-5" />
 							</div>
 							<div>
 								<CardTitle>{provider.name}</CardTitle>
@@ -193,7 +193,7 @@
 							{#if connectingProvider === provider.id}
 								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 							{:else}
-								<svelte:component this={provider.icon} class="mr-2 h-4 w-4" />
+								<provider.icon class="mr-2 h-4 w-4" />
 							{/if}
 							Connect {provider.name}
 						</Button>
