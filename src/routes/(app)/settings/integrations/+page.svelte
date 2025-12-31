@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import Github from '@lucide/svelte/icons/github';
 	import GitlabIcon from '@lucide/svelte/icons/gitlab';
@@ -11,6 +17,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
 	import { authClient } from '$lib/auth-client';
+
 	interface ConnectedAccount {
 		id: string;
 		provider: 'github' | 'gitlab' | 'google';
@@ -43,10 +50,9 @@
 
 		try {
 			// Start OAuth flow
-		await authClient.linkSocial({
-			provider,
-		});
-		
+			await authClient.linkSocial({
+				provider
+			});
 		} catch (error) {
 			toast.error(`Error connecting to ${provider}`);
 			console.error(error);
@@ -167,7 +173,7 @@
 									<p class="font-medium">{account.username}</p>
 									<p class="text-sm text-muted-foreground">{account.email}</p>
 									<p class="text-xs text-muted-foreground">
-										Connected {new Date(account.connected_at).toLocaleDateString()}
+										Connectedf {new Date(account.connected_at).toLocaleDateString()}
 									</p>
 								</div>
 							</div>
@@ -211,8 +217,8 @@
 			<div>
 				<h4 class="font-medium mb-2">GitHub</h4>
 				<p class="text-sm text-muted-foreground">
-					Connect GitHub to import pull requests directly into CodeReview.live. All private repositories
-					are supported with proper authentication.
+					Connect GitHub to import pull requests directly into CodeReview.live. All private
+					repositories are supported with proper authentication.
 				</p>
 			</div>
 			<div>

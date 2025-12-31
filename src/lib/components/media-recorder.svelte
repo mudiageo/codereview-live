@@ -61,14 +61,28 @@
 	let compressionProgress = $state(0);
 	let availableAudioInputs = $state<MediaDeviceInfo[]>([]);
 
-	// Annotations State
+	// Canvas Compositing State
 	let canvasRef: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D | null = null;
+	let annotationCanvas: HTMLCanvasElement | null = null;
+	let annotationCtx: CanvasRenderingContext2D | null = null;
+	let animationFrameId: number | null = null;
+
+	// Annotations State
 	let isDrawing = $state(false);
-	let currentTool = $state({ type: 'pen', color: '#ff0000', strokeWidth: 3 });
+	let currentTool = $state({ type: 'pen' as const, color: '#ff0000', strokeWidth: 3 });
 	let annotationHistory = $state<ImageData[]>([]);
-	let historyIndex = $state(0);
+	let historyIndex = $state(-1);
 	let isToolbarVisible = $state(true);
+	let startPoint = $state<{ x: number; y: number } | null>(null);
+	let tempCanvas: HTMLCanvasElement | null = null;
+	let tempCtx: CanvasRenderingContext2D | null = null;
+
+	// Text tool state
+	let textInputVisible = $state(false);
+	let textInputPosition = $state({ x: 0, y: 0 });
+	let textInputValue = $state('');
+	let textInputRef: HTMLInputElement | null = null;
 
 	// Preview Modal State
 	let showPreviewModal = $state(false);
@@ -94,23 +108,127 @@
 		}
 	});
 
-	// Initialize canvas for annotations when recording starts
+	// Initialize annotation canvas when recording starts
 	$effect(() => {
 		if (isRecording && canvasRef && videoPreview) {
+			// Initialize main canvas context
 			ctx = canvasRef.getContext('2d');
-			if (ctx) {
-				// Match canvas size to video preview
-				const resizeObserver = new ResizeObserver(() => {
-					if (canvasRef && videoPreview) {
-						canvasRef.width = videoPreview.clientWidth;
-						canvasRef.height = videoPreview.clientHeight;
-					}
-				});
-				resizeObserver.observe(videoPreview);
-				return () => resizeObserver.disconnect();
+
+			// Create annotation canvas (separate layer for non-destructive annotations)
+			if (!annotationCanvas) {
+				annotationCanvas = document.createElement('canvas');
+				annotationCtx = annotationCanvas.getContext('2d');
 			}
+
+			// Create temp canvas for shape previews
+			if (!tempCanvas) {
+				tempCanvas = document.createElement('canvas');
+				tempCtx = tempCanvas.getContext('2d');
+			}
+
+			// Match canvas sizes to video preview
+			const resizeObserver = new ResizeObserver(() => {
+				if (canvasRef && videoPreview) {
+					const width = videoPreview.clientWidth;
+					const height = videoPreview.clientHeight;
+
+					canvasRef.width = width;
+					canvasRef.height = height;
+
+					if (annotationCanvas) {
+						annotationCanvas.width = width;
+						annotationCanvas.height = height;
+					}
+
+					if (tempCanvas) {
+						tempCanvas.width = width;
+						tempCanvas.height = height;
+					}
+				}
+			});
+			resizeObserver.observe(videoPreview);
+
+			// Start the canvas compositing loop
+			startCanvasLoop();
+
+			// Save initial empty state for undo
+			if (annotationCtx && annotationCanvas) {
+				const initialData = annotationCtx.getImageData(
+					0,
+					0,
+					annotationCanvas.width,
+					annotationCanvas.height
+				);
+				annotationHistory = [initialData];
+				historyIndex = 0;
+			}
+
+			return () => {
+				resizeObserver.disconnect();
+				stopCanvasLoop();
+			};
 		}
 	});
+
+	// Canvas compositing loop - draws video + webcam + annotations onto main canvas
+	function startCanvasLoop() {
+		const drawFrame = () => {
+			if (!ctx || !videoPreview || !isRecording || isPaused) {
+				animationFrameId = requestAnimationFrame(drawFrame);
+				return;
+			}
+
+			// Draw video frame
+			ctx.drawImage(videoPreview, 0, 0, canvasRef.width, canvasRef.height);
+
+			// Draw webcam PIP if enabled
+			if (includeWebcam && webcamPreview && webcamStream) {
+				const pipWidth = canvasRef.width * 0.2;
+				const pipHeight = pipWidth * (3 / 4);
+				const pipX = canvasRef.width - pipWidth - 16;
+				const pipY = canvasRef.height - pipHeight - 16;
+
+				// Draw border/shadow for PIP
+				ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+				ctx.shadowBlur = 10;
+				ctx.fillStyle = '#000';
+				ctx.fillRect(pipX - 2, pipY - 2, pipWidth + 4, pipHeight + 4);
+				ctx.shadowBlur = 0;
+
+				// Draw webcam feed
+				ctx.drawImage(webcamPreview, pipX, pipY, pipWidth, pipHeight);
+			}
+
+			// Draw annotation layer on top
+			if (annotationCanvas) {
+				ctx.drawImage(annotationCanvas, 0, 0);
+			}
+
+			// Draw temp canvas (for shape preview while drawing)
+			if (tempCanvas && isDrawing && ['arrow', 'rectangle', 'circle'].includes(currentTool.type)) {
+				ctx.drawImage(tempCanvas, 0, 0);
+			}
+
+			animationFrameId = requestAnimationFrame(drawFrame);
+		};
+
+		drawFrame();
+	}
+
+	function stopCanvasLoop() {
+		if (animationFrameId !== null) {
+			cancelAnimationFrame(animationFrameId);
+			animationFrameId = null;
+		}
+	}
+
+	// Utility function for highlighter color
+	function hexToRgba(hex: string, alpha: number): string {
+		const r = parseInt(hex.slice(1, 3), 16);
+		const g = parseInt(hex.slice(3, 5), 16);
+		const b = parseInt(hex.slice(5, 7), 16);
+		return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+	}
 
 	async function startRecording() {
 		if (countdownDuration > 0) {
@@ -192,13 +310,82 @@
 				});
 				if (webcamPreview) {
 					webcamPreview.srcObject = webcamStream;
-					webcamPreview.play();
+					await webcamPreview.play();
 				}
 			}
 
+			// Set video source and wait for it to be ready
 			if (videoPreview) {
 				videoPreview.srcObject = stream;
-				videoPreview.play();
+				await videoPreview.play();
+			}
+
+			// Wait for video to have actual frames
+			await new Promise<void>((resolve, reject) => {
+				const timeout = setTimeout(() => {
+					reject(new Error('Timeout waiting for video frames'));
+				}, 10000);
+
+				const checkReady = () => {
+					if (videoPreview && videoPreview.readyState >= 2 && videoPreview.videoWidth > 0) {
+						clearTimeout(timeout);
+						resolve();
+					} else {
+						requestAnimationFrame(checkReady);
+					}
+				};
+				checkReady();
+			});
+
+			// Initialize canvas with proper dimensions based on video
+			const videoWidth = videoPreview?.videoWidth || 1280;
+			const videoHeight = videoPreview?.videoHeight || 720;
+
+			if (canvasRef) {
+				canvasRef.width = videoWidth;
+				canvasRef.height = videoHeight;
+				ctx = canvasRef.getContext('2d');
+			}
+
+			if (!annotationCanvas) {
+				annotationCanvas = document.createElement('canvas');
+			}
+			annotationCanvas.width = videoWidth;
+			annotationCanvas.height = videoHeight;
+			annotationCtx = annotationCanvas.getContext('2d');
+
+			if (!tempCanvas) {
+				tempCanvas = document.createElement('canvas');
+			}
+			tempCanvas.width = videoWidth;
+			tempCanvas.height = videoHeight;
+			tempCtx = tempCanvas.getContext('2d');
+
+			// Draw initial frame to canvas
+			if (ctx && videoPreview) {
+				ctx.drawImage(videoPreview, 0, 0, canvasRef.width, canvasRef.height);
+			}
+
+			// Set recording state - needed for canvas loop
+			isRecording = true;
+			recordingTime = 0;
+
+			// Start the canvas compositing loop
+			startCanvasLoop();
+
+			// Wait a frame to ensure canvas has content
+			await new Promise((resolve) => requestAnimationFrame(resolve));
+
+			// Save initial annotation state for undo
+			if (annotationCtx && annotationCanvas) {
+				const initialData = annotationCtx.getImageData(
+					0,
+					0,
+					annotationCanvas.width,
+					annotationCanvas.height
+				);
+				annotationHistory = [initialData];
+				historyIndex = 0;
 			}
 
 			const qualitySettings = {
@@ -207,7 +394,16 @@
 				high: { videoBitsPerSecond: 5000000 }
 			};
 
-			mediaRecorder = new MediaRecorder(stream, {
+			// IMPORTANT: Capture from the composited canvas, not the raw stream!
+			// This ensures annotations and webcam PIP are included in the recording
+			const canvasStream = canvasRef.captureStream(30);
+
+			// Add audio tracks from the original stream
+			stream.getAudioTracks().forEach((track) => {
+				canvasStream.addTrack(track);
+			});
+
+			mediaRecorder = new MediaRecorder(canvasStream, {
 				mimeType: 'video/webm;codecs=vp9,opus',
 				...qualitySettings[quality]
 			});
@@ -260,14 +456,15 @@
 				// Show Preview Modal
 				showPreviewModal = true;
 
+				// Stop canvas loop
+				stopCanvasLoop();
+
 				// Stop all tracks
 				stream?.getTracks().forEach((t) => t.stop());
 				webcamStream?.getTracks().forEach((t) => t.stop());
 			};
 
 			mediaRecorder.start(1000);
-			isRecording = true;
-			recordingTime = 0;
 			onStart?.();
 
 			recordingInterval = window.setInterval(() => {
@@ -278,12 +475,18 @@
 				}
 			}, 1000);
 		} catch (error: any) {
+			// If we failed, reset recording state
+			isRecording = false;
+			stopCanvasLoop();
+
 			console.error('Error starting recording:', error);
 
 			if (error.name === 'NotAllowedError') {
 				toast.error('Camera/screen permission denied. Please allow access and try again.');
 			} else if (error.name === 'NotFoundError') {
 				toast.error('No camera or screen capture device found.');
+			} else if (error.name === 'AbortError') {
+				toast.error('Recording was aborted. Please try again.');
 			} else {
 				toast.error('Failed to start recording: ' + error.message);
 			}
@@ -320,22 +523,294 @@
 			clearInterval(recordingInterval);
 		}
 	}
+
 	function resetRecording() {
 		videoBlob = null;
 		thumbnail = '';
 		recordedChunks = [];
 		recordingTime = 0;
+		annotationHistory = [];
+		historyIndex = -1;
+
+		// Clear annotation canvas
+		if (annotationCtx && annotationCanvas) {
+			annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
+		}
 	}
 
-	// Annotation Handlers
+	// ============================================================================
+	// ANNOTATION TOOL HANDLERS
+	// ============================================================================
+
+	function saveAnnotationState() {
+		if (!annotationCtx || !annotationCanvas) return;
+		const data = annotationCtx.getImageData(0, 0, annotationCanvas.width, annotationCanvas.height);
+		// Truncate history if we're in the middle of undo
+		annotationHistory = [...annotationHistory.slice(0, historyIndex + 1), data];
+		historyIndex++;
+	}
+
+	function handleUndo() {
+		if (historyIndex > 0 && annotationCtx && annotationCanvas) {
+			historyIndex--;
+			annotationCtx.putImageData(annotationHistory[historyIndex], 0, 0);
+		}
+	}
+
+	function handleRedo() {
+		if (historyIndex < annotationHistory.length - 1 && annotationCtx && annotationCanvas) {
+			historyIndex++;
+			annotationCtx.putImageData(annotationHistory[historyIndex], 0, 0);
+		}
+	}
+
+	function handleClear() {
+		if (annotationCtx && annotationCanvas) {
+			annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
+			saveAnnotationState();
+		}
+	}
+
 	function handleMouseDown(e: MouseEvent) {
-		if (!ctx || !isRecording) return;
-		isDrawing = true;
+		if (!annotationCtx || !annotationCanvas || !isRecording) return;
+
 		const rect = canvasRef.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+
+		startPoint = { x, y };
+		isDrawing = true;
+
+		switch (currentTool.type) {
+			case 'pen':
+			case 'highlighter':
+				annotationCtx.beginPath();
+				annotationCtx.moveTo(x, y);
+				annotationCtx.strokeStyle =
+					currentTool.type === 'highlighter'
+						? hexToRgba(currentTool.color, 0.4)
+						: currentTool.color;
+				annotationCtx.lineWidth =
+					currentTool.type === 'highlighter'
+						? currentTool.strokeWidth * 3
+						: currentTool.strokeWidth;
+				annotationCtx.lineCap = 'round';
+				annotationCtx.lineJoin = 'round';
+				break;
+
+			case 'text':
+				// Show text input at click position
+				textInputPosition = { x, y };
+				textInputValue = '';
+				textInputVisible = true;
+				isDrawing = false;
+				// Focus the input after it renders
+				setTimeout(() => textInputRef?.focus(), 10);
+				break;
+
+			case 'arrow':
+			case 'rectangle':
+			case 'circle':
+				// Clear temp canvas for preview
+				if (tempCtx && tempCanvas) {
+					tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+				}
+				break;
+		}
+	}
+
+	function handleMouseMove(e: MouseEvent) {
+		if (!isDrawing || !startPoint) return;
+
+		const rect = canvasRef.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+
+		switch (currentTool.type) {
+			case 'pen':
+			case 'highlighter':
+				if (annotationCtx) {
+					annotationCtx.lineTo(x, y);
+					annotationCtx.stroke();
+				}
+				break;
+
+			case 'arrow':
+				drawArrowPreview(startPoint.x, startPoint.y, x, y);
+				break;
+
+			case 'rectangle':
+				drawRectanglePreview(startPoint.x, startPoint.y, x, y);
+				break;
+
+			case 'circle':
+				drawCirclePreview(startPoint.x, startPoint.y, x, y);
+				break;
+		}
+	}
+
+	function handleMouseUp(e: MouseEvent) {
+		if (!isDrawing || !startPoint) {
+			isDrawing = false;
+			return;
+		}
+
+		const rect = canvasRef.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+
+		switch (currentTool.type) {
+			case 'pen':
+			case 'highlighter':
+				// Path already drawn, just save state
+				break;
+
+			case 'arrow':
+				drawArrow(annotationCtx!, startPoint.x, startPoint.y, x, y);
+				break;
+
+			case 'rectangle':
+				drawRectangle(annotationCtx!, startPoint.x, startPoint.y, x, y);
+				break;
+
+			case 'circle':
+				drawCircle(annotationCtx!, startPoint.x, startPoint.y, x, y);
+				break;
+		}
+
+		// Clear temp canvas
+		if (tempCtx && tempCanvas) {
+			tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+		}
+
+		isDrawing = false;
+		startPoint = null;
+		saveAnnotationState();
+	}
+
+	// Shape drawing functions
+	function drawArrowPreview(x1: number, y1: number, x2: number, y2: number) {
+		if (!tempCtx || !tempCanvas) return;
+		tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+		drawArrow(tempCtx, x1, y1, x2, y2);
+	}
+
+	function drawArrow(
+		ctx: CanvasRenderingContext2D,
+		x1: number,
+		y1: number,
+		x2: number,
+		y2: number
+	) {
+		const headLength = 15;
+		const angle = Math.atan2(y2 - y1, x2 - x1);
+
 		ctx.beginPath();
-		ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
 		ctx.strokeStyle = currentTool.color;
 		ctx.lineWidth = currentTool.strokeWidth;
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+
+		// Arrow shaft
+		ctx.moveTo(x1, y1);
+		ctx.lineTo(x2, y2);
+
+		// Arrow head
+		ctx.lineTo(
+			x2 - headLength * Math.cos(angle - Math.PI / 6),
+			y2 - headLength * Math.sin(angle - Math.PI / 6)
+		);
+		ctx.moveTo(x2, y2);
+		ctx.lineTo(
+			x2 - headLength * Math.cos(angle + Math.PI / 6),
+			y2 - headLength * Math.sin(angle + Math.PI / 6)
+		);
+
+		ctx.stroke();
+	}
+
+	function drawRectanglePreview(x1: number, y1: number, x2: number, y2: number) {
+		if (!tempCtx || !tempCanvas) return;
+		tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+		drawRectangle(tempCtx, x1, y1, x2, y2);
+	}
+
+	function drawRectangle(
+		ctx: CanvasRenderingContext2D,
+		x1: number,
+		y1: number,
+		x2: number,
+		y2: number
+	) {
+		ctx.beginPath();
+		ctx.strokeStyle = currentTool.color;
+		ctx.lineWidth = currentTool.strokeWidth;
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+	}
+
+	function drawCirclePreview(x1: number, y1: number, x2: number, y2: number) {
+		if (!tempCtx || !tempCanvas) return;
+		tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+		drawCircle(tempCtx, x1, y1, x2, y2);
+	}
+
+	function drawCircle(
+		ctx: CanvasRenderingContext2D,
+		x1: number,
+		y1: number,
+		x2: number,
+		y2: number
+	) {
+		const centerX = (x1 + x2) / 2;
+		const centerY = (y1 + y2) / 2;
+		const radiusX = Math.abs(x2 - x1) / 2;
+		const radiusY = Math.abs(y2 - y1) / 2;
+
+		ctx.beginPath();
+		ctx.strokeStyle = currentTool.color;
+		ctx.lineWidth = currentTool.strokeWidth;
+		ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+		ctx.stroke();
+	}
+
+	// Text tool handlers
+	function handleTextInputKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			commitText();
+		} else if (e.key === 'Escape') {
+			textInputVisible = false;
+			textInputValue = '';
+		}
+	}
+
+	function commitText() {
+		if (!annotationCtx || !textInputValue.trim()) {
+			textInputVisible = false;
+			textInputValue = '';
+			return;
+		}
+
+		const fontSize = Math.max(16, currentTool.strokeWidth * 6);
+		annotationCtx.font = `${fontSize}px sans-serif`;
+		annotationCtx.fillStyle = currentTool.color;
+		annotationCtx.textBaseline = 'top';
+
+		// Handle multi-line text
+		const lines = textInputValue.split('\n');
+		lines.forEach((line, index) => {
+			annotationCtx!.fillText(
+				line,
+				textInputPosition.x,
+				textInputPosition.y + index * (fontSize * 1.2)
+			);
+		});
+
+		saveAnnotationState();
+		textInputVisible = false;
+		textInputValue = '';
 	}
 
 	async function compressVideo(blob: Blob): Promise<Blob> {
@@ -381,22 +856,6 @@
 		}
 	}
 
-	function handleMouseMove(e: MouseEvent) {
-		if (!isDrawing || !ctx) return;
-		const rect = canvasRef.getBoundingClientRect();
-		ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-		ctx.stroke();
-	}
-	function handleMouseUp() {
-		if (!isDrawing) return;
-		isDrawing = false;
-		if (ctx) {
-			const data = ctx.getImageData(0, 0, canvasRef.width, canvasRef.height);
-			annotationHistory = [...annotationHistory.slice(0, historyIndex + 1), data];
-			historyIndex++;
-		}
-	}
-
 	function handleSaveVideo(metadata: any) {
 		if (metadata.videoUrl) {
 			onUploadComplete?.({
@@ -411,6 +870,7 @@
 			showPreviewModal = false;
 		}
 	}
+
 	function handleDiscard() {
 		showPreviewModal = false;
 		videoBlob = null;
@@ -458,6 +918,7 @@
 		return () => {
 			clearInterval(recordingInterval);
 			clearInterval(countdownInterval);
+			stopCanvasLoop();
 			stream?.getTracks().forEach((t) => t.stop());
 			webcamStream?.getTracks().forEach((t) => t.stop());
 		};
@@ -485,27 +946,43 @@
 					{/if}
 				</div>
 			{:else if isRecording || isPaused}
-				<video bind:this={videoPreview} class="w-full h-full object-contain" muted
-					><track kind="captions" /></video
-				>
+				<!-- Hidden video element for source stream -->
+				<video bind:this={videoPreview} class="hidden" muted><track kind="captions" /></video>
 				{#if includeWebcam && webcamStream}
-					<div
-						class="absolute bottom-4 right-4 w-48 h-36 rounded-lg overflow-hidden border-2 border-white shadow-lg"
-					>
-						<video bind:this={webcamPreview} class="w-full h-full object-cover" muted
-							><track kind="captions" /></video
-						>
-					</div>
+					<video bind:this={webcamPreview} class="hidden" muted><track kind="captions" /></video>
 				{/if}
 
+				<!-- Main composited canvas (what gets recorded) -->
 				<canvas
 					bind:this={canvasRef}
-					class="absolute inset-0 cursor-crosshair z-10"
+					class="absolute inset-0 w-full h-full cursor-crosshair z-10"
 					onmousedown={handleMouseDown}
 					onmousemove={handleMouseMove}
 					onmouseup={handleMouseUp}
 					onmouseleave={handleMouseUp}
 				></canvas>
+
+				<!-- Text input overlay for text tool -->
+				{#if textInputVisible}
+					<div
+						class="absolute z-30 bg-transparent"
+						style="left: {textInputPosition.x}px; top: {textInputPosition.y}px;"
+					>
+						<input
+							bind:this={textInputRef}
+							bind:value={textInputValue}
+							type="text"
+							class="bg-transparent border-none outline-none text-lg"
+							style="color: {currentTool.color}; font-size: {Math.max(
+								16,
+								currentTool.strokeWidth * 6
+							)}px;"
+							placeholder="Type text..."
+							onkeydown={handleTextInputKeydown}
+							onblur={commitText}
+						/>
+					</div>
+				{/if}
 
 				<div
 					class="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -515,13 +992,9 @@
 						visible={isToolbarVisible}
 						canUndo={historyIndex > 0}
 						canRedo={historyIndex < annotationHistory.length - 1}
-						onUndo={() => {
-							/* Undo logic */
-						}}
-						onRedo={() => {
-							/* Redo logic */
-						}}
-						onClear={() => ctx?.clearRect(0, 0, canvasRef.width, canvasRef.height)}
+						onUndo={handleUndo}
+						onRedo={handleRedo}
+						onClear={handleClear}
 						onToolChange={(tool) => (currentTool = tool)}
 						onToggleVisibility={() => (isToolbarVisible = !isToolbarVisible)}
 					/>
@@ -694,9 +1167,6 @@
 			{:else if videoBlob}
 				<Button variant="outline" onclick={resetRecording}>Record Again</Button>
 				<Button onclick={handleUseRecording}>Use This Recording</Button>
-				<Button onclick={stopRecording} size="lg" variant="destructive">
-					<Square class="h-5 w-5" /> Stop
-				</Button>
 			{/if}
 		</div>
 		{#if videoBlob}
