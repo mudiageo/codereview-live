@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { onMount, onDestroy } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
 	import { toast } from 'svelte-sonner';
 	import Circle from '@lucide/svelte/icons/circle';
 	import Square from '@lucide/svelte/icons/square';
@@ -12,6 +14,7 @@
 	import Play from '@lucide/svelte/icons/play';
 	import Settings from '@lucide/svelte/icons/settings';
 	import Monitor from '@lucide/svelte/icons/monitor';
+	import Keyboard from '@lucide/svelte/icons/keyboard';
 	import { FFmpeg } from '@ffmpeg/ffmpeg';
 	import { fetchFile } from '@ffmpeg/util';
 
@@ -22,17 +25,28 @@
 		reviewId: string;
 		onUploadComplete?: (result: { videoUrl: string; thumbnailUrl: string; metadata: any }) => void;
 		onStart?: () => void;
+		onEnd?: () => void;
+		onPause?: () => void;
+		onResume?: () => void;
 		maxDuration?: number;
 		quality?: 'low' | 'medium' | 'high';
+		autoShowPreview?: boolean;
 	}
 
 	let {
 		reviewId,
 		onUploadComplete,
 		onStart,
+		onEnd,
+		onPause,
+		onResume,
 		maxDuration = 600,
-		quality = 'high'
+		quality = 'high',
+		autoShowPreview = true
 	}: Props = $props();
+
+	// Show keyboard shortcuts hint
+	let showShortcutsHint = $state(false);
 
 	let isRecording = $state(false);
 	let isPaused = $state(false);
@@ -117,6 +131,153 @@
 
 	// NOTE: Canvas initialization is now handled in beginRecording() directly
 	// to avoid race conditions with the $effect
+
+	// ============================================================================
+	// KEYBOARD SHORTCUTS
+	// ============================================================================
+
+	const positionOrder: (typeof webcamPosition)[] = [
+		'top-left',
+		'top-right',
+		'bottom-right',
+		'bottom-left',
+		'center'
+	];
+	const sizeOrder: (typeof webcamSize)[] = ['small', 'medium', 'large'];
+
+	function cycleWebcamPosition(direction: 'next' | 'prev') {
+		const currentIndex = positionOrder.indexOf(webcamPosition);
+		const newIndex =
+			direction === 'next'
+				? (currentIndex + 1) % positionOrder.length
+				: (currentIndex - 1 + positionOrder.length) % positionOrder.length;
+		webcamPosition = positionOrder[newIndex];
+	}
+
+	function moveWebcamPosition(key: string) {
+		const moves: Record<string, typeof webcamPosition> = {
+			ArrowUp: webcamPosition.includes('bottom')
+				? (webcamPosition.replace('bottom', 'top') as typeof webcamPosition)
+				: webcamPosition,
+			ArrowDown: webcamPosition.includes('top')
+				? (webcamPosition.replace('top', 'bottom') as typeof webcamPosition)
+				: webcamPosition,
+			ArrowLeft: webcamPosition.includes('right')
+				? (webcamPosition.replace('right', 'left') as typeof webcamPosition)
+				: webcamPosition,
+			ArrowRight:
+				webcamPosition.includes('left') && webcamPosition !== 'center'
+					? (webcamPosition.replace('left', 'right') as typeof webcamPosition)
+					: webcamPosition
+		};
+		if (moves[key] && moves[key] !== webcamPosition) {
+			webcamPosition = moves[key];
+			toast.info(`Webcam: ${webcamPosition}`);
+		}
+	}
+
+	function cycleWebcamSize(direction: 'increase' | 'decrease') {
+		const currentIndex = sizeOrder.indexOf(webcamSize);
+		if (direction === 'increase' && currentIndex < sizeOrder.length - 1) {
+			webcamSize = sizeOrder[currentIndex + 1];
+			toast.info(`Webcam size: ${webcamSize}`);
+		} else if (direction === 'decrease' && currentIndex > 0) {
+			webcamSize = sizeOrder[currentIndex - 1];
+			toast.info(`Webcam size: ${webcamSize}`);
+		}
+	}
+
+	function toggleWebcamShape() {
+		webcamShape = webcamShape === 'rectangle' ? 'circle' : 'rectangle';
+		toast.info(`Webcam shape: ${webcamShape}`);
+	}
+
+	function handleKeyDown(e: KeyboardEvent) {
+		// Don't handle shortcuts if user is typing in an input
+		if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+			return;
+		}
+
+		const key = e.key.toLowerCase();
+
+		// Recording controls
+		if (key === 'r' && !isRecording && !countdown) {
+			e.preventDefault();
+			startRecording();
+		} else if (key === 's' && isRecording) {
+			e.preventDefault();
+			stopRecording();
+		} else if ((key === 'p' || key === ' ') && isRecording) {
+			e.preventDefault();
+			if (isPaused) {
+				resumeRecording();
+			} else {
+				pauseRecording();
+			}
+		} else if (key === 'escape') {
+			if (countdown) {
+				clearInterval(countdownInterval);
+				countdown = 0;
+				toast.info('Recording cancelled');
+			} else if (isRecording) {
+				stopRecording();
+				toast.info('Recording stopped');
+			}
+		}
+
+		// Webcam controls (only during recording with webcam)
+		if (isRecording && includeWebcam) {
+			if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+				e.preventDefault();
+				moveWebcamPosition(e.key);
+			} else if (key === '+' || key === '=') {
+				e.preventDefault();
+				cycleWebcamSize('increase');
+			} else if (key === '-' || key === '_') {
+				e.preventDefault();
+				cycleWebcamSize('decrease');
+			} else if (key === 'c') {
+				e.preventDefault();
+				toggleWebcamShape();
+			}
+		}
+	}
+
+	onMount(() => {
+		if (typeof window !== 'undefined') {
+			window.addEventListener('keydown', handleKeyDown);
+		}
+	});
+
+	onDestroy(() => {
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('keydown', handleKeyDown);
+		}
+		// Cleanup any running intervals
+		clearInterval(recordingInterval);
+		clearInterval(countdownInterval);
+		stopCanvasLoop();
+	});
+
+	// ============================================================================
+	// EXPORTED FUNCTIONS FOR EXTERNAL CONTROL
+	// ============================================================================
+
+	export function externalPause() {
+		pauseRecording();
+	}
+
+	export function externalResume() {
+		resumeRecording();
+	}
+
+	export function externalStop() {
+		stopRecording();
+	}
+
+	export function getRecordingState() {
+		return { isRecording, isPaused, recordingTime };
+	}
 
 	// Helper to convert mouse event coordinates to canvas coordinates
 	function getCanvasCoordinates(e: MouseEvent): { x: number; y: number } {
@@ -515,8 +676,10 @@
 					};
 				});
 
-				// Show Preview Modal
-				showPreviewModal = true;
+				// Show Preview Modal (if enabled)
+				if (autoShowPreview) {
+					showPreviewModal = true;
+				}
 
 				// Stop canvas loop
 				stopCanvasLoop();
@@ -560,6 +723,7 @@
 			mediaRecorder.pause();
 			isPaused = true;
 			clearInterval(recordingInterval);
+			onPause?.();
 		}
 	}
 
@@ -574,6 +738,7 @@
 					stopRecording();
 				}
 			}, 1000);
+			onResume?.();
 		}
 	}
 
@@ -583,6 +748,7 @@
 			isRecording = false;
 			isPaused = false;
 			clearInterval(recordingInterval);
+			onEnd?.();
 		}
 	}
 
@@ -1075,6 +1241,99 @@
 					<span class="text-white/60 text-xs">/ {formatTime(maxDuration)}</span>
 				</div>
 
+				<!-- Floating Webcam Controls (visible during recording with webcam) -->
+				{#if includeWebcam}
+					<div class="absolute top-4 right-4 flex flex-col gap-2 z-20">
+						<!-- Position Controls -->
+						<div class="bg-black/70 backdrop-blur-sm rounded-lg p-2 space-y-1">
+							<span class="text-white/60 text-xs block text-center">Position</span>
+							<div class="grid grid-cols-3 gap-0.5">
+								<button
+									class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-xs {webcamPosition ===
+									'top-left'
+										? 'bg-primary text-white'
+										: ''}"
+									onclick={() => (webcamPosition = 'top-left')}
+									title="Top Left">↖</button
+								>
+								<button
+									class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-xs {webcamPosition ===
+									'center'
+										? 'bg-primary text-white'
+										: ''}"
+									onclick={() => (webcamPosition = 'center')}
+									title="Center">○</button
+								>
+								<button
+									class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-xs {webcamPosition ===
+									'top-right'
+										? 'bg-primary text-white'
+										: ''}"
+									onclick={() => (webcamPosition = 'top-right')}
+									title="Top Right">↗</button
+								>
+								<button
+									class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-xs {webcamPosition ===
+									'bottom-left'
+										? 'bg-primary text-white'
+										: ''}"
+									onclick={() => (webcamPosition = 'bottom-left')}
+									title="Bottom Left">↙</button
+								>
+								<div class="w-6 h-6"></div>
+								<button
+									class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-xs {webcamPosition ===
+									'bottom-right'
+										? 'bg-primary text-white'
+										: ''}"
+									onclick={() => (webcamPosition = 'bottom-right')}
+									title="Bottom Right">↘</button
+								>
+							</div>
+						</div>
+						<!-- Size Controls -->
+						<div class="bg-black/70 backdrop-blur-sm rounded-lg p-2 flex items-center gap-1">
+							<button
+								class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-sm {webcamSize ===
+								'small'
+									? 'bg-primary/50'
+									: ''}"
+								onclick={() => (webcamSize = 'small')}
+								title="Small">S</button
+							>
+							<button
+								class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-sm {webcamSize ===
+								'medium'
+									? 'bg-primary/50'
+									: ''}"
+								onclick={() => (webcamSize = 'medium')}
+								title="Medium">M</button
+							>
+							<button
+								class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-sm {webcamSize ===
+								'large'
+									? 'bg-primary/50'
+									: ''}"
+								onclick={() => (webcamSize = 'large')}
+								title="Large">L</button
+							>
+						</div>
+						<!-- Shape Toggle -->
+						<button
+							class="bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1 text-white/80 text-xs hover:bg-black/80 flex items-center justify-center gap-1"
+							onclick={() => (webcamShape = webcamShape === 'rectangle' ? 'circle' : 'rectangle')}
+							title="Toggle Shape (C)"
+						>
+							{#if webcamShape === 'rectangle'}
+								<span class="w-3 h-2 border border-current rounded-sm"></span>
+							{:else}
+								<span class="w-3 h-3 border border-current rounded-full"></span>
+							{/if}
+							<span>{webcamShape}</span>
+						</button>
+					</div>
+				{/if}
+
 				{#if isPaused}
 					<div class="absolute inset-0 flex items-center justify-center bg-black/40">
 						<Badge variant="secondary" class="text-lg px-4 py-2">Paused</Badge>
@@ -1240,6 +1499,45 @@
 					<Circle class="h-5 w-5" />
 					Start Recording
 				</Button>
+				<Popover>
+					<PopoverTrigger>
+						{#snippet child(props)}
+							<Button {...props} variant="ghost" size="icon" title="Keyboard Shortcuts">
+								<Keyboard class="h-4 w-4" />
+							</Button>
+						{/snippet}
+					</PopoverTrigger>
+					<PopoverContent class="w-72">
+						<div class="space-y-3">
+							<h4 class="font-semibold text-sm">Keyboard Shortcuts</h4>
+							<div class="grid grid-cols-2 gap-y-1 text-xs">
+								<span class="text-muted-foreground">Start Recording</span>
+								<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">R</kbd>
+								<span class="text-muted-foreground">Stop Recording</span>
+								<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">S</kbd>
+								<span class="text-muted-foreground">Pause/Resume</span>
+								<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">Space</kbd>
+								<span class="text-muted-foreground">Cancel</span>
+								<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">Esc</kbd>
+							</div>
+							{#if includeWebcam}
+								<div class="border-t pt-2">
+									<h5 class="font-medium text-xs mb-1">Webcam Controls</h5>
+									<div class="grid grid-cols-2 gap-y-1 text-xs">
+										<span class="text-muted-foreground">Move Position</span>
+										<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">↑↓←→</kbd>
+										<span class="text-muted-foreground">Increase Size</span>
+										<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">+</kbd>
+										<span class="text-muted-foreground">Decrease Size</span>
+										<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">-</kbd>
+										<span class="text-muted-foreground">Toggle Shape</span>
+										<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">C</kbd>
+									</div>
+								</div>
+							{/if}
+						</div>
+					</PopoverContent>
+				</Popover>
 			{:else if countdown > 0}
 				<Button
 					onclick={() => {
