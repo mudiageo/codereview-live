@@ -13,6 +13,7 @@
   import X from '@lucide/svelte/icons/x';
   import { uploadVideo } from '$lib/video.remote';
   import { settingsStore } from '$lib/stores/index.svelte';
+  import { clientVideoStorage } from '$lib/utils/video-storage';
 
   interface Props {
     open: boolean;
@@ -61,28 +62,51 @@
       const blob = await response.blob();
       const file = new File([blob], 'recording.webm', { type: 'video/webm' });
 
-      const result = await uploadVideo({
-        video: file,
-        reviewId,
-        storageProvider
-      });
+      if (storageProvider === 'local') {
+        // Save to client-side storage (IndexedDB/OPFS)
+        const localUrl = await clientVideoStorage.saveVideo(reviewId, blob);
 
-      if (result.success && result.videoUrl) {
         onSave({
           title,
           description,
           trimStart,
           trimEnd,
-          videoUrl: result.videoUrl,
-          thumbnailUrl: result.thumbnailUrl || '',
-          metadata: result.metadata
+          videoUrl: localUrl,
+          thumbnailUrl: '', // No thumbnail generation for local storage yet, or we could generate client-side
+          metadata: {
+            duration: videoDuration,
+            size: file.size,
+            width: videoElement.videoWidth,
+            height: videoElement.videoHeight
+          }
         });
-        toast.success('Video uploaded successfully');
+        toast.success('Video saved locally');
         open = false;
+      } else {
+        // Upload to Cloud (S3/R2)
+        const result = await uploadVideo({
+          video: file,
+          reviewId,
+          storageProvider: 'cloud' // Force 'cloud' if selected here, as 'local' now means client-side
+        });
+
+        if (result.success && result.videoUrl) {
+          onSave({
+            title,
+            description,
+            trimStart,
+            trimEnd,
+            videoUrl: result.videoUrl,
+            thumbnailUrl: result.thumbnailUrl || '',
+            metadata: result.metadata
+          });
+          toast.success('Video uploaded successfully');
+          open = false;
+        }
       }
     } catch (error: any) {
-      console.error('Upload failed:', error);
-      toast.error(error.message || 'Failed to upload video');
+      console.error('Save failed:', error);
+      toast.error(error.message || 'Failed to save video');
     } finally {
       isUploading = false;
     }
@@ -177,17 +201,17 @@
           <Label>Storage Location</Label>
           <Select type="single" bind:value={storageProvider}>
             <SelectTrigger>
-              {storageProvider === 'local' ? 'Local Storage' : 'Cloud Storage'}
+              {storageProvider === 'local' ? 'Client-Side Storage' : 'Cloud Upload'}
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="local">Local Storage</SelectItem>
-              <SelectItem value="cloud">Cloud Storage (S3/R2)</SelectItem>
+              <SelectItem value="local">Client-Side Storage (Offline)</SelectItem>
+              <SelectItem value="cloud">Cloud Upload (S3/R2)</SelectItem>
             </SelectContent>
           </Select>
           <p class="text-xs text-muted-foreground">
             {storageProvider === 'local'
-              ? 'Video will be stored on your local server disk.'
-              : 'Video will be uploaded to configured cloud storage.'}
+              ? 'Video stays in your browser (IndexedDB/OPFS). Best for offline/private drafts.'
+              : 'Video is uploaded to the server/cloud for team sharing.'}
           </p>
         </div>
       </div>

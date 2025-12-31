@@ -21,6 +21,7 @@
   import MentionAutocomplete from '$lib/components/mention-autocomplete.svelte';
   import VideoPlayer from '$lib/components/video-player.svelte';
   import P2PShareDialog from '$lib/components/p2p-share-dialog.svelte';
+  import { clientVideoStorage } from '$lib/utils/video-storage';
 
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Share2 from '@lucide/svelte/icons/share-2';
@@ -61,6 +62,7 @@
   const threadedComments = $derived(commentsStore.getThreaded(reviewId));
   const teamMembers = $derived(review.teamId ? teamsStore.findById(review.teamId)?.members || [] : []);
 
+  let videoSrc = $state('');
   let currentTime = $state(0);
   let newComment = $state('');
   let activeTab = $state('diff'); 
@@ -98,6 +100,23 @@
       filename: 'main'
     }
   );
+
+  // Load video if client-side
+  $effect(() => {
+    if (review.videoUrl) {
+      if (review.videoUrl.startsWith('indexeddb:') || review.videoUrl.startsWith('opfs:')) {
+        clientVideoStorage.getVideo(review.videoUrl).then(blob => {
+          if (blob) {
+            videoSrc = URL.createObjectURL(blob);
+          } else {
+            toast.error('Local video file not found');
+          }
+        });
+      } else {
+        videoSrc = review.videoUrl;
+      }
+    }
+  });
 
   // --- Inline Comments Integration ---
   let activeCommentLine = $state<number | null>(null);
@@ -336,8 +355,8 @@
           </TabsList>
           
           <TabsContent value="video" class="flex-1 overflow-auto mt-0">
-            {#if review.videoUrl}
-              <VideoPlayer src={review.videoUrl} onTimeUpdate={handleTimeUpdate} markers={videoMarkers} />
+            {#if videoSrc}
+              <VideoPlayer src={videoSrc} onTimeUpdate={handleTimeUpdate} markers={videoMarkers} />
             {:else}
               <div class="aspect-video bg-muted flex items-center justify-center p-8 text-center text-muted-foreground">
                 <div><VideoIcon class="h-8 w-8 mx-auto mb-2"/>No video available</div>
@@ -438,8 +457,8 @@
 
         <div class="flex flex-col overflow-hidden">
           <div class="border-b">
-            {#if review.videoUrl}
-              <VideoPlayer src={review.videoUrl} onTimeUpdate={handleTimeUpdate} markers={videoMarkers} />
+            {#if videoSrc}
+              <VideoPlayer src={videoSrc} onTimeUpdate={handleTimeUpdate} markers={videoMarkers} />
             {:else}
               <div class="aspect-video bg-muted flex items-center justify-center">
                  <div class="text-center text-muted-foreground"><VideoIcon class="h-12 w-12 mx-auto mb-2"/><p>No video available</p></div>
