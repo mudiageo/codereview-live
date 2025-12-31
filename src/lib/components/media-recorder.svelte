@@ -61,6 +61,13 @@
 	let compressionProgress = $state(0);
 	let availableAudioInputs = $state<MediaDeviceInfo[]>([]);
 
+	// Webcam PIP Settings
+	let webcamPosition = $state<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center'>(
+		'bottom-right'
+	);
+	let webcamSize = $state<'small' | 'medium' | 'large'>('small');
+	let webcamShape = $state<'rectangle' | 'circle'>('rectangle');
+
 	// Canvas Compositing State
 	let canvasRef: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D | null = null;
@@ -108,104 +115,151 @@
 		}
 	});
 
-	// Initialize annotation canvas when recording starts
-	$effect(() => {
-		if (isRecording && canvasRef && videoPreview) {
-			// Initialize main canvas context
-			ctx = canvasRef.getContext('2d');
+	// NOTE: Canvas initialization is now handled in beginRecording() directly
+	// to avoid race conditions with the $effect
 
-			// Create annotation canvas (separate layer for non-destructive annotations)
-			if (!annotationCanvas) {
-				annotationCanvas = document.createElement('canvas');
-				annotationCtx = annotationCanvas.getContext('2d');
-			}
+	// Helper to convert mouse event coordinates to canvas coordinates
+	function getCanvasCoordinates(e: MouseEvent): { x: number; y: number } {
+		const rect = canvasRef.getBoundingClientRect();
+		// Scale from CSS pixels to canvas internal pixels
+		const scaleX = canvasRef.width / rect.width;
+		const scaleY = canvasRef.height / rect.height;
+		return {
+			x: (e.clientX - rect.left) * scaleX,
+			y: (e.clientY - rect.top) * scaleY
+		};
+	}
 
-			// Create temp canvas for shape previews
-			if (!tempCanvas) {
-				tempCanvas = document.createElement('canvas');
-				tempCtx = tempCanvas.getContext('2d');
-			}
+	// Calculate webcam PIP position and size based on settings
+	function getWebcamPIPRect(): { x: number; y: number; width: number; height: number } {
+		const sizeMultipliers = { small: 0.15, medium: 0.2, large: 0.3 };
+		const multiplier = sizeMultipliers[webcamSize];
+		const pipWidth = canvasRef.width * multiplier;
+		const pipHeight = pipWidth * (3 / 4);
+		const margin = 16;
 
-			// Match canvas sizes to video preview
-			const resizeObserver = new ResizeObserver(() => {
-				if (canvasRef && videoPreview) {
-					const width = videoPreview.clientWidth;
-					const height = videoPreview.clientHeight;
-
-					canvasRef.width = width;
-					canvasRef.height = height;
-
-					if (annotationCanvas) {
-						annotationCanvas.width = width;
-						annotationCanvas.height = height;
-					}
-
-					if (tempCanvas) {
-						tempCanvas.width = width;
-						tempCanvas.height = height;
-					}
-				}
-			});
-			resizeObserver.observe(videoPreview);
-
-			// Start the canvas compositing loop
-			startCanvasLoop();
-
-			// Save initial empty state for undo
-			if (annotationCtx && annotationCanvas) {
-				const initialData = annotationCtx.getImageData(
-					0,
-					0,
-					annotationCanvas.width,
-					annotationCanvas.height
-				);
-				annotationHistory = [initialData];
-				historyIndex = 0;
-			}
-
-			return () => {
-				resizeObserver.disconnect();
-				stopCanvasLoop();
-			};
+		let x = 0,
+			y = 0;
+		switch (webcamPosition) {
+			case 'top-left':
+				x = margin;
+				y = margin;
+				break;
+			case 'top-right':
+				x = canvasRef.width - pipWidth - margin;
+				y = margin;
+				break;
+			case 'bottom-left':
+				x = margin;
+				y = canvasRef.height - pipHeight - margin;
+				break;
+			case 'bottom-right':
+				x = canvasRef.width - pipWidth - margin;
+				y = canvasRef.height - pipHeight - margin;
+				break;
+			case 'center':
+				x = (canvasRef.width - pipWidth) / 2;
+				y = (canvasRef.height - pipHeight) / 2;
+				break;
 		}
-	});
+		return { x, y, width: pipWidth, height: pipHeight };
+	}
 
 	// Canvas compositing loop - draws video + webcam + annotations onto main canvas
 	function startCanvasLoop() {
 		const drawFrame = () => {
-			if (!ctx || !videoPreview || !isRecording || isPaused) {
+			// Skip if not recording or missing required elements
+			if (!ctx || !videoPreview || !isRecording) {
+				if (isRecording) {
+					// Keep trying if we're recording but elements aren't ready
+					animationFrameId = requestAnimationFrame(drawFrame);
+				}
+				return;
+			}
+
+			// Skip if canvas has no dimensions
+			if (canvasRef.width === 0 || canvasRef.height === 0) {
+				animationFrameId = requestAnimationFrame(drawFrame);
+				return;
+			}
+
+			// Skip drawing if paused (but keep the loop running)
+			if (isPaused) {
 				animationFrameId = requestAnimationFrame(drawFrame);
 				return;
 			}
 
 			// Draw video frame
-			ctx.drawImage(videoPreview, 0, 0, canvasRef.width, canvasRef.height);
+			try {
+				ctx.drawImage(videoPreview, 0, 0, canvasRef.width, canvasRef.height);
+			} catch (e) {
+				// Video might not be ready yet
+				animationFrameId = requestAnimationFrame(drawFrame);
+				return;
+			}
 
 			// Draw webcam PIP if enabled
 			if (includeWebcam && webcamPreview && webcamStream) {
-				const pipWidth = canvasRef.width * 0.2;
-				const pipHeight = pipWidth * (3 / 4);
-				const pipX = canvasRef.width - pipWidth - 16;
-				const pipY = canvasRef.height - pipHeight - 16;
+				const pip = getWebcamPIPRect();
 
-				// Draw border/shadow for PIP
+				ctx.save();
+
+				// Draw shadow/border
 				ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
 				ctx.shadowBlur = 10;
 				ctx.fillStyle = '#000';
-				ctx.fillRect(pipX - 2, pipY - 2, pipWidth + 4, pipHeight + 4);
-				ctx.shadowBlur = 0;
 
-				// Draw webcam feed
-				ctx.drawImage(webcamPreview, pipX, pipY, pipWidth, pipHeight);
+				if (webcamShape === 'circle') {
+					// Circle shape with clipping
+					const centerX = pip.x + pip.width / 2;
+					const centerY = pip.y + pip.height / 2;
+					const radius = Math.min(pip.width, pip.height) / 2;
+
+					// Draw circle background/border
+					ctx.beginPath();
+					ctx.arc(centerX, centerY, radius + 2, 0, Math.PI * 2);
+					ctx.fill();
+					ctx.shadowBlur = 0;
+
+					// Clip to circle and draw webcam
+					ctx.beginPath();
+					ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+					ctx.clip();
+
+					try {
+						ctx.drawImage(webcamPreview, pip.x, pip.y, pip.width, pip.height);
+					} catch (e) {
+						// Webcam might not be ready
+					}
+				} else {
+					// Rectangle shape
+					ctx.fillRect(pip.x - 2, pip.y - 2, pip.width + 4, pip.height + 4);
+					ctx.shadowBlur = 0;
+
+					// Draw webcam feed
+					try {
+						ctx.drawImage(webcamPreview, pip.x, pip.y, pip.width, pip.height);
+					} catch (e) {
+						// Webcam might not be ready
+					}
+				}
+
+				ctx.restore();
 			}
 
-			// Draw annotation layer on top
-			if (annotationCanvas) {
+			// Draw annotation layer on top (only if it has dimensions)
+			if (annotationCanvas && annotationCanvas.width > 0 && annotationCanvas.height > 0) {
 				ctx.drawImage(annotationCanvas, 0, 0);
 			}
 
 			// Draw temp canvas (for shape preview while drawing)
-			if (tempCanvas && isDrawing && ['arrow', 'rectangle', 'circle'].includes(currentTool.type)) {
+			if (
+				tempCanvas &&
+				tempCanvas.width > 0 &&
+				tempCanvas.height > 0 &&
+				isDrawing &&
+				['arrow', 'rectangle', 'circle'].includes(currentTool.type)
+			) {
 				ctx.drawImage(tempCanvas, 0, 0);
 			}
 
@@ -341,12 +395,7 @@
 			const videoWidth = videoPreview?.videoWidth || 1280;
 			const videoHeight = videoPreview?.videoHeight || 720;
 
-			if (canvasRef) {
-				canvasRef.width = videoWidth;
-				canvasRef.height = videoHeight;
-				ctx = canvasRef.getContext('2d');
-			}
-
+			// Create in-memory canvases (these don't need to be in the DOM)
 			if (!annotationCanvas) {
 				annotationCanvas = document.createElement('canvas');
 			}
@@ -361,14 +410,27 @@
 			tempCanvas.height = videoHeight;
 			tempCtx = tempCanvas.getContext('2d');
 
+			// Set recording state FIRST - this causes Svelte to render the canvas element
+			isRecording = true;
+			recordingTime = 0;
+
+			// Wait for Svelte to render the canvas element
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			// Now the canvas should exist in the DOM
+			if (!canvasRef) {
+				throw new Error('Canvas element not available after render');
+			}
+
+			// Set canvas dimensions
+			canvasRef.width = videoWidth;
+			canvasRef.height = videoHeight;
+			ctx = canvasRef.getContext('2d');
+
 			// Draw initial frame to canvas
 			if (ctx && videoPreview) {
 				ctx.drawImage(videoPreview, 0, 0, canvasRef.width, canvasRef.height);
 			}
-
-			// Set recording state - needed for canvas loop
-			isRecording = true;
-			recordingTime = 0;
 
 			// Start the canvas compositing loop
 			startCanvasLoop();
@@ -544,6 +606,8 @@
 
 	function saveAnnotationState() {
 		if (!annotationCtx || !annotationCanvas) return;
+		// Don't save if canvas has no dimensions
+		if (annotationCanvas.width === 0 || annotationCanvas.height === 0) return;
 		const data = annotationCtx.getImageData(0, 0, annotationCanvas.width, annotationCanvas.height);
 		// Truncate history if we're in the middle of undo
 		annotationHistory = [...annotationHistory.slice(0, historyIndex + 1), data];
@@ -573,10 +637,11 @@
 
 	function handleMouseDown(e: MouseEvent) {
 		if (!annotationCtx || !annotationCanvas || !isRecording) return;
+		// Don't allow drawing if canvas has no dimensions
+		if (annotationCanvas.width === 0 || annotationCanvas.height === 0) return;
 
-		const rect = canvasRef.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
+		// Convert CSS coordinates to canvas coordinates
+		const { x, y } = getCanvasCoordinates(e);
 
 		startPoint = { x, y };
 		isDrawing = true;
@@ -622,9 +687,7 @@
 	function handleMouseMove(e: MouseEvent) {
 		if (!isDrawing || !startPoint) return;
 
-		const rect = canvasRef.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
+		const { x, y } = getCanvasCoordinates(e);
 
 		switch (currentTool.type) {
 			case 'pen':
@@ -655,9 +718,7 @@
 			return;
 		}
 
-		const rect = canvasRef.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
+		const { x, y } = getCanvasCoordinates(e);
 
 		switch (currentTool.type) {
 			case 'pen':
@@ -945,13 +1006,17 @@
 						>
 					{/if}
 				</div>
-			{:else if isRecording || isPaused}
-				<!-- Hidden video element for source stream -->
-				<video bind:this={videoPreview} class="hidden" muted><track kind="captions" /></video>
-				{#if includeWebcam && webcamStream}
-					<video bind:this={webcamPreview} class="hidden" muted><track kind="captions" /></video>
-				{/if}
+			{/if}
 
+			<!-- Hidden video elements - always in DOM so they exist before recording starts -->
+			<video bind:this={videoPreview} class="hidden" muted playsinline
+				><track kind="captions" /></video
+			>
+			<video bind:this={webcamPreview} class="hidden" muted playsinline
+				><track kind="captions" /></video
+			>
+
+			{#if isRecording || isPaused}
 				<!-- Main composited canvas (what gets recorded) -->
 				<canvas
 					bind:this={canvasRef}
@@ -988,7 +1053,7 @@
 					class="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
 				>
 					<AnnotationToolbar
-						bind:currentTool
+						{currentTool}
 						visible={isToolbarVisible}
 						canUndo={historyIndex > 0}
 						canRedo={historyIndex < annotationHistory.length - 1}
@@ -1076,6 +1141,47 @@
 								</div>
 								<Switch bind:checked={includeWebcam} />
 							</div>
+
+							{#if includeWebcam}
+								<div class="ml-4 space-y-3 pt-2 border-l-2 border-muted pl-4">
+									<div class="space-y-2">
+										<Label class="text-sm">Position</Label>
+										<Select type="single" bind:value={webcamPosition}>
+											<SelectTrigger class="h-8">{webcamPosition}</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="top-left">Top Left</SelectItem>
+												<SelectItem value="top-right">Top Right</SelectItem>
+												<SelectItem value="bottom-left">Bottom Left</SelectItem>
+												<SelectItem value="bottom-right">Bottom Right</SelectItem>
+												<SelectItem value="center">Center</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+
+									<div class="space-y-2">
+										<Label class="text-sm">Size</Label>
+										<Select type="single" bind:value={webcamSize}>
+											<SelectTrigger class="h-8">{webcamSize}</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="small">Small (15%)</SelectItem>
+												<SelectItem value="medium">Medium (20%)</SelectItem>
+												<SelectItem value="large">Large (30%)</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+
+									<div class="space-y-2">
+										<Label class="text-sm">Shape</Label>
+										<Select type="single" bind:value={webcamShape}>
+											<SelectTrigger class="h-8">{webcamShape}</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="rectangle">Rectangle</SelectItem>
+												<SelectItem value="circle">Circle</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+								</div>
+							{/if}
 						{/if}
 
 						<div class="flex items-center justify-between">

@@ -20,7 +20,7 @@
 	import Cloud from '@lucide/svelte/icons/cloud';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import X from '@lucide/svelte/icons/x';
-	import { uploadVideo } from '$lib/video.remote';
+	import { uploadVideo as uploadVideoForm } from '$lib/video.remote';
 	import { settingsStore } from '$lib/stores/index.svelte';
 	import {
 		createClientVideoStorage,
@@ -64,6 +64,9 @@
 		settingsStore.settings.clientStorageBackend || 'auto'
 	);
 
+	const uploadVideo = uploadVideoForm.for('preview');
+	let uploadButton: HTMLButtonElement | null = $state(null);
+
 	// Detect available storage backends on mount
 	$effect(() => {
 		detectAvailableBackends().then((backends) => {
@@ -73,7 +76,8 @@
 
 	function handleVideoLoad() {
 		if (videoElement) {
-			videoDuration = videoElement.duration;
+			// Ensure duration is finite (it can be Infinity for some streams)
+			videoDuration = Number.isFinite(videoElement.duration) ? videoElement.duration : 0;
 			trimEnd = videoDuration;
 		}
 	}
@@ -169,12 +173,14 @@
 			// Cloud storage - upload to server
 			const file = new File([blob], 'recording.webm', { type: 'video/webm' });
 
-			const result = await uploadVideo({
-				video: file,
-				reviewId,
-				storageProvider: 'cloud'
-			});
+			// Set form values
+			uploadVideo.fields.video.value = () => file;
+			// reviewId and storageProvider are handled by inputs
 
+			// Submit the form programmatically
+			uploadButton?.click();
+			const result = uploadVideo.result;
+			console.log(result);
 			if (result.success && result.videoUrl) {
 				onSave({
 					title,
@@ -273,8 +279,8 @@
 					src={videoUrl}
 					controls
 					class="w-full"
-					onloadedmetadata={handleVideoLoad}
-				/>
+					onloadedmetadata={handleVideoLoad}><track kind="captions" /></video
+				>
 			</div>
 
 			<!-- Metadata -->
@@ -433,3 +439,11 @@
 		</DialogFooter>
 	</DialogContent>
 </Dialog>
+
+<!-- Hidden form for programmatic submission (file upload) -->
+<form {...uploadVideo} class="hidden" enctype="multipart/form-data">
+	<input {...uploadVideo.fields.video.as('file')} />
+	<input {...uploadVideo.fields.reviewId.as('text')} bind:value={reviewId} />
+	<input {...uploadVideo.fields.storageProvider.as('text')} value="cloud" />
+	<button bind:this={uploadButton} {...uploadVideo.buttonProps}></button>
+</form>
