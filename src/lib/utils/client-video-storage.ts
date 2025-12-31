@@ -467,34 +467,42 @@ class FileSystemVideoStorage implements ClientVideoStorage {
 
 // ============================================================================
 // Tauri Backend (Native filesystem for desktop app)
+// NOTE: This backend requires @tauri-apps/plugin-fs to be installed
 // ============================================================================
 
 class TauriVideoStorage implements ClientVideoStorage {
     private basePath: string | null = null;
+    private tauriFs: any = null;
+    private tauriPath: any = null;
 
     async initialize(): Promise<void> {
         if (this.basePath) return;
 
-        // @ts-ignore - Tauri API
-        const { appDataDir, join } = await import('@tauri-apps/api/path');
-        const baseDir = await appDataDir();
-        // @ts-ignore - Tauri API
-        const { createDir, exists } = await import('@tauri-apps/api/fs');
+        try {
+            // Use dynamic import with a variable to prevent Vite from analyzing
+            const fsModulePath = '@tauri-apps/plugin-fs';
+            const pathModulePath = '@tauri-apps/api/path';
 
-        this.basePath = await join(baseDir, 'videos');
+            this.tauriFs = await import(/* @vite-ignore */ fsModulePath);
+            this.tauriPath = await import(/* @vite-ignore */ pathModulePath);
 
-        if (!(await exists(this.basePath))) {
-            await createDir(this.basePath, { recursive: true });
+            const baseDir = await this.tauriPath.appDataDir();
+            this.basePath = await this.tauriPath.join(baseDir, 'videos');
+
+            // Check if directory exists, create if not
+            try {
+                await this.tauriFs.stat(this.basePath);
+            } catch {
+                await this.tauriFs.mkdir(this.basePath, { recursive: true });
+            }
+        } catch (error) {
+            console.error('Failed to initialize Tauri storage:', error);
+            throw new Error('Tauri filesystem not available');
         }
     }
 
     async save(video: Blob, metadata: Omit<VideoMetadata, 'id' | 'createdAt' | 'size'>): Promise<string> {
         await this.initialize();
-
-        // @ts-ignore - Tauri API
-        const { writeBinaryFile, writeTextFile } = await import('@tauri-apps/api/fs');
-        // @ts-ignore - Tauri API
-        const { join } = await import('@tauri-apps/api/path');
 
         const id = crypto.randomUUID();
         const fullMetadata: VideoMetadata = {
@@ -505,14 +513,14 @@ class TauriVideoStorage implements ClientVideoStorage {
             syncStatus: 'pending'
         };
 
-        const videoPath = await join(this.basePath!, `${id}.webm`);
-        const metadataPath = await join(this.basePath!, `${id}.json`);
+        const videoPath = await this.tauriPath.join(this.basePath!, `${id}.webm`);
+        const metadataPath = await this.tauriPath.join(this.basePath!, `${id}.json`);
 
-        // Convert blob to array buffer
+        // Convert blob to Uint8Array
         const arrayBuffer = await video.arrayBuffer();
 
-        await writeBinaryFile(videoPath, new Uint8Array(arrayBuffer));
-        await writeTextFile(metadataPath, JSON.stringify(fullMetadata, null, 2));
+        await this.tauriFs.writeFile(videoPath, new Uint8Array(arrayBuffer));
+        await this.tauriFs.writeTextFile(metadataPath, JSON.stringify(fullMetadata, null, 2));
 
         return id;
     }
@@ -521,16 +529,11 @@ class TauriVideoStorage implements ClientVideoStorage {
         await this.initialize();
 
         try {
-            // @ts-ignore - Tauri API
-            const { readBinaryFile, readTextFile } = await import('@tauri-apps/api/fs');
-            // @ts-ignore - Tauri API
-            const { join } = await import('@tauri-apps/api/path');
+            const videoPath = await this.tauriPath.join(this.basePath!, `${id}.webm`);
+            const metadataPath = await this.tauriPath.join(this.basePath!, `${id}.json`);
 
-            const videoPath = await join(this.basePath!, `${id}.webm`);
-            const metadataPath = await join(this.basePath!, `${id}.json`);
-
-            const videoData = await readBinaryFile(videoPath);
-            const metadataText = await readTextFile(metadataPath);
+            const videoData = await this.tauriFs.readFile(videoPath);
+            const metadataText = await this.tauriFs.readTextFile(metadataPath);
 
             return {
                 blob: new Blob([videoData], { type: 'video/webm' }),
@@ -544,43 +547,40 @@ class TauriVideoStorage implements ClientVideoStorage {
     async delete(id: string): Promise<void> {
         await this.initialize();
 
-        // @ts-ignore - Tauri API
-        const { removeFile } = await import('@tauri-apps/api/fs');
-        // @ts-ignore - Tauri API
-        const { join } = await import('@tauri-apps/api/path');
-
         try {
-            await removeFile(await join(this.basePath!, `${id}.webm`));
+            await this.tauriFs.remove(await this.tauriPath.join(this.basePath!, `${id}.webm`));
         } catch { /* ignore */ }
 
         try {
-            await removeFile(await join(this.basePath!, `${id}.json`));
+            await this.tauriFs.remove(await this.tauriPath.join(this.basePath!, `${id}.json`));
         } catch { /* ignore */ }
     }
 
     async list(): Promise<VideoEntry[]> {
         await this.initialize();
 
-        // @ts-ignore - Tauri API
-        const { readDir, readTextFile } = await import('@tauri-apps/api/fs');
-        // @ts-ignore - Tauri API
-        const { join } = await import('@tauri-apps/api/path');
-
         const entries: VideoEntry[] = [];
-        const files = await readDir(this.basePath!);
 
-        for (const file of files) {
-            if (file.name?.endsWith('.json')) {
-                try {
-                    const metadataPath = await join(this.basePath!, file.name);
-                    const metadata = JSON.parse(await readTextFile(metadataPath));
-                    entries.push({
-                        id: metadata.id,
-                        metadata,
-                        backend: 'tauri'
-                    });
-                } catch { /* skip invalid */ }
+        try {
+            const files = await this.tauriFs.readDir(this.basePath!);
+
+            for (const file of files) {
+                const fileName = typeof file === 'string' ? file : file.name;
+                if (fileName?.endsWith('.json')) {
+                    try {
+                        const metadataPath = await this.tauriPath.join(this.basePath!, fileName);
+                        const metadataText = await this.tauriFs.readTextFile(metadataPath);
+                        const metadata = JSON.parse(metadataText);
+                        entries.push({
+                            id: metadata.id,
+                            metadata,
+                            backend: 'tauri'
+                        });
+                    } catch { /* skip invalid */ }
+                }
             }
+        } catch (error) {
+            console.warn('Failed to list Tauri videos:', error);
         }
 
         return entries;
