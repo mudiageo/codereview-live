@@ -48,7 +48,7 @@
       
       <div class="space-y-2">
         <Label>Video Quality</Label>
-        <Select value={settings.videoQuality} onValueChange={(value) => updateSetting('videoQuality', value as 'low' | 'medium' | 'high')}>
+        <Select type="single" value={settings.videoQuality} onValueChange={(value) => updateSetting('videoQuality', value as 'low' | 'medium' | 'high')}>
           <SelectTrigger>
             {settings.videoQuality || ""}
           </SelectTrigger>
@@ -85,7 +85,7 @@
       
       <div class="space-y-2">
         <Label>Countdown Duration</Label>
-        <Select value={settings.countdown.toString()} onValueChange={(value) => updateSetting('countdown', parseInt(value))}>
+        <Select type="single" value={settings.countdown.toString()} onValueChange={(value) => updateSetting('countdown', parseInt(value))}>
           <SelectTrigger>
             {settings.countdown.toString() || ""}
           </SelectTrigger>
@@ -108,7 +108,7 @@
     <CardContent class="space-y-6">
       <div class="space-y-2">
         <Label>Default Playback Speed</Label>
-        <Select value={settings.defaultSpeed.toString()} onValueChange={(value) => updateSetting('defaultSpeed', parseFloat(value))}>
+        <Select type="single" value={settings.defaultSpeed.toString()} onValueChange={(value) => updateSetting('defaultSpeed', parseFloat(value))}>
           <SelectTrigger>
             {settings.defaultSpeed.toString() || ""}
           </SelectTrigger>

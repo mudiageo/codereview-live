@@ -27,11 +27,12 @@
   import Menu from '@lucide/svelte/icons/menu';
   import X from '@lucide/svelte/icons/x';
   import { cn } from '$lib/utils';
+  import { auth } from '$lib/stores/auth.svelte';
   
   let { children } = $props();
   
   // Mock user data - replace with actual auth store
-  const user = $state({
+  const user = $state(auth.currentUser || {
     name: 'John Doe',
     email: 'john@example.com',
     avatar: '',
@@ -225,7 +226,7 @@
             Billing
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
+          <DropdownMenuItem onclick={auth.logOut}>
             <LogOut class="mr-2 h-4 w-4" />
             Log out
           </DropdownMenuItem>
@@ -312,7 +313,7 @@
                 Billing
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onclick={auth.logOut}>
                 <LogOut class="mr-2 h-4 w-4" />
                 Log out
               </DropdownMenuItem>
