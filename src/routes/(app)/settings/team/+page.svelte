@@ -18,13 +18,7 @@
 	let newMemberEmail = $state('');
 	let newMemberRole = $state('member');
 	let isInviting = $state(false);
-
-	onMount(async () => {
-		if (hasTeamAccess) {
-			await teamsStore.load();
-			await teamInvitationsStore.load();
-		}
-	});
+;
 
 	async function handleInvite() {
 		if (!newMemberEmail) {
@@ -112,7 +106,7 @@
 
 				<div class="space-y-2">
 					<Label for="role">Role</Label>
-					<Select id="role" bind:value={newMemberRole} class="w-full rounded-md border p-2">
+					<Select bind:value={newMemberRole} class="w-full rounded-md border p-2">
 					<SelectTrigger>
             {newMemberRole || ""}
           </SelectTrigger>
