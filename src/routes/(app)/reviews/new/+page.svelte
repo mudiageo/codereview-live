@@ -21,6 +21,8 @@
 	import VideoIcon from '@lucide/svelte/icons/video';
 	import Circle from '@lucide/svelte/icons/circle';
 	import Square from '@lucide/svelte/icons/square';
+	import Play from '@lucide/svelte/icons/play';
+	import Pause from '@lucide/svelte/icons/pause';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import AuthGuard from '$lib/components/auth-guard.svelte';
 	import PaywallDialog from '$lib/components/paywall-dialog.svelte';
@@ -79,6 +81,11 @@
 	let checklistItems = $state<Record<string, boolean>>({});
 	let checklistNotes = $state<Record<string, string>>({});
 	let checklistLoading = $state(false);
+
+	// Smart Recording Workflow State
+	let showRecordingIndicator = $state(false);
+	let isPaused = $state(false);
+	let mediaRecorderRef = $state<ReturnType<typeof MediaRecorder>>();
 
 	const userPlan = $derived(auth.currentUser?.plan || 'free');
 	const reviewCount = $derived(reviewsStore.count);
@@ -227,6 +234,51 @@
 		isRecording = true;
 		recordingStartTime = Date.now();
 		recordingEvents = [];
+		showRecordingIndicator = true;
+
+		// Auto-navigate to code editor step
+		if (step !== 2) {
+			step = 2;
+		}
+	}
+
+	function handleRecordingEnd() {
+		isRecording = false;
+		showRecordingIndicator = false;
+		isPaused = false;
+
+		// Navigate back to video step so user can save
+		step = 3;
+	}
+
+	function handleRecordingPause() {
+		isPaused = true;
+	}
+
+	function handleRecordingResume() {
+		isPaused = false;
+	}
+
+	function handlePauseRecording() {
+		if (mediaRecorderRef) {
+			if (isPaused) {
+				mediaRecorderRef.externalResume();
+			} else {
+				mediaRecorderRef.externalPause();
+			}
+		}
+	}
+
+	function handleStopRecording() {
+		if (mediaRecorderRef) {
+			mediaRecorderRef.externalStop();
+		}
+	}
+
+	function formatRecordingTime(seconds: number) {
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 	}
 
 	function handleEditorScroll(e: Event) {
@@ -369,6 +421,49 @@
 		}
 	}
 </script>
+
+<!-- Floating Recording Indicator -->
+{#if showRecordingIndicator}
+	<div
+		class="fixed top-4 right-4 z-50 flex items-center gap-3 bg-red-500/95 text-white px-4 py-2.5 rounded-full shadow-lg backdrop-blur-sm"
+	>
+		<span class="relative flex h-3 w-3">
+			<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"
+			></span>
+			<span
+				class="relative inline-flex rounded-full h-3 w-3 bg-white {isPaused ? 'opacity-50' : ''}"
+			></span>
+		</span>
+		<span class="font-mono font-medium text-sm">
+			{isPaused ? 'PAUSED' : 'REC'}
+			{formatRecordingTime(recordingTime)}
+		</span>
+		<div class="flex items-center gap-1 ml-2 border-l border-white/30 pl-2">
+			<Button
+				size="sm"
+				variant="ghost"
+				class="text-white hover:bg-white/20 h-7 w-7 p-0"
+				onclick={handlePauseRecording}
+				title={isPaused ? 'Resume (Space)' : 'Pause (Space)'}
+			>
+				{#if isPaused}
+					<Play class="h-4 w-4" />
+				{:else}
+					<Pause class="h-4 w-4" />
+				{/if}
+			</Button>
+			<Button
+				size="sm"
+				variant="ghost"
+				class="text-white hover:bg-white/20 h-7 w-7 p-0"
+				onclick={handleStopRecording}
+				title="Stop Recording (S)"
+			>
+				<Square class="h-4 w-4" />
+			</Button>
+		</div>
+	</div>
+{/if}
 
 <AuthGuard requireAuth requirePlan="free">
 	{#if !canCreateReview}
@@ -602,6 +697,7 @@
 									<TabsContent value="record" class="space-y-4">
 										{#if reviewId}
 											<MediaRecorder
+												bind:this={mediaRecorderRef}
 												{reviewId}
 												onUploadComplete={(result) => {
 													uploadedVideoUrl = result.videoUrl;
@@ -611,6 +707,9 @@
 													toast.success('Video attached to review');
 												}}
 												onStart={handleRecordingStart}
+												onEnd={handleRecordingEnd}
+												onPause={handleRecordingPause}
+												onResume={handleRecordingResume}
 												maxDuration={600}
 												quality="high"
 											/>
