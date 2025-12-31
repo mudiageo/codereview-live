@@ -142,7 +142,8 @@
 						class:ring-primary={currentTool.color === color}
 						style="background-color: {color}"
 						onclick={() => handleColorSelect(color)}
-					/>
+						aria-label="Select colour"
+					></button>
 				{/each}
 			</div>
 		</PopoverContent>
