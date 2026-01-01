@@ -131,14 +131,6 @@ export class RecordingContext {
     private screenVideo: HTMLVideoElement | null = null;
     private webcamVideo: HTMLVideoElement | null = null;
 
-    // ============= UI Element Refs =============
-    private canvasRef: HTMLCanvasElement | null = null;
-    private uiCtx: CanvasRenderingContext2D | null = null;
-
-    // We keeping these for potential direct binding but they are no longer the primary loop source
-    private videoPreviewRef: HTMLVideoElement | null = null;
-    private webcamPreviewRef: HTMLVideoElement | null = null;
-    private animationFrameId: number | null = null;
 
     private async setupInternalVideo(stream: MediaStream, type: 'screen' | 'webcam') {
         const v = document.createElement('video');
