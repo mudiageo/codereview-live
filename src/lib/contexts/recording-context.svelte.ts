@@ -514,13 +514,16 @@ export class RecordingContext {
 
         try {
             // Use dynamic import to avoid bundling issues
-            const { default: snapdom } = await import('@zumer/snapdom');
+            const { snapdom } = await import('@zumer/snapdom');
             
             // Capture the DOM element to a canvas
-            const capturedCanvas = await snapdom(this.workspaceElement, {
+            const result = await snapdom(this.workspaceElement, {
                 backgroundColor: '#ffffff',
                 scale: 1,
             });
+            
+            // Get canvas from result
+            const capturedCanvas = await result.toCanvas();
 
             // Draw the captured canvas to our master canvas
             this.masterCtx.drawImage(
