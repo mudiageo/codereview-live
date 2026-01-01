@@ -65,7 +65,6 @@
 	let code = $state('');
 	let language = $state('javascript');
 	let isRecording = $state(false);
-	let recordingTime = $state(0);
 	let uploadedVideoUrl = $state<string>('');
 	let uploadedThumbnailUrl = $state<string>('');
 	let uploadedMetadata = $state<any>(null);
@@ -101,8 +100,8 @@
 	const recordingCtx = createRecordingContext();
 
 	// Bind local state to context for reactivity
-	const isPaused = $derived(recordingCtx.isPaused);
-	const recordingTime = $derived(recordingCtx.recordingTime);
+	let isPaused = $derived(recordingCtx.isPaused);
+	let recordingTime = $derived(recordingCtx.recordingTime || 0);
 
 	const userPlan = $derived(auth.currentUser?.plan || 'free');
 	const reviewCount = $derived(reviewsStore.count);
