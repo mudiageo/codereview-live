@@ -88,7 +88,7 @@
 	import SearchCommand from '$lib/components/search-command.svelte';
 	import KeyboardShortcutsDialog from '$lib/components/keyboard-shortcuts-dialog.svelte';
 	import { browser } from '$app/environment';
-	import { KeyboardShortcuts } from '$lib/utils/keyboard-shortcuts';
+	import { keyboardShortcuts } from '$lib/utils/keyboard-shortcuts';
 
 	let searchOpen = $state(false);
 	let shortcutsOpen = $state(false);
@@ -101,50 +101,59 @@
 			// Load initial data
 
 			// Setup keyboard shortcuts
-			const shortcuts = new KeyboardShortcuts();
-			shortcuts.register(
-				'mod+k',
-				() => {
+			// Setup keyboard shortcuts
+			// Use the singleton instance
+			keyboardShortcuts.register({
+				key: 'k',
+				mod: true,
+				action: () => {
 					searchOpen = true;
 				},
-				{ description: 'Open search' }
-			);
-			shortcuts.register(
-				'mod+/',
-				() => {
+				description: 'Open search',
+				category: 'Navigation'
+			});
+			keyboardShortcuts.register({
+				key: '/',
+				mod: true,
+				action: () => {
 					shortcutsOpen = true;
 				},
-				{ description: 'Show shortcuts' }
-			);
-			shortcuts.register(
-				'g d',
-				() => {
+				description: 'Show shortcuts',
+				category: 'Help'
+			});
+			keyboardShortcuts.register({
+				key: 'd',
+				action: () => {
 					goto('/dashboard');
 				},
-				{ description: 'Go to dashboard' }
-			);
-			shortcuts.register(
-				'g p',
-				() => {
+				description: 'Go to dashboard',
+				category: 'Navigation'
+			});
+			keyboardShortcuts.register({
+				key: 'p',
+				action: () => {
 					goto('/projects');
 				},
-				{ description: 'Go to projects' }
-			);
-			shortcuts.register(
-				'g r',
-				() => {
+				description: 'Go to projects',
+				category: 'Navigation'
+			});
+			keyboardShortcuts.register({
+				key: 'r',
+				action: () => {
 					goto('/reviews');
 				},
-				{ description: 'Go to reviews' }
-			);
-			shortcuts.register(
-				'c',
-				() => {
+				description: 'Go to reviews',
+				category: 'Navigation'
+			});
+			keyboardShortcuts.register({
+				key: 'c',
+				action: () => {
 					goto('/reviews/new');
 				},
-				{ description: 'Create review' }
-			);
-			shortcuts.enable();
+				description: 'Create review',
+				category: 'Actions'
+			});
+			keyboardShortcuts.enable();
 
 			// Start sync
 		} catch (err) {

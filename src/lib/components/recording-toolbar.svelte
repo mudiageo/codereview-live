@@ -7,6 +7,7 @@
 	import Minimize2 from '@lucide/svelte/icons/minimize-2';
 	import Maximize2 from '@lucide/svelte/icons/maximize-2';
 	import Move from '@lucide/svelte/icons/move';
+	import PenTool from '@lucide/svelte/icons/pen-tool';
 
 	interface Props {
 		isRecording: boolean;
@@ -19,6 +20,8 @@
 		onResume?: () => void;
 		onStop?: () => void;
 		onGoToRecorder?: () => void;
+		isAnnotationMode?: boolean;
+		onToggleAnnotation?: () => void;
 	}
 
 	let {
@@ -28,10 +31,11 @@
 		position = 'bottom-right',
 		showPreview = false,
 		videoStream = null,
-		onPause,
 		onResume,
 		onStop,
-		onGoToRecorder
+		onGoToRecorder,
+		isAnnotationMode = false,
+		onToggleAnnotation
 	}: Props = $props();
 
 	let isMinimized = $state(false);
@@ -117,6 +121,17 @@
 
 				<!-- Control Buttons -->
 				<div class="flex items-center gap-1">
+					<Button
+						size="sm"
+						variant="ghost"
+						class="h-7 w-7 p-0 text-white hover:bg-white/20 {isAnnotationMode
+							? 'bg-primary text-white hover:bg-primary/90'
+							: ''}"
+						onclick={onToggleAnnotation}
+						title="Toggle Annotation Mode"
+					>
+						<PenTool class="h-4 w-4" />
+					</Button>
 					<Button
 						size="sm"
 						variant="ghost"

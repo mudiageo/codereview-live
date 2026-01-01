@@ -40,6 +40,7 @@
 	import AIAnalysisPanel from '$lib/components/ai-analysis-panel.svelte';
 	import ReviewChecklist from '$lib/components/review-checklist.svelte';
 	import RecordingToolbar from '$lib/components/recording-toolbar.svelte';
+	import GlobalAnnotationLayer from '$lib/components/global-annotation-layer.svelte';
 	import CodeReviewWorkspace, { type FileNode } from '$lib/components/code-review-workspace.svelte';
 	import {
 		createRecordingContext,
@@ -574,6 +575,8 @@
 		onResume={() => handlePauseRecording()}
 		onStop={handleStopRecording}
 		onGoToRecorder={() => (step = 3)}
+		isAnnotationMode={recordingCtx.isAnnotationMode}
+		onToggleAnnotation={() => (recordingCtx.isAnnotationMode = !recordingCtx.isAnnotationMode)}
 	/>
 {/if}
 
@@ -1108,6 +1111,9 @@
 				</div>
 			{/if}
 		</div>
+	{/if}
+	{#if step !== 3}
+		<GlobalAnnotationLayer />
 	{/if}
 </AuthGuard>
 

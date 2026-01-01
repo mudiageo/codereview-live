@@ -42,11 +42,7 @@
 	let videoPreviewRef = $state<HTMLVideoElement>();
 	let webcamPreviewRef = $state<HTMLVideoElement>();
 
-	// Annotation UI state (local, for UI interactions only)
-	let isDrawing = $state(false);
-	let currentTool = $state({ type: 'pen' as const, color: '#ff0000', strokeWidth: 3 });
-	let annotationHistory = $state<ImageData[]>([]);
-	let historyIndex = $state(-1);
+	// Annotation UI state now managed by RecordingContext
 
 	// Screen capture support check
 	const supportsScreenCapture =
@@ -68,129 +64,47 @@
 	});
 
 	// ============= Keyboard Shortcuts =============
-	function handleKeyDown(e: KeyboardEvent) {
-		if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-		const key = e.key.toLowerCase();
-
-		if (key === 'r' && !ctx.isRecording && ctx.countdown === 0) {
-			e.preventDefault();
-			ctx.startRecording();
-		} else if (key === 's' && ctx.isRecording) {
-			e.preventDefault();
-			ctx.stopRecording();
-		} else if ((key === ' ' || key === 'p') && ctx.isRecording) {
-			e.preventDefault();
-			ctx.togglePause();
-		} else if (key === 'escape' && (ctx.isRecording || ctx.countdown > 0)) {
-			e.preventDefault();
-			ctx.cancelRecording();
-		}
-
-		// Webcam controls during recording
-		if (ctx.isRecording && ctx.settings.includeWebcam) {
-			if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
-				e.preventDefault();
-				ctx.cycleWebcamPosition();
-				toast.info(`Webcam: ${ctx.settings.webcamPosition}`);
-			} else if (key === '+' || key === '=') {
-				e.preventDefault();
-				ctx.cycleWebcamSize();
-				toast.info(`Webcam size: ${ctx.settings.webcamSize}`);
-			} else if (key === 'c') {
-				e.preventDefault();
-				ctx.toggleWebcamShape();
-				toast.info(`Webcam shape: ${ctx.settings.webcamShape}`);
-			}
-		}
+	// Keyboard handling delegated to context
+	function bgHandleKeyDown(e: KeyboardEvent) {
+		ctx.handleKeyDown(e);
 	}
 
 	onMount(() => {
 		if (typeof window !== 'undefined') {
-			window.addEventListener('keydown', handleKeyDown);
+			window.addEventListener('keydown', bgHandleKeyDown);
 		}
 	});
 
 	onDestroy(() => {
 		if (typeof window !== 'undefined') {
-			window.removeEventListener('keydown', handleKeyDown);
+			window.removeEventListener('keydown', bgHandleKeyDown);
 		}
 	});
 
 	// ============= Annotation Mouse Handlers =============
-	function getMousePos(e: MouseEvent) {
-		const canvas = ctx.getCanvasRef();
-		if (!canvas) return { x: 0, y: 0 };
-		const rect = canvas.getBoundingClientRect();
-		const scaleX = canvas.width / rect.width;
-		const scaleY = canvas.height / rect.height;
-		return {
-			x: (e.clientX - rect.left) * scaleX,
-			y: (e.clientY - rect.top) * scaleY
-		};
+	// Annotation handlers delegated to context
+	function onMouseDown(e: MouseEvent) {
+		ctx.handleMouseDown(e);
 	}
 
-	function handleMouseDown(e: MouseEvent) {
-		const annotationCtx = ctx.getAnnotationContext();
-		if (!annotationCtx || !ctx.isRecording) return;
-		isDrawing = true;
-		const pos = getMousePos(e);
-		annotationCtx.beginPath();
-		annotationCtx.moveTo(pos.x, pos.y);
-		annotationCtx.strokeStyle = currentTool.color;
-		annotationCtx.lineWidth = currentTool.strokeWidth;
-		annotationCtx.lineCap = 'round';
-		annotationCtx.lineJoin = 'round';
+	function onMouseMove(e: MouseEvent) {
+		ctx.handleMouseMove(e);
 	}
 
-	function handleMouseMove(e: MouseEvent) {
-		const annotationCtx = ctx.getAnnotationContext();
-		if (!isDrawing || !annotationCtx) return;
-		const pos = getMousePos(e);
-		annotationCtx.lineTo(pos.x, pos.y);
-		annotationCtx.stroke();
-	}
-
-	function handleMouseUp() {
-		const annotationCanvas = ctx.getAnnotationCanvas();
-		const annotationCtx = ctx.getAnnotationContext();
-		if (isDrawing && annotationCanvas && annotationCtx) {
-			isDrawing = false;
-			const imageData = annotationCtx.getImageData(
-				0,
-				0,
-				annotationCanvas.width,
-				annotationCanvas.height
-			);
-			annotationHistory = [...annotationHistory.slice(0, historyIndex + 1), imageData];
-			historyIndex = annotationHistory.length - 1;
-		}
+	function onMouseUp() {
+		ctx.handleMouseUp();
 	}
 
 	function handleUndo() {
-		const annotationCanvas = ctx.getAnnotationCanvas();
-		const annotationCtx = ctx.getAnnotationContext();
-		if (historyIndex > 0 && annotationCtx && annotationCanvas) {
-			historyIndex--;
-			annotationCtx.putImageData(annotationHistory[historyIndex], 0, 0);
-		} else if (historyIndex === 0 && annotationCtx && annotationCanvas) {
-			historyIndex = -1;
-			annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
-		}
+		ctx.undoAnnotation();
 	}
 
 	function handleRedo() {
-		const annotationCtx = ctx.getAnnotationContext();
-		if (historyIndex < annotationHistory.length - 1 && annotationCtx) {
-			historyIndex++;
-			annotationCtx.putImageData(annotationHistory[historyIndex], 0, 0);
-		}
+		ctx.redoAnnotation();
 	}
 
 	function handleClear() {
 		ctx.clearAnnotations();
-		annotationHistory = [];
-		historyIndex = -1;
 	}
 
 	function handleSaveVideo(metadata: any) {
@@ -216,10 +130,10 @@
 				<canvas
 					bind:this={canvasRef}
 					class="absolute inset-0 w-full h-full cursor-crosshair z-10"
-					onmousedown={handleMouseDown}
-					onmousemove={handleMouseMove}
-					onmouseup={handleMouseUp}
-					onmouseleave={handleMouseUp}
+					onmousedown={onMouseDown}
+					onmousemove={onMouseMove}
+					onmouseup={onMouseUp}
+					onmouseleave={onMouseUp}
 				></canvas>
 
 				<!-- Annotation Toolbar -->
@@ -227,14 +141,15 @@
 					class="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
 				>
 					<AnnotationToolbar
-						{currentTool}
+						currentTool={ctx.currentTool}
 						visible={true}
-						canUndo={historyIndex > 0}
-						canRedo={historyIndex < annotationHistory.length - 1}
+						canUndo={ctx.historyIndex > 0 ||
+							(ctx.historyIndex === 0 && ctx.annotationHistory.length > 0)}
+						canRedo={ctx.historyIndex < ctx.annotationHistory.length - 1}
 						onUndo={handleUndo}
 						onRedo={handleRedo}
 						onClear={handleClear}
-						onToolChange={(tool) => (currentTool = tool)}
+						onToolChange={(tool) => ctx.setTool(tool)}
 						onToggleVisibility={() => {}}
 					/>
 				</div>

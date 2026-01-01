@@ -5,15 +5,28 @@
  * Uses Svelte's context API with $state runes for reactivity
  */
 
-import { createContext } from 'svelte';
+import { getContext, setContext } from 'svelte';
 
-// Type-safe context using Svelte's createContext
+function createContext<T>(key: string) {
+    return [
+        () => getContext<T>(key),
+        (value: T) => setContext(key, value)
+    ] as const;
+}
+
+// Type-safe context using local helper
 const [getRecordingContextInternal, setRecordingContextInternal] = createContext<RecordingContext>('recording-context');
 
 export type RecordingQuality = 'low' | 'medium' | 'high';
 export type WebcamPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
 export type WebcamSize = 'small' | 'medium' | 'large';
 export type WebcamShape = 'rectangle' | 'circle';
+
+export interface AnnotationTool {
+    type: 'pen' | 'arrow' | 'rect' | 'circle';
+    color: string;
+    strokeWidth: number;
+}
 
 export interface RecordingSettings {
     selectedSource: 'screen' | 'window' | 'camera';
@@ -57,6 +70,13 @@ export class RecordingContext {
 
     // Settings (reactive)
     settings = $state<RecordingSettings>({ ...DEFAULT_SETTINGS });
+
+    // Annotation UI State (reactive)
+    currentTool = $state<AnnotationTool>({ type: 'pen', color: '#ff0000', strokeWidth: 3 });
+    isDrawing = $state(false);
+    isAnnotationMode = $state(false);
+    annotationHistory = $state<ImageData[]>([]);
+    historyIndex = $state(-1);
 
     // ============= Internal State =============
     private mediaRecorder: MediaRecorder | null = null;
@@ -155,6 +175,117 @@ export class RecordingContext {
     clearAnnotations() {
         if (this.annotationCtx && this.annotationCanvas) {
             this.annotationCtx.clearRect(0, 0, this.annotationCanvas.width, this.annotationCanvas.height);
+            this.annotationHistory = [];
+            this.historyIndex = -1;
+        }
+    }
+
+    // ============= Annotation History & Tools =============
+
+    addToHistory() {
+        if (this.annotationCtx && this.annotationCanvas) {
+            const imageData = this.annotationCtx.getImageData(0, 0, this.annotationCanvas.width, this.annotationCanvas.height);
+            this.annotationHistory = [...this.annotationHistory.slice(0, this.historyIndex + 1), imageData];
+            this.historyIndex = this.annotationHistory.length - 1;
+        }
+    }
+
+    undoAnnotation() {
+        if (this.historyIndex > 0 && this.annotationCtx && this.annotationCanvas) {
+            this.historyIndex--;
+            this.annotationCtx.putImageData(this.annotationHistory[this.historyIndex], 0, 0);
+        } else if (this.historyIndex === 0 && this.annotationCtx && this.annotationCanvas) {
+            this.historyIndex = -1;
+            this.annotationCtx.clearRect(0, 0, this.annotationCanvas.width, this.annotationCanvas.height);
+        }
+    }
+
+    redoAnnotation() {
+        if (this.historyIndex < this.annotationHistory.length - 1 && this.annotationCtx) {
+            this.historyIndex++;
+            this.annotationCtx.putImageData(this.annotationHistory[this.historyIndex], 0, 0);
+        }
+    }
+
+    setTool(tool: AnnotationTool) {
+        this.currentTool = tool;
+    }
+
+    // ============= Input Event Handlers =============
+
+    handleKeyDown(e: KeyboardEvent) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+        const key = e.key.toLowerCase();
+
+        if (key === 'r' && !this.isRecording && this.countdown === 0) {
+            e.preventDefault();
+            this.startRecording();
+        } else if (key === 's' && this.isRecording) {
+            e.preventDefault();
+            this.stopRecording();
+        } else if ((key === ' ' || key === 'p') && this.isRecording) {
+            e.preventDefault();
+            this.togglePause();
+        } else if (key === 'escape' && (this.isRecording || this.countdown > 0)) {
+            e.preventDefault();
+            this.cancelRecording();
+        }
+
+        // Webcam controls during recording
+        if (this.isRecording && this.settings.includeWebcam) {
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+                e.preventDefault();
+                this.cycleWebcamPosition();
+                // toast.info(`Webcam: ${this.settings.webcamPosition}`); // To act on toast, we might need a callback or direct import
+            } else if (key === '+' || key === '=') {
+                e.preventDefault();
+                this.cycleWebcamSize();
+                // toast.info(`Webcam size: ${this.settings.webcamSize}`);
+            } else if (key === 'c') {
+                e.preventDefault();
+                this.toggleWebcamShape();
+                // toast.info(`Webcam shape: ${this.settings.webcamShape}`);
+            }
+        }
+    }
+
+    getMousePos(e: MouseEvent, canvas: HTMLCanvasElement) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
+        };
+    }
+
+    handleMouseDown(e: MouseEvent) {
+        if (!this.annotationCtx || !this.isRecording || !this.canvasRef) return;
+
+        this.isDrawing = true;
+        const pos = this.getMousePos(e, this.canvasRef);
+
+        this.annotationCtx.beginPath();
+        this.annotationCtx.moveTo(pos.x, pos.y);
+        this.annotationCtx.strokeStyle = this.currentTool.color;
+        this.annotationCtx.lineWidth = this.currentTool.strokeWidth;
+        this.annotationCtx.lineCap = 'round';
+        this.annotationCtx.lineJoin = 'round';
+    }
+
+    handleMouseMove(e: MouseEvent) {
+        if (!this.isDrawing || !this.annotationCtx || !this.canvasRef) return;
+
+        const pos = this.getMousePos(e, this.canvasRef);
+        this.annotationCtx.lineTo(pos.x, pos.y);
+        this.annotationCtx.stroke();
+    }
+
+    handleMouseUp() {
+        if (this.isDrawing && this.annotationCanvas && this.annotationCtx) {
+            this.isDrawing = false;
+            this.addToHistory();
         }
     }
 
