@@ -703,6 +703,11 @@ export class RecordingContext {
                 width = trackSettings.width || DEFAULT_CANVAS_WIDTH;
                 height = trackSettings.height || DEFAULT_CANVAS_HEIGHT;
             }
+            // Add mic audio track if available
+            if (this.micStream) {
+                const micAudioTracks = this.micStream.getAudioTracks();
+                micAudioTracks.forEach(track => this.canvasStream!.addTrack(track));
+            }
 
             // Initialize MASTER canvas
             this.initMasterCanvas(width, height);
