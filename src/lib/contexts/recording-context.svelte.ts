@@ -587,10 +587,15 @@ export class RecordingContext {
 		};
 
 		this.mediaRecorder.onstop = async () => {
-			this.stopCanvasLoop();
-			this.stopDOMCaptureLoop();
-			this.stopStreams();
-			await this.processRecording();
+			try {
+				this.stopCanvasLoop();
+				this.stopDOMCaptureLoop();
+				this.stopStreams();
+				await this.processRecording();
+			} catch (error) {
+				console.error('Error processing recording:', error);
+				this.onErrorCallback?.(error instanceof Error ? error : new Error(String(error)));
+			}
 		};
 
 		// Start recording with 2000ms timeslice for better performance
@@ -637,69 +642,78 @@ export class RecordingContext {
 		let lastDropLogTime = 0;
 
 		const captureFrame = async () => {
-			// Stop if not recording
-			if (!this.isRecording) {
-				return;
-			}
-
-			const frameStartTime = performance.now();
-
-			// Detect if we're falling behind
-			const drift = frameStartTime - expectedTime;
-			if (drift > frameDuration) {
-				droppedFrames++;
-				const framesToSkip = Math.floor(drift / frameDuration);
-				expectedTime += framesToSkip * frameDuration;
-
-				// Only log every 5 seconds to avoid performance impact
-				if (frameStartTime - lastDropLogTime > 5000) {
-					console.warn(
-						`[Performance] Dropped ${framesToSkip} frame(s), total dropped: ${droppedFrames}`
-					);
-					lastDropLogTime = frameStartTime;
+			try {
+				// Stop if not recording
+				if (!this.isRecording) {
+					return;
 				}
-			}
 
-			// Skip frame if paused, but continue loop
-			if (this.isPaused) {
+				const frameStartTime = performance.now();
+
+				// Detect if we're falling behind
+				const drift = frameStartTime - expectedTime;
+				if (drift > frameDuration) {
+					droppedFrames++;
+					const framesToSkip = Math.floor(drift / frameDuration);
+					expectedTime += framesToSkip * frameDuration;
+
+					// Only log every 5 seconds to avoid performance impact
+					if (frameStartTime - lastDropLogTime > 5000) {
+						console.warn(
+							`[Performance] Dropped ${framesToSkip} frame(s), total dropped: ${droppedFrames}`
+						);
+						lastDropLogTime = frameStartTime;
+					}
+				}
+
+				// Skip frame if paused, but continue loop
+				if (this.isPaused) {
+					expectedTime += frameDuration;
+					const delay = Math.max(0, expectedTime - performance.now());
+					this.domCaptureInterval = window.setTimeout(captureFrame, delay);
+					return;
+				}
+
+				if (!this.masterCtx || !this.masterCanvas) {
+					expectedTime += frameDuration;
+					const delay = Math.max(0, expectedTime - performance.now());
+					this.domCaptureInterval = window.setTimeout(captureFrame, delay);
+					return;
+				}
+
+				// 1. Capture DOM to MASTER canvas
+				await this.captureDOMToCanvas();
+
+				// 2. Draw webcam PIP to MASTER canvas
+				if (this.settings.includeWebcam && this.webcamVideo && this.webcamStream) {
+					this.drawWebcamPIP(this.masterCtx, this.masterCanvas);
+				}
+
+				// 3. Draw annotation layer to MASTER canvas
+				if (
+					this.annotationCanvas &&
+					this.annotationCanvas.width > 0 &&
+					this.annotationCanvas.height > 0
+				) {
+					this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
+				}
+
+				// 4. Sync to UI canvas if available (User Preview)
+				this.syncToUICanvas();
+
+				// Calculate delay with drift correction
+				const frameEndTime = performance.now();
 				expectedTime += frameDuration;
-				const delay = Math.max(0, expectedTime - performance.now());
+				const delay = Math.max(0, expectedTime - frameEndTime);
 				this.domCaptureInterval = window.setTimeout(captureFrame, delay);
-				return;
-			}
-
-			if (!this.masterCtx || !this.masterCanvas) {
+			} catch (error) {
+				console.error('Error in capture frame:', error);
+				// Continue loop even on error to prevent recording from stopping
+				const frameEndTime = performance.now();
 				expectedTime += frameDuration;
-				const delay = Math.max(0, expectedTime - performance.now());
+				const delay = Math.max(0, expectedTime - frameEndTime);
 				this.domCaptureInterval = window.setTimeout(captureFrame, delay);
-				return;
 			}
-
-			// 1. Capture DOM to MASTER canvas
-			await this.captureDOMToCanvas();
-
-			// 2. Draw webcam PIP to MASTER canvas
-			if (this.settings.includeWebcam && this.webcamVideo && this.webcamStream) {
-				this.drawWebcamPIP(this.masterCtx, this.masterCanvas);
-			}
-
-			// 3. Draw annotation layer to MASTER canvas
-			if (
-				this.annotationCanvas &&
-				this.annotationCanvas.width > 0 &&
-				this.annotationCanvas.height > 0
-			) {
-				this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
-			}
-
-			// 4. Sync to UI canvas if available (User Preview)
-			this.syncToUICanvas();
-
-			// Calculate delay with drift correction
-			const frameEndTime = performance.now();
-			expectedTime += frameDuration;
-			const delay = Math.max(0, expectedTime - frameEndTime);
-			this.domCaptureInterval = window.setTimeout(captureFrame, delay);
 		};
 
 		captureFrame();
