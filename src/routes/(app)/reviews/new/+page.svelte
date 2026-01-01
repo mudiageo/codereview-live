@@ -36,6 +36,12 @@
 	import LocalGitBrowser from '$lib/components/git-repo-browser.svelte';
 	import AIAnalysisPanel from '$lib/components/ai-analysis-panel.svelte';
 	import ReviewChecklist from '$lib/components/review-checklist.svelte';
+	import RecordingToolbar from '$lib/components/recording-toolbar.svelte';
+	import CodeReviewWorkspace, { type FileNode } from '$lib/components/code-review-workspace.svelte';
+	import {
+		createRecordingContext,
+		type RecordingContext
+	} from '$lib/contexts/recording-context.svelte';
 	import {
 		reviewsStore,
 		projectsStore,
@@ -82,10 +88,21 @@
 	let checklistNotes = $state<Record<string, string>>({});
 	let checklistLoading = $state(false);
 
+	// Multi-file workspace state
+	let importedFiles = $state<FileNode[]>([]);
+	let importSource = $state('');
+	let showCodeWorkspace = $state(false);
+
 	// Smart Recording Workflow State
 	let showRecordingIndicator = $state(false);
-	let isPaused = $state(false);
 	let mediaRecorderRef = $state<ReturnType<typeof MediaRecorder>>();
+
+	// Create recording context for state persistence across component mounts
+	const recordingCtx = createRecordingContext();
+
+	// Bind local state to context for reactivity
+	const isPaused = $derived(recordingCtx.isPaused);
+	const recordingTime = $derived(recordingCtx.recordingTime);
 
 	const userPlan = $derived(auth.currentUser?.plan || 'free');
 	const reviewCount = $derived(reviewsStore.count);
@@ -188,6 +205,73 @@
 		}
 	}
 
+	// Parse unified diff into file nodes
+	function parseDiffToFiles(diffContent: string): FileNode[] {
+		const files: FileNode[] = [];
+		const fileRegex = /^diff --git a\/(.*) b\/(.*?)(?:\r?\n|$)/gm;
+		const hunks = diffContent.split(/(?=^diff --git)/gm).filter(Boolean);
+
+		for (const hunk of hunks) {
+			const fileMatch = hunk.match(/^diff --git a\/(.*) b\/(.*)/);
+			if (!fileMatch) continue;
+
+			const filePath = fileMatch[2];
+			const fileName = filePath.split('/').pop() || filePath;
+
+			// Count additions/deletions
+			let additions = 0;
+			let deletions = 0;
+			const lines = hunk.split('\n');
+			for (const line of lines) {
+				if (line.startsWith('+') && !line.startsWith('+++')) additions++;
+				if (line.startsWith('-') && !line.startsWith('---')) deletions++;
+			}
+
+			// Determine status
+			let status: FileNode['status'] = 'modified';
+			if (hunk.includes('new file mode')) status = 'added';
+			else if (hunk.includes('deleted file mode')) status = 'deleted';
+			else if (hunk.includes('rename from')) status = 'renamed';
+
+			// Detect language from extension
+			const ext = fileName.split('.').pop()?.toLowerCase();
+			const langMap: Record<string, string> = {
+				js: 'javascript',
+				jsx: 'javascript',
+				ts: 'typescript',
+				tsx: 'typescript',
+				py: 'python',
+				go: 'go',
+				rs: 'rust',
+				rb: 'ruby',
+				php: 'php',
+				java: 'java',
+				c: 'c',
+				cpp: 'cpp',
+				cs: 'csharp',
+				svelte: 'svelte',
+				vue: 'vue',
+				html: 'html',
+				css: 'css',
+				scss: 'scss',
+				md: 'markdown'
+			};
+
+			files.push({
+				name: fileName,
+				path: filePath,
+				type: 'file',
+				diff: hunk,
+				language: langMap[ext || ''] || 'text',
+				status,
+				additions,
+				deletions
+			});
+		}
+
+		return files;
+	}
+
 	function handleGitHubImport(data: {
 		title: string;
 		code: string;
@@ -199,6 +283,15 @@
 		language = data.language;
 		description = `Imported from: ${data.prUrl}`;
 		showGitHubImport = false;
+
+		// Parse diff into multi-file structure
+		const files = parseDiffToFiles(data.code);
+		if (files.length > 0) {
+			importedFiles = files;
+			importSource = data.prUrl;
+			showCodeWorkspace = true;
+		}
+
 		toast.success('Pull request imported successfully');
 	}
 
@@ -213,6 +306,15 @@
 		language = data.language;
 		description = `Imported from: ${data.mrUrl}`;
 		showGitLabImport = false;
+
+		// Parse diff into multi-file structure
+		const files = parseDiffToFiles(data.code);
+		if (files.length > 0) {
+			importedFiles = files;
+			importSource = data.mrUrl;
+			showCodeWorkspace = true;
+		}
+
 		toast.success('Merge request imported successfully');
 	}
 
@@ -227,6 +329,15 @@
 		language = data.language;
 		description = `Imported from commit: ${data.commitHash}`;
 		showLocalGitBrowser = false;
+
+		// Parse diff into multi-file structure
+		const files = parseDiffToFiles(data.code);
+		if (files.length > 0) {
+			importedFiles = files;
+			importSource = `commit: ${data.commitHash}`;
+			showCodeWorkspace = true;
+		}
+
 		toast.success('Git commit imported successfully');
 	}
 
@@ -235,11 +346,8 @@
 		recordingStartTime = Date.now();
 		recordingEvents = [];
 		showRecordingIndicator = true;
-
-		// Auto-navigate to code editor step
-		if (step !== 2) {
-			step = 2;
-		}
+		// User can navigate to other steps manually
+		// The floating RecordingToolbar will appear when they leave step 3
 	}
 
 	function handleRecordingEnd() {
@@ -252,27 +360,24 @@
 	}
 
 	function handleRecordingPause() {
-		isPaused = true;
+		recordingCtx.pauseRecording();
 	}
 
 	function handleRecordingResume() {
-		isPaused = false;
+		recordingCtx.resumeRecording();
 	}
 
 	function handlePauseRecording() {
-		if (mediaRecorderRef) {
-			if (isPaused) {
-				mediaRecorderRef.externalResume();
-			} else {
-				mediaRecorderRef.externalPause();
-			}
+		// Toggle pause/resume via context (which controls the actual MediaRecorder)
+		if (recordingCtx.isPaused) {
+			recordingCtx.resumeRecording();
+		} else {
+			recordingCtx.pauseRecording();
 		}
 	}
 
 	function handleStopRecording() {
-		if (mediaRecorderRef) {
-			mediaRecorderRef.externalStop();
-		}
+		recordingCtx.stopRecording();
 	}
 
 	function formatRecordingTime(seconds: number) {
@@ -307,22 +412,33 @@
 
 		try {
 			const text = await file.text();
-			// Parse diff file using DiffParser utility
-			const { DiffParser } = await import('$lib/utils/diff-parser');
-			const parsed = DiffParser.parse(text);
 
-			if (parsed.files && parsed.files.length > 0) {
-				// Use first file's language or auto-detect
-				language = parsed.language || 'javascript';
-				code = parsed.content || text;
-				title = parsed.title || `Imported from ${fileName}`;
-				description = parsed.stats
-					? `${parsed.stats.additions} additions, ${parsed.stats.deletions} deletions`
-					: '';
-				toast.success('Diff file parsed successfully');
-			} else {
-				// Fallback: use raw content
+			// Parse diff into multi-file structure
+			const files = parseDiffToFiles(text);
+			if (files.length > 0) {
+				importedFiles = files;
+				importSource = fileName;
+				showCodeWorkspace = true;
+
+				// Calculate totals
+				let totalAdditions = 0;
+				let totalDeletions = 0;
+				for (const f of files) {
+					totalAdditions += f.additions || 0;
+					totalDeletions += f.deletions || 0;
+				}
+
+				title = `Imported from ${fileName}`;
+				description = `${files.length} files, ${totalAdditions} additions, ${totalDeletions} deletions`;
 				code = text;
+				language = 'diff';
+
+				toast.success(`Parsed ${files.length} files from diff`);
+			} else {
+				// Fallback: single file
+				code = text;
+				language = 'diff';
+				title = `Imported from ${fileName}`;
 				toast.success('File uploaded successfully');
 			}
 		} catch (error) {
@@ -362,7 +478,10 @@
 					codeLanguage: language,
 					videoUrl: uploadedVideoUrl || undefined,
 					videoSize: uploadedMetadata?.size || undefined,
-					videoDuration: uploadedMetadata?.duration || undefined,
+					videoDuration:
+						uploadedMetadata?.duration && Number.isFinite(uploadedMetadata.duration)
+							? Math.round(uploadedMetadata.duration)
+							: null,
 					thumbnailUrl: uploadedThumbnailUrl || undefined,
 					aiSummary
 					// metadata: { recordingEvents: $state.snapshot(recordingEvents) }
@@ -390,8 +509,8 @@
 					description,
 					codeContent: code,
 					codeLanguage: language,
-					aiSummary,
-					metadata: { recordingEvents }
+					aiSummary
+					// metadata: { recordingEvents }
 				});
 			} else {
 				// Create new published review
@@ -404,7 +523,10 @@
 					codeLanguage: language,
 					videoUrl: uploadedVideoUrl || null,
 					videoSize: uploadedMetadata?.size || null,
-					videoDuration: uploadedMetadata?.duration || null,
+					videoDuration:
+						uploadedMetadata?.duration && Number.isFinite(uploadedMetadata.duration)
+							? Math.round(uploadedMetadata.duration)
+							: null,
 					thumbnailUrl: uploadedThumbnailUrl || null,
 					shareToken: crypto.randomUUID(),
 					isPublic: false,
@@ -422,47 +544,19 @@
 	}
 </script>
 
-<!-- Floating Recording Indicator -->
-{#if showRecordingIndicator}
-	<div
-		class="fixed top-4 right-4 z-50 flex items-center gap-3 bg-red-500/95 text-white px-4 py-2.5 rounded-full shadow-lg backdrop-blur-sm"
-	>
-		<span class="relative flex h-3 w-3">
-			<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"
-			></span>
-			<span
-				class="relative inline-flex rounded-full h-3 w-3 bg-white {isPaused ? 'opacity-50' : ''}"
-			></span>
-		</span>
-		<span class="font-mono font-medium text-sm">
-			{isPaused ? 'PAUSED' : 'REC'}
-			{formatRecordingTime(recordingTime)}
-		</span>
-		<div class="flex items-center gap-1 ml-2 border-l border-white/30 pl-2">
-			<Button
-				size="sm"
-				variant="ghost"
-				class="text-white hover:bg-white/20 h-7 w-7 p-0"
-				onclick={handlePauseRecording}
-				title={isPaused ? 'Resume (Space)' : 'Pause (Space)'}
-			>
-				{#if isPaused}
-					<Play class="h-4 w-4" />
-				{:else}
-					<Pause class="h-4 w-4" />
-				{/if}
-			</Button>
-			<Button
-				size="sm"
-				variant="ghost"
-				class="text-white hover:bg-white/20 h-7 w-7 p-0"
-				onclick={handleStopRecording}
-				title="Stop Recording (S)"
-			>
-				<Square class="h-4 w-4" />
-			</Button>
-		</div>
-	</div>
+<!-- Floating Recording Toolbar (only shows when not on step 3 and recording) -->
+{#if showRecordingIndicator && step !== 3}
+	<RecordingToolbar
+		{isRecording}
+		{isPaused}
+		{recordingTime}
+		position="bottom-right"
+		showPreview={false}
+		onPause={handlePauseRecording}
+		onResume={() => handlePauseRecording()}
+		onStop={handleStopRecording}
+		onGoToRecorder={() => (step = 3)}
+	/>
 {/if}
 
 <AuthGuard requireAuth requirePlan="free">
@@ -474,6 +568,58 @@
 				limit={reviewLimit}
 				onUpgrade={() => (showUpgrade = true)}
 			/>
+		</div>
+	{:else if showCodeWorkspace && importedFiles.length > 0}
+		<!-- Full-screen Code Workspace -->
+		<div class="fixed inset-0 z-40 bg-background flex flex-col">
+			<!-- Workspace Header -->
+			<header class="flex items-center justify-between border-b px-4 py-2 bg-muted/30">
+				<div class="flex items-center gap-3">
+					<Button
+						variant="ghost"
+						size="sm"
+						onclick={() => (showCodeWorkspace = false)}
+						class="gap-2"
+					>
+						<ArrowLeft class="h-4 w-4" />
+						<span class="hidden sm:inline">Back to Editor</span>
+					</Button>
+					<div class="hidden sm:block">
+						<h1 class="text-sm font-semibold">{title || 'Code Review'}</h1>
+						{#if importSource}
+							<p class="text-xs text-muted-foreground truncate max-w-md">{importSource}</p>
+						{/if}
+					</div>
+				</div>
+				<div class="flex items-center gap-2">
+					<Badge variant="outline" class="text-xs">
+						{importedFiles.length} files
+					</Badge>
+					<Button variant="outline" size="sm" onclick={saveDraft}>
+						<Save class="h-4 w-4 mr-2" />
+						<span class="hidden sm:inline">Save Draft</span>
+					</Button>
+					<Button
+						size="sm"
+						onclick={() => {
+							showCodeWorkspace = false;
+							step = 3;
+						}}
+					>
+						Continue
+					</Button>
+				</div>
+			</header>
+
+			<!-- Workspace Content -->
+			<div class="flex-1 overflow-hidden">
+				<CodeReviewWorkspace
+					files={importedFiles}
+					mode="diff"
+					{importSource}
+					onBack={() => (showCodeWorkspace = false)}
+				/>
+			</div>
 		</div>
 	{:else}
 		<div class="max-w-4xl mx-auto space-y-6">
@@ -703,13 +849,24 @@
 												</Button>
 											</div>
 										{:else}
-											<!-- MediaRecorder is rendered in the persistent container below -->
-											<div class="text-sm text-muted-foreground text-center py-2">
-												<p>
-													Recording controls are below. The recorder will persist even when
-													navigating to other steps.
-												</p>
-											</div>
+											<MediaRecorder
+												bind:this={mediaRecorderRef}
+												{reviewId}
+												onUploadComplete={(result) => {
+													uploadedVideoUrl = result.videoUrl;
+													uploadedThumbnailUrl = result.thumbnailUrl;
+													uploadedMetadata = result.metadata;
+													isRecording = false;
+													showRecordingIndicator = false;
+													toast.success('Video attached to review');
+												}}
+												onStart={handleRecordingStart}
+												onEnd={handleRecordingEnd}
+												onPause={handleRecordingPause}
+												onResume={handleRecordingResume}
+												maxDuration={600}
+												quality="high"
+											/>
 										{/if}
 									</TabsContent>
 
@@ -769,30 +926,6 @@
 				</div>
 			{/if}
 		</div>
-
-		<!-- Persistent MediaRecorder - stays mounted to preserve recording state -->
-		{#if reviewId}
-			<div class={step === 3 ? '' : 'fixed -left-[9999px] opacity-0 pointer-events-none'}>
-				<MediaRecorder
-					bind:this={mediaRecorderRef}
-					{reviewId}
-					onUploadComplete={(result) => {
-						uploadedVideoUrl = result.videoUrl;
-						uploadedThumbnailUrl = result.thumbnailUrl;
-						uploadedMetadata = result.metadata;
-						isRecording = false;
-						showRecordingIndicator = false;
-						toast.success('Video attached to review');
-					}}
-					onStart={handleRecordingStart}
-					onEnd={handleRecordingEnd}
-					onPause={handleRecordingPause}
-					onResume={handleRecordingResume}
-					maxDuration={600}
-					quality="high"
-				/>
-			</div>
-		{/if}
 	{/if}
 </AuthGuard>
 

@@ -1,0 +1,508 @@
+<script lang="ts">
+	import { Button } from '$lib/components/ui/button';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Input } from '$lib/components/ui/input';
+	import { ScrollArea } from '$lib/components/ui/scroll-area';
+	import { Separator } from '$lib/components/ui/separator';
+	import CodeEditor from './code-editor.svelte';
+	import DiffViewer from './diff-viewer.svelte';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import File from '@lucide/svelte/icons/file';
+	import FileCode from '@lucide/svelte/icons/file-code';
+	import FileText from '@lucide/svelte/icons/file-text';
+	import Folder from '@lucide/svelte/icons/folder';
+	import FolderOpen from '@lucide/svelte/icons/folder-open';
+	import Search from '@lucide/svelte/icons/search';
+	import X from '@lucide/svelte/icons/x';
+	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
+	import PanelLeft from '@lucide/svelte/icons/panel-left';
+	import Menu from '@lucide/svelte/icons/menu';
+	import { LanguageDetector } from '$lib/utils/language-detector';
+
+	export interface FileNode {
+		name: string;
+		path: string;
+		type: 'file' | 'directory';
+		content?: string;
+		diff?: string;
+		language?: string;
+		status?: 'added' | 'modified' | 'deleted' | 'renamed';
+		additions?: number;
+		deletions?: number;
+		children?: FileNode[];
+	}
+
+	interface Props {
+		files: FileNode[];
+		mode?: 'view' | 'diff';
+		importSource?: string;
+		onFileChange?: (file: FileNode) => void;
+		onBack?: () => void;
+	}
+
+	let { files = [], mode = 'diff', importSource = '', onFileChange, onBack }: Props = $props();
+
+	// State
+	let sidebarOpen = $state(true);
+	let sidebarWidth = $state(280);
+	let mobileDrawerOpen = $state(false);
+	let searchQuery = $state('');
+	let expandedDirs = $state<Set<string>>(new Set());
+	let openTabs = $state<FileNode[]>([]);
+	let activeTab = $state<FileNode | null>(null);
+	let isDragging = $state(false);
+
+	const languageDetector = new LanguageDetector();
+
+	// Build tree structure from flat file list
+	const fileTree = $derived(() => {
+		const tree: FileNode[] = [];
+		const nodeMap = new Map<string, FileNode>();
+
+		// Sort files by path
+		const sortedFiles = [...files].sort((a, b) => a.path.localeCompare(b.path));
+
+		for (const file of sortedFiles) {
+			if (searchQuery && !file.path.toLowerCase().includes(searchQuery.toLowerCase())) {
+				continue;
+			}
+
+			const parts = file.path.split('/');
+			let currentPath = '';
+
+			for (let i = 0; i < parts.length; i++) {
+				const part = parts[i];
+				const isLast = i === parts.length - 1;
+				currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+				if (!nodeMap.has(currentPath)) {
+					const node: FileNode = {
+						name: part,
+						path: currentPath,
+						type: isLast && file.type === 'file' ? 'file' : 'directory',
+						children: []
+					};
+
+					if (isLast && file.type === 'file') {
+						node.content = file.content;
+						node.language = file.language || languageDetector.detectFromFilename(file.name);
+						node.diff = file.diff;
+						node.additions = file.additions;
+						node.deletions = file.deletions;
+						node.status = file.status;
+					}
+
+					nodeMap.set(currentPath, node);
+
+					if (i === 0) {
+						tree.push(node);
+					} else {
+						const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+						const parent = nodeMap.get(parentPath);
+						if (parent && parent.children) {
+							parent.children.push(node);
+						}
+					}
+				}
+			}
+		}
+
+		return tree;
+	});
+
+	// Stats
+	const totalStats = $derived(() => {
+		let additions = 0;
+		let deletions = 0;
+
+		for (const file of files) {
+			additions += file.additions || 0;
+			deletions += file.deletions || 0;
+		}
+
+		return { additions, deletions, files: files.filter((f) => f.type === 'file').length };
+	});
+
+	// Auto-select first file
+	$effect(() => {
+		if (!activeTab && files.length > 0) {
+			const firstFile = files.find((f) => f.type === 'file');
+			if (firstFile) {
+				openFile(firstFile);
+			}
+		}
+	});
+
+	// Expand parent directories by default
+	$effect(() => {
+		const dirs = new Set<string>();
+		for (const file of files) {
+			const parts = file.path.split('/');
+			let path = '';
+			for (let i = 0; i < parts.length - 1; i++) {
+				path = path ? `${path}/${parts[i]}` : parts[i];
+				dirs.add(path);
+			}
+		}
+		expandedDirs = dirs;
+	});
+
+	function toggleDirectory(path: string) {
+		if (expandedDirs.has(path)) {
+			expandedDirs.delete(path);
+		} else {
+			expandedDirs.add(path);
+		}
+		expandedDirs = new Set(expandedDirs);
+	}
+
+	function openFile(file: FileNode) {
+		if (file.type !== 'file') return;
+
+		// Add to tabs if not already open
+		if (!openTabs.find((t) => t.path === file.path)) {
+			openTabs = [...openTabs, file];
+		}
+
+		activeTab = file;
+		onFileChange?.(file);
+		mobileDrawerOpen = false;
+	}
+
+	function closeTab(file: FileNode, e?: Event) {
+		e?.stopPropagation();
+		openTabs = openTabs.filter((t) => t.path !== file.path);
+
+		if (activeTab?.path === file.path) {
+			activeTab = openTabs[openTabs.length - 1] || null;
+		}
+	}
+
+	function getFileIcon(filename: string, status?: string) {
+		const ext = filename.split('.').pop()?.toLowerCase();
+
+		// Status-based colors
+		const statusColors: Record<string, string> = {
+			added: 'text-green-500',
+			modified: 'text-yellow-500',
+			deleted: 'text-red-500',
+			renamed: 'text-blue-500'
+		};
+		const statusColor = status ? statusColors[status] : '';
+
+		// Extension-based colors (fallback)
+		const extColors: Record<string, string> = {
+			js: 'text-yellow-500',
+			jsx: 'text-yellow-500',
+			ts: 'text-blue-500',
+			tsx: 'text-blue-500',
+			py: 'text-green-500',
+			go: 'text-cyan-500',
+			rs: 'text-orange-500',
+			svelte: 'text-orange-500',
+			vue: 'text-green-500',
+			css: 'text-purple-500',
+			html: 'text-orange-500'
+		};
+
+		const color = statusColor || extColors[ext || ''] || 'text-muted-foreground';
+
+		if (['ts', 'tsx', 'js', 'jsx', 'py', 'go', 'rs', 'svelte', 'vue'].includes(ext || '')) {
+			return { component: FileCode, class: `h-4 w-4 ${color}` };
+		}
+
+		return { component: File, class: `h-4 w-4 ${color}` };
+	}
+
+	function handleResizeStart(e: MouseEvent) {
+		isDragging = true;
+		const startX = e.clientX;
+		const startWidth = sidebarWidth;
+
+		function onMouseMove(e: MouseEvent) {
+			const delta = e.clientX - startX;
+			sidebarWidth = Math.max(200, Math.min(500, startWidth + delta));
+		}
+
+		function onMouseUp() {
+			isDragging = false;
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+		}
+
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('mouseup', onMouseUp);
+	}
+
+	// Keyboard shortcuts
+	function handleKeydown(e: KeyboardEvent) {
+		// Toggle sidebar with [
+		if (e.key === '[' && !e.ctrlKey && !e.metaKey) {
+			sidebarOpen = !sidebarOpen;
+			e.preventDefault();
+		}
+
+		// Navigate files with j/k
+		if ((e.key === 'j' || e.key === 'k') && !e.ctrlKey && !e.metaKey) {
+			const fileList = files.filter((f) => f.type === 'file');
+			const currentIndex = activeTab ? fileList.findIndex((f) => f.path === activeTab.path) : -1;
+
+			if (e.key === 'j' && currentIndex < fileList.length - 1) {
+				openFile(fileList[currentIndex + 1]);
+			} else if (e.key === 'k' && currentIndex > 0) {
+				openFile(fileList[currentIndex - 1]);
+			}
+			e.preventDefault();
+		}
+	}
+</script>
+
+<svelte:window on:keydown={handleKeydown} />
+
+<div class="flex h-full w-full overflow-hidden bg-background">
+	<!-- Mobile Overlay -->
+	{#if mobileDrawerOpen}
+		<button
+			class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+			onclick={() => (mobileDrawerOpen = false)}
+			aria-label="Close sidebar"
+		></button>
+	{/if}
+
+	<!-- Sidebar -->
+	<aside
+		class="flex flex-col border-r bg-muted/30 transition-all duration-200 {mobileDrawerOpen
+			? 'fixed inset-y-0 left-0 z-50 w-80'
+			: 'hidden lg:flex'} {sidebarOpen ? '' : 'lg:w-0 lg:overflow-hidden'}"
+		style={sidebarOpen ? `width: ${sidebarWidth}px` : ''}
+	>
+		<!-- Sidebar Header -->
+		<div class="flex items-center justify-between border-b p-3">
+			<div class="flex items-center gap-2">
+				<h3 class="text-sm font-semibold">Files</h3>
+				<Badge variant="secondary" class="text-xs">
+					{totalStats().files}
+				</Badge>
+			</div>
+			<Button
+				variant="ghost"
+				size="icon"
+				class="h-7 w-7 lg:hidden"
+				onclick={() => (mobileDrawerOpen = false)}
+			>
+				<X class="h-4 w-4" />
+			</Button>
+		</div>
+
+		<!-- Stats -->
+		{#if mode === 'diff'}
+			<div class="flex items-center gap-2 border-b px-3 py-2 text-xs">
+				<Badge variant="outline" class="text-green-600">+{totalStats().additions}</Badge>
+				<Badge variant="outline" class="text-red-600">-{totalStats().deletions}</Badge>
+				{#if importSource}
+					<span class="ml-auto text-muted-foreground truncate">{importSource}</span>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- Search -->
+		<div class="border-b p-2">
+			<div class="relative">
+				<Search class="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+				<Input placeholder="Filter files..." bind:value={searchQuery} class="h-8 pl-8 text-sm" />
+			</div>
+		</div>
+
+		<!-- File Tree -->
+		<ScrollArea class="flex-1">
+			<div class="p-2">
+				{#each fileTree() as node (node.path)}
+					{@render FileTreeNode(node, 0)}
+				{/each}
+			</div>
+		</ScrollArea>
+
+		<!-- Keyboard Hints -->
+		<div class="border-t p-2 text-xs text-muted-foreground">
+			<div class="flex items-center justify-between">
+				<span>j/k navigate</span>
+				<span>[ toggle sidebar</span>
+			</div>
+		</div>
+
+		<!-- Resize Handle -->
+		<button
+			class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/20 transition-colors {isDragging
+				? 'bg-primary/30'
+				: ''}"
+			onmousedown={handleResizeStart}
+			aria-label="Resize sidebar"
+		></button>
+	</aside>
+
+	<!-- Main Content -->
+	<main class="flex flex-1 flex-col overflow-hidden">
+		<!-- Header Bar -->
+		<div class="flex items-center gap-2 border-b px-2 py-1.5 bg-muted/20">
+			<!-- Mobile Menu Button -->
+			<Button
+				variant="ghost"
+				size="icon"
+				class="h-8 w-8 lg:hidden"
+				onclick={() => (mobileDrawerOpen = true)}
+			>
+				<Menu class="h-4 w-4" />
+			</Button>
+
+			<!-- Sidebar Toggle (Desktop) -->
+			<Button
+				variant="ghost"
+				size="icon"
+				class="hidden lg:flex h-8 w-8"
+				onclick={() => (sidebarOpen = !sidebarOpen)}
+				title="Toggle sidebar ([)"
+			>
+				{#if sidebarOpen}
+					<PanelLeftClose class="h-4 w-4" />
+				{:else}
+					<PanelLeft class="h-4 w-4" />
+				{/if}
+			</Button>
+
+			<!-- Back Button -->
+			{#if onBack}
+				<Button variant="ghost" size="sm" onclick={onBack} class="gap-1">
+					<ChevronLeft class="h-4 w-4" />
+					<span class="hidden sm:inline">Back to Editor</span>
+				</Button>
+				<Separator orientation="vertical" class="h-6" />
+			{/if}
+
+			<!-- File Tabs -->
+			<div class="flex-1 overflow-x-auto">
+				<div class="flex items-center gap-1">
+					{#each openTabs as tab (tab.path)}
+						{@const icon = getFileIcon(tab.name, tab.status)}
+						<button
+							onclick={() => (activeTab = tab)}
+							class="group flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab?.path ===
+							tab.path
+								? 'bg-background border shadow-sm'
+								: 'hover:bg-muted'}"
+						>
+							<icon.component class={icon.class} />
+							<span class="max-w-32 truncate">{tab.name}</span>
+							{#if tab.additions || tab.deletions}
+								<span class="flex items-center gap-0.5 text-xs">
+									{#if tab.additions}<span class="text-green-600">+{tab.additions}</span>{/if}
+									{#if tab.deletions}<span class="text-red-600">-{tab.deletions}</span>{/if}
+								</span>
+							{/if}
+							<button
+								onclick={(e) => closeTab(tab, e)}
+								class="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20"
+							>
+								<X class="h-3 w-3" />
+							</button>
+						</button>
+					{/each}
+				</div>
+			</div>
+		</div>
+
+		<!-- File Content -->
+		<div class="flex-1 overflow-auto">
+			{#if activeTab}
+				<div class="h-full">
+					{#if mode === 'diff' && activeTab.diff}
+						<div class="p-4">
+							<DiffViewer diff={activeTab.diff} filename={activeTab.path} />
+						</div>
+					{:else if activeTab.content}
+						<CodeEditor
+							value={activeTab.content}
+							language={activeTab.language || 'text'}
+							readonly
+							showLineNumbers
+							class="h-full"
+						/>
+					{:else}
+						<div class="flex h-full items-center justify-center text-muted-foreground">
+							<div class="text-center">
+								<FileText class="mx-auto h-12 w-12 opacity-20" />
+								<p class="mt-4">No content available</p>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{:else}
+				<div class="flex h-full items-center justify-center text-muted-foreground">
+					<div class="text-center">
+						<Folder class="mx-auto h-12 w-12 opacity-20" />
+						<p class="mt-4">Select a file to view</p>
+						<p class="text-sm mt-1">Use the file tree on the left or press j/k to navigate</p>
+					</div>
+				</div>
+			{/if}
+		</div>
+	</main>
+</div>
+
+<!-- Recursive File Tree Node Snippet -->
+{#snippet FileTreeNode(node: FileNode, depth: number)}
+	{#if node.type === 'directory'}
+		<div class="file-tree-directory">
+			<button
+				onclick={() => toggleDirectory(node.path)}
+				class="flex w-full items-center gap-1 rounded px-2 py-1 text-sm hover:bg-accent transition-colors"
+				style="padding-left: {depth * 12 + 8}px"
+			>
+				{#if expandedDirs.has(node.path)}
+					<ChevronDown class="h-4 w-4 flex-shrink-0" />
+					<FolderOpen class="h-4 w-4 text-muted-foreground flex-shrink-0" />
+				{:else}
+					<ChevronRight class="h-4 w-4 flex-shrink-0" />
+					<Folder class="h-4 w-4 text-muted-foreground flex-shrink-0" />
+				{/if}
+				<span class="truncate">{node.name}</span>
+			</button>
+
+			{#if expandedDirs.has(node.path) && node.children}
+				{#each node.children as child (child.path)}
+					{@render FileTreeNode(child, depth + 1)}
+				{/each}
+			{/if}
+		</div>
+	{:else}
+		{@const icon = getFileIcon(node.name, node.status)}
+		<button
+			onclick={() => openFile(node)}
+			class="flex w-full items-center gap-1 rounded px-2 py-1 text-sm hover:bg-accent transition-colors {activeTab?.path ===
+			node.path
+				? 'bg-accent'
+				: ''}"
+			style="padding-left: {depth * 12 + 28}px"
+		>
+			<icon.component class={icon.class} />
+			<span class="flex-1 truncate text-left">{node.name}</span>
+			{#if node.additions || node.deletions}
+				<span class="flex items-center gap-1 text-xs">
+					{#if node.additions > 0}
+						<span class="text-green-600">+{node.additions}</span>
+					{/if}
+					{#if node.deletions > 0}
+						<span class="text-red-600">-{node.deletions}</span>
+					{/if}
+				</span>
+			{/if}
+		</button>
+	{/if}
+{/snippet}
+
+<style>
+	.file-tree-directory {
+		/* Ensure proper indentation */
+	}
+</style>

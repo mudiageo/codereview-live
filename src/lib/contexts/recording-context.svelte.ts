@@ -1,24 +1,11 @@
 /**
- * Recording Context - Persists recording state across component navigation
+ * Recording Context - Persists recording state and browser MediaRecorder across component navigation
  * Uses Svelte's context API with $state runes for reactivity
  */
 
 import { getContext, setContext } from 'svelte';
 
 const RECORDING_CONTEXT_KEY = Symbol('recording-context');
-
-export interface RecordingState {
-    isRecording: boolean;
-    isPaused: boolean;
-    recordingTime: number;
-    recordingStartTime: number;
-    recordingEvents: { type: string; time: number; scrollTop: number }[];
-    videoBlob: Blob | null;
-    recordedVideoUrl: string;
-    thumbnail: string;
-    videoDuration: number;
-    showPreviewModal: boolean;
-}
 
 export class RecordingContext {
     // Recording state
@@ -35,26 +22,34 @@ export class RecordingContext {
     videoDuration = $state(0);
     showPreviewModal = $state(false);
 
-    // MediaRecorder reference for external control
-    private mediaRecorder: MediaRecorder | null = null;
+    // Browser MediaRecorder and Streams (persisted across component mounts)
+    mediaRecorder: MediaRecorder | null = null;
+    stream: MediaStream | null = null;
+    webcamStream: MediaStream | null = null;
+    canvasStream: MediaStream | null = null;
+    recordedChunks: Blob[] = [];
+
+    // Recording interval
     private recordingInterval: number | null = null;
 
-    // Callbacks
-    private onStartCallback?: () => void;
-    private onEndCallback?: () => void;
-    private onPauseCallback?: () => void;
-    private onResumeCallback?: () => void;
+    // Canvas for compositing (persisted)
+    canvasRef: HTMLCanvasElement | null = null;
+    canvasCtx: CanvasRenderingContext2D | null = null;
 
-    setCallbacks(callbacks: {
-        onStart?: () => void;
-        onEnd?: () => void;
-        onPause?: () => void;
-        onResume?: () => void;
-    }) {
-        this.onStartCallback = callbacks.onStart;
-        this.onEndCallback = callbacks.onEnd;
-        this.onPauseCallback = callbacks.onPause;
-        this.onResumeCallback = callbacks.onResume;
+    startTimer() {
+        if (this.recordingInterval) return;
+        this.recordingInterval = window.setInterval(() => {
+            if (!this.isPaused) {
+                this.recordingTime++;
+            }
+        }, 1000);
+    }
+
+    stopTimer() {
+        if (this.recordingInterval) {
+            clearInterval(this.recordingInterval);
+            this.recordingInterval = null;
+        }
     }
 
     startRecording() {
@@ -63,15 +58,8 @@ export class RecordingContext {
         this.recordingStartTime = Date.now();
         this.recordingEvents = [];
         this.recordingTime = 0;
-
-        // Start timer
-        this.recordingInterval = window.setInterval(() => {
-            if (!this.isPaused) {
-                this.recordingTime++;
-            }
-        }, 1000);
-
-        this.onStartCallback?.();
+        this.recordedChunks = [];
+        this.startTimer();
     }
 
     pauseRecording() {
@@ -80,7 +68,6 @@ export class RecordingContext {
             if (this.mediaRecorder?.state === 'recording') {
                 this.mediaRecorder.pause();
             }
-            this.onPauseCallback?.();
         }
     }
 
@@ -90,7 +77,6 @@ export class RecordingContext {
             if (this.mediaRecorder?.state === 'paused') {
                 this.mediaRecorder.resume();
             }
-            this.onResumeCallback?.();
         }
     }
 
@@ -98,22 +84,26 @@ export class RecordingContext {
         if (this.isRecording) {
             this.isRecording = false;
             this.isPaused = false;
-
-            if (this.recordingInterval) {
-                clearInterval(this.recordingInterval);
-                this.recordingInterval = null;
-            }
+            this.stopTimer();
 
             if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
                 this.mediaRecorder.stop();
             }
-
-            this.onEndCallback?.();
         }
     }
 
     setMediaRecorder(recorder: MediaRecorder | null) {
         this.mediaRecorder = recorder;
+    }
+
+    setStreams(stream: MediaStream | null, webcam: MediaStream | null, canvas: MediaStream | null) {
+        this.stream = stream;
+        this.webcamStream = webcam;
+        this.canvasStream = canvas;
+    }
+
+    addChunk(chunk: Blob) {
+        this.recordedChunks.push(chunk);
     }
 
     setVideoOutput(output: {
@@ -138,7 +128,19 @@ export class RecordingContext {
         }
     }
 
+    cleanup() {
+        this.stopTimer();
+        this.stream?.getTracks().forEach(t => t.stop());
+        this.webcamStream?.getTracks().forEach(t => t.stop());
+        this.canvasStream?.getTracks().forEach(t => t.stop());
+        this.mediaRecorder = null;
+        this.stream = null;
+        this.webcamStream = null;
+        this.canvasStream = null;
+    }
+
     reset() {
+        this.cleanup();
         this.isRecording = false;
         this.isPaused = false;
         this.recordingTime = 0;
@@ -149,26 +151,12 @@ export class RecordingContext {
         this.thumbnail = '';
         this.videoDuration = 0;
         this.showPreviewModal = false;
-
-        if (this.recordingInterval) {
-            clearInterval(this.recordingInterval);
-            this.recordingInterval = null;
-        }
+        this.recordedChunks = [];
     }
 
-    getState(): RecordingState {
-        return {
-            isRecording: this.isRecording,
-            isPaused: this.isPaused,
-            recordingTime: this.recordingTime,
-            recordingStartTime: this.recordingStartTime,
-            recordingEvents: this.recordingEvents,
-            videoBlob: this.videoBlob,
-            recordedVideoUrl: this.recordedVideoUrl,
-            thumbnail: this.thumbnail,
-            videoDuration: this.videoDuration,
-            showPreviewModal: this.showPreviewModal
-        };
+    // Check if we have an active recording session
+    hasActiveSession(): boolean {
+        return this.mediaRecorder !== null && this.mediaRecorder.state !== 'inactive';
     }
 }
 
@@ -178,12 +166,8 @@ export function createRecordingContext(): RecordingContext {
     return context;
 }
 
-export function getRecordingContext(): RecordingContext {
-    const context = getContext<RecordingContext>(RECORDING_CONTEXT_KEY);
-    if (!context) {
-        throw new Error('RecordingContext not found. Make sure to call createRecordingContext() in a parent component.');
-    }
-    return context;
+export function getRecordingContext(): RecordingContext | undefined {
+    return getContext<RecordingContext>(RECORDING_CONTEXT_KEY);
 }
 
 export function hasRecordingContext(): boolean {

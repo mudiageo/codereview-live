@@ -17,6 +17,7 @@
 	import Keyboard from '@lucide/svelte/icons/keyboard';
 	import { FFmpeg } from '@ffmpeg/ffmpeg';
 	import { fetchFile } from '@ffmpeg/util';
+	import { getRecordingContext } from '$lib/contexts/recording-context.svelte';
 
 	import AnnotationToolbar from './annotation-toolbar.svelte';
 	import VideoPreviewModal from './video-preview-modal.svelte';
@@ -48,20 +49,33 @@
 	// Show keyboard shortcuts hint
 	let showShortcutsHint = $state(false);
 
-	let isRecording = $state(false);
-	let isPaused = $state(false);
-	let recordingTime = $state(0);
+	// Get recording context if available (for state persistence)
+	const recordingCtx = getRecordingContext();
+
+	// Use context state if available, otherwise local state
+	let isRecording = $state(recordingCtx?.isRecording ?? false);
+	let isPaused = $state(recordingCtx?.isPaused ?? false);
+	let recordingTime = $state(recordingCtx?.recordingTime ?? 0);
 	let countdown = $state(0);
-	let mediaRecorder = $state<MediaRecorder | null>(null);
-	let recordedChunks = $state<Blob[]>([]);
-	let videoBlob = $state<Blob | null>(null);
-	let thumbnail = $state<string>('');
-	let stream = $state<MediaStream | null>(null);
-	let webcamStream = $state<MediaStream | null>(null);
+	let mediaRecorder = $state<MediaRecorder | null>(recordingCtx?.mediaRecorder ?? null);
+	let recordedChunks = $state<Blob[]>(recordingCtx?.recordedChunks ?? []);
+	let videoBlob = $state<Blob | null>(recordingCtx?.videoBlob ?? null);
+	let thumbnail = $state<string>(recordingCtx?.thumbnail ?? '');
+	let stream = $state<MediaStream | null>(recordingCtx?.stream ?? null);
+	let webcamStream = $state<MediaStream | null>(recordingCtx?.webcamStream ?? null);
 	let recordingInterval: number;
 	let countdownInterval: number;
 	let videoPreview = $state<HTMLVideoElement>();
 	let webcamPreview = $state<HTMLVideoElement>();
+
+	// Sync state with context
+	$effect(() => {
+		if (recordingCtx) {
+			isRecording = recordingCtx.isRecording;
+			isPaused = recordingCtx.isPaused;
+			recordingTime = recordingCtx.recordingTime;
+		}
+	});
 
 	// Settings
 	let selectedSource = $state<'screen' | 'window' | 'camera'>('screen');
@@ -671,7 +685,7 @@
 				tempVideo.src = recordedVideoUrl;
 				await new Promise((r) => {
 					tempVideo.onloadedmetadata = () => {
-						videoDuration = tempVideo.duration;
+						videoDuration = Number.isFinite(tempVideo.duration) ? tempVideo.duration : 0;
 						r(null);
 					};
 				});
@@ -692,8 +706,20 @@
 			mediaRecorder.start(1000);
 			onStart?.();
 
+			// Sync with context
+			if (recordingCtx) {
+				recordingCtx.isRecording = true;
+				recordingCtx.isPaused = false;
+				recordingCtx.mediaRecorder = mediaRecorder;
+				recordingCtx.stream = stream;
+				recordingCtx.webcamStream = webcamStream;
+				recordingCtx.recordedChunks = recordedChunks;
+				recordingCtx.startTimer();
+			}
+
 			recordingInterval = window.setInterval(() => {
 				recordingTime++;
+				if (recordingCtx) recordingCtx.recordingTime = recordingTime;
 				if (recordingTime >= maxDuration) {
 					stopRecording();
 					toast.warning('Maximum recording duration reached');
@@ -723,6 +749,11 @@
 			mediaRecorder.pause();
 			isPaused = true;
 			clearInterval(recordingInterval);
+			// Sync with context
+			if (recordingCtx) {
+				recordingCtx.isPaused = true;
+				recordingCtx.mediaRecorder = mediaRecorder;
+			}
 			onPause?.();
 		}
 	}
@@ -731,9 +762,14 @@
 		if (mediaRecorder?.state === 'paused') {
 			mediaRecorder.resume();
 			isPaused = false;
+			// Sync with context
+			if (recordingCtx) {
+				recordingCtx.isPaused = false;
+			}
 
 			recordingInterval = window.setInterval(() => {
 				recordingTime++;
+				if (recordingCtx) recordingCtx.recordingTime = recordingTime;
 				if (recordingTime >= maxDuration) {
 					stopRecording();
 				}
@@ -748,6 +784,12 @@
 			isRecording = false;
 			isPaused = false;
 			clearInterval(recordingInterval);
+			// Sync with context
+			if (recordingCtx) {
+				recordingCtx.isRecording = false;
+				recordingCtx.isPaused = false;
+				recordingCtx.stopTimer();
+			}
 			onEnd?.();
 		}
 	}
@@ -759,6 +801,10 @@
 		recordingTime = 0;
 		annotationHistory = [];
 		historyIndex = -1;
+		// Sync with context
+		if (recordingCtx) {
+			recordingCtx.reset();
+		}
 
 		// Clear annotation canvas
 		if (annotationCtx && annotationCanvas) {
