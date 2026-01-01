@@ -641,6 +641,13 @@ export class RecordingContext {
 		let droppedFrames = 0;
 		let lastDropLogTime = 0;
 
+		// Helper to schedule next frame with drift correction
+		const scheduleNextFrame = () => {
+			expectedTime += frameDuration;
+			const delay = Math.max(0, expectedTime - performance.now());
+			this.domCaptureInterval = window.setTimeout(captureFrame, delay);
+		};
+
 		const captureFrame = async () => {
 			try {
 				// Stop if not recording
@@ -668,16 +675,12 @@ export class RecordingContext {
 
 				// Skip frame if paused, but continue loop
 				if (this.isPaused) {
-					expectedTime += frameDuration;
-					const delay = Math.max(0, expectedTime - performance.now());
-					this.domCaptureInterval = window.setTimeout(captureFrame, delay);
+					scheduleNextFrame();
 					return;
 				}
 
 				if (!this.masterCtx || !this.masterCanvas) {
-					expectedTime += frameDuration;
-					const delay = Math.max(0, expectedTime - performance.now());
-					this.domCaptureInterval = window.setTimeout(captureFrame, delay);
+					scheduleNextFrame();
 					return;
 				}
 
@@ -701,18 +704,12 @@ export class RecordingContext {
 				// 4. Sync to UI canvas if available (User Preview)
 				this.syncToUICanvas();
 
-				// Calculate delay with drift correction
-				const frameEndTime = performance.now();
-				expectedTime += frameDuration;
-				const delay = Math.max(0, expectedTime - frameEndTime);
-				this.domCaptureInterval = window.setTimeout(captureFrame, delay);
+				// Schedule next frame with drift correction
+				scheduleNextFrame();
 			} catch (error) {
 				console.error('Error in capture frame:', error);
 				// Continue loop even on error to prevent recording from stopping
-				const frameEndTime = performance.now();
-				expectedTime += frameDuration;
-				const delay = Math.max(0, expectedTime - frameEndTime);
-				this.domCaptureInterval = window.setTimeout(captureFrame, delay);
+				scheduleNextFrame();
 			}
 		};
 
