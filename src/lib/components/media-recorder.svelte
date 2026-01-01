@@ -12,12 +12,10 @@
 	import Square from '@lucide/svelte/icons/square';
 	import Pause from '@lucide/svelte/icons/pause';
 	import Play from '@lucide/svelte/icons/play';
-	import Settings from '@lucide/svelte/icons/settings';
-	import Monitor from '@lucide/svelte/icons/monitor';
 	import Keyboard from '@lucide/svelte/icons/keyboard';
+	import Monitor from '@lucide/svelte/icons/monitor';
 	import {
 		getRecordingContext,
-		type RecordingContext,
 		type WebcamPosition,
 		type WebcamSize,
 		type WebcamShape
@@ -39,116 +37,71 @@
 		throw new Error('MediaRecorder must be used within a component that provides RecordingContext');
 	}
 
-	// UI-only local state (not recording logic)
-	let showSettings = $state(false);
-	let videoPreview = $state<HTMLVideoElement>();
-	let webcamPreview = $state<HTMLVideoElement>();
+	// Element refs - passed to context
 	let canvasRef = $state<HTMLCanvasElement>();
-	let canvasCtx: CanvasRenderingContext2D | null = null;
-	let annotationCanvas: HTMLCanvasElement | null = null;
-	let annotationCtx: CanvasRenderingContext2D | null = null;
-	let animationFrameId: number | null = null;
+	let videoPreviewRef = $state<HTMLVideoElement>();
+	let webcamPreviewRef = $state<HTMLVideoElement>();
 
-	// Annotations State (UI-only, could be moved to context if needed)
+	// Annotation UI state (local, for UI interactions only)
 	let isDrawing = $state(false);
 	let currentTool = $state({ type: 'pen' as const, color: '#ff0000', strokeWidth: 3 });
 	let annotationHistory = $state<ImageData[]>([]);
 	let historyIndex = $state(-1);
-	let isToolbarVisible = $state(true);
-	let textInputVisible = $state(false);
-	let textInputPosition = $state({ x: 0, y: 0 });
-	let textInputValue = $state('');
-	let textInputRef: HTMLInputElement | null = null;
-
-	// Derived state from context
-	const isRecording = $derived(ctx.isRecording);
-	const isPaused = $derived(ctx.isPaused);
-	const recordingTime = $derived(ctx.recordingTime);
-	const countdown = $derived(ctx.countdown);
-	const videoBlob = $derived(ctx.videoBlob);
-	const recordedVideoUrl = $derived(ctx.recordedVideoUrl);
-	const thumbnail = $derived(ctx.thumbnail);
-	const showPreviewModal = $derived(ctx.showPreviewModal);
-	const settings = $derived(ctx.settings);
 
 	// Screen capture support check
-	const supportsScreenCapture = $derived(
+	const supportsScreenCapture =
 		typeof navigator !== 'undefined' &&
-			'mediaDevices' in navigator &&
-			'getDisplayMedia' in navigator.mediaDevices
-	);
+		'mediaDevices' in navigator &&
+		'getDisplayMedia' in navigator.mediaDevices;
+
+	// Pass refs to context when they're available
+	$effect(() => {
+		if (canvasRef) ctx.setCanvasRef(canvasRef);
+	});
+
+	$effect(() => {
+		if (videoPreviewRef) ctx.setVideoPreviewRef(videoPreviewRef);
+	});
+
+	$effect(() => {
+		if (webcamPreviewRef) ctx.setWebcamPreviewRef(webcamPreviewRef);
+	});
 
 	// ============= Keyboard Shortcuts =============
 	function handleKeyDown(e: KeyboardEvent) {
-		if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-			return;
-		}
+		if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
 		const key = e.key.toLowerCase();
 
-		// Recording controls
-		if (key === 'r' && !isRecording && countdown === 0) {
+		if (key === 'r' && !ctx.isRecording && ctx.countdown === 0) {
 			e.preventDefault();
 			ctx.startRecording();
-		} else if (key === 's' && isRecording) {
+		} else if (key === 's' && ctx.isRecording) {
 			e.preventDefault();
 			ctx.stopRecording();
-		} else if ((key === ' ' || key === 'p') && isRecording) {
+		} else if ((key === ' ' || key === 'p') && ctx.isRecording) {
 			e.preventDefault();
 			ctx.togglePause();
-		} else if (key === 'escape' && (isRecording || countdown > 0)) {
+		} else if (key === 'escape' && (ctx.isRecording || ctx.countdown > 0)) {
 			e.preventDefault();
 			ctx.cancelRecording();
 		}
 
 		// Webcam controls during recording
-		if (isRecording && settings.includeWebcam) {
+		if (ctx.isRecording && ctx.settings.includeWebcam) {
 			if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
 				e.preventDefault();
-				handleWebcamPositionKey(key);
+				ctx.cycleWebcamPosition();
+				toast.info(`Webcam: ${ctx.settings.webcamPosition}`);
 			} else if (key === '+' || key === '=') {
 				e.preventDefault();
 				ctx.cycleWebcamSize();
-				toast.info(`Webcam size: ${settings.webcamSize}`);
-			} else if (key === '-' || key === '_') {
-				e.preventDefault();
-				// Cycle backwards not implemented, just cycle forward
+				toast.info(`Webcam size: ${ctx.settings.webcamSize}`);
 			} else if (key === 'c') {
 				e.preventDefault();
 				ctx.toggleWebcamShape();
-				toast.info(`Webcam shape: ${settings.webcamShape}`);
+				toast.info(`Webcam shape: ${ctx.settings.webcamShape}`);
 			}
-		}
-	}
-
-	function handleWebcamPositionKey(key: string) {
-		const positionMap: Record<string, Record<string, WebcamPosition>> = {
-			arrowup: {
-				'bottom-left': 'top-left',
-				'bottom-right': 'top-right',
-				center: 'top-right'
-			},
-			arrowdown: {
-				'top-left': 'bottom-left',
-				'top-right': 'bottom-right',
-				center: 'bottom-right'
-			},
-			arrowleft: {
-				'top-right': 'top-left',
-				'bottom-right': 'bottom-left',
-				center: 'bottom-left'
-			},
-			arrowright: {
-				'top-left': 'top-right',
-				'bottom-left': 'bottom-right',
-				center: 'bottom-right'
-			}
-		};
-
-		const newPosition = positionMap[key]?.[settings.webcamPosition];
-		if (newPosition) {
-			ctx.setWebcamPosition(newPosition);
-			toast.info(`Webcam: ${newPosition}`);
 		}
 	}
 
@@ -162,183 +115,15 @@
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('keydown', handleKeyDown);
 		}
-		stopCanvasLoop();
 	});
 
-	// ============= Canvas Compositing =============
-	function initCanvas() {
-		if (!canvasRef) return;
-		canvasCtx = canvasRef.getContext('2d');
-
-		// Create offscreen annotation canvas
-		annotationCanvas = document.createElement('canvas');
-		annotationCtx = annotationCanvas.getContext('2d');
-	}
-
-	function startCanvasLoop() {
-		const drawFrame = () => {
-			if (!canvasCtx || !videoPreview || !isRecording) {
-				if (isRecording) {
-					animationFrameId = requestAnimationFrame(drawFrame);
-				}
-				return;
-			}
-
-			// Draw video frame
-			try {
-				canvasCtx.drawImage(videoPreview, 0, 0, canvasRef!.width, canvasRef!.height);
-			} catch (e) {
-				animationFrameId = requestAnimationFrame(drawFrame);
-				return;
-			}
-
-			// Draw webcam PIP if enabled
-			if (settings.includeWebcam && webcamPreview && ctx.getWebcamStream()) {
-				drawWebcamPIP();
-			}
-
-			// Draw annotation layer
-			if (annotationCanvas && annotationCanvas.width > 0 && annotationCanvas.height > 0) {
-				canvasCtx.drawImage(annotationCanvas, 0, 0);
-			}
-
-			animationFrameId = requestAnimationFrame(drawFrame);
-		};
-
-		animationFrameId = requestAnimationFrame(drawFrame);
-	}
-
-	function stopCanvasLoop() {
-		if (animationFrameId) {
-			cancelAnimationFrame(animationFrameId);
-			animationFrameId = null;
-		}
-	}
-
-	function drawWebcamPIP() {
-		if (!canvasCtx || !webcamPreview || !canvasRef) return;
-
-		const pip = getWebcamPIPRect();
-		canvasCtx.save();
-
-		// Draw shadow/border
-		canvasCtx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-		canvasCtx.shadowBlur = 10;
-		canvasCtx.fillStyle = '#000';
-
-		if (settings.webcamShape === 'circle') {
-			const radius = Math.min(pip.width, pip.height) / 2;
-			const centerX = pip.x + pip.width / 2;
-			const centerY = pip.y + pip.height / 2;
-
-			canvasCtx.beginPath();
-			canvasCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-			canvasCtx.clip();
-			canvasCtx.drawImage(webcamPreview, pip.x, pip.y, pip.width, pip.height);
-		} else {
-			canvasCtx.fillRect(pip.x - 2, pip.y - 2, pip.width + 4, pip.height + 4);
-			canvasCtx.drawImage(webcamPreview, pip.x, pip.y, pip.width, pip.height);
-		}
-
-		canvasCtx.restore();
-	}
-
-	function getWebcamPIPRect(): { x: number; y: number; width: number; height: number } {
-		if (!canvasRef) return { x: 0, y: 0, width: 0, height: 0 };
-
-		const sizeMultipliers = { small: 0.15, medium: 0.2, large: 0.3 };
-		const multiplier = sizeMultipliers[settings.webcamSize];
-		const pipWidth = canvasRef.width * multiplier;
-		const pipHeight = (pipWidth * 3) / 4;
-		const padding = 20;
-
-		let x = padding,
-			y = padding;
-
-		switch (settings.webcamPosition) {
-			case 'top-right':
-				x = canvasRef.width - pipWidth - padding;
-				break;
-			case 'bottom-left':
-				y = canvasRef.height - pipHeight - padding;
-				break;
-			case 'bottom-right':
-				x = canvasRef.width - pipWidth - padding;
-				y = canvasRef.height - pipHeight - padding;
-				break;
-			case 'center':
-				x = (canvasRef.width - pipWidth) / 2;
-				y = (canvasRef.height - pipHeight) / 2;
-				break;
-		}
-
-		return { x, y, width: pipWidth, height: pipHeight };
-	}
-
-	// ============= Recording Flow =============
-	async function handleStartRecording() {
-		const success = await ctx.startRecording();
-		if (success) {
-			// Setup video preview
-			const stream = ctx.getStream();
-			if (stream && videoPreview) {
-				videoPreview.srcObject = stream;
-				videoPreview.play();
-			}
-
-			// Setup webcam preview
-			const webcamStream = ctx.getWebcamStream();
-			if (webcamStream && webcamPreview) {
-				webcamPreview.srcObject = webcamStream;
-				webcamPreview.play();
-			}
-
-			// Initialize and start canvas loop
-			initCanvas();
-			if (canvasRef && stream) {
-				const videoTrack = stream.getVideoTracks()[0];
-				const trackSettings = videoTrack.getSettings();
-				canvasRef.width = trackSettings.width || 1920;
-				canvasRef.height = trackSettings.height || 1080;
-				if (annotationCanvas) {
-					annotationCanvas.width = canvasRef.width;
-					annotationCanvas.height = canvasRef.height;
-				}
-			}
-			startCanvasLoop();
-		} else {
-			toast.error('Failed to start recording');
-		}
-	}
-
-	function handleSaveVideo(metadata: any) {
-		ctx.showPreviewModal = false;
-		onUploadComplete?.({
-			videoUrl: recordedVideoUrl,
-			thumbnailUrl: thumbnail,
-			metadata
-		});
-	}
-
-	function handleDiscard() {
-		ctx.reset();
-	}
-
-	function handleReRecord() {
-		ctx.reset();
-		handleStartRecording();
-	}
-
-	function formatTime(seconds: number): string {
-		return ctx.formatTime(seconds);
-	}
-
-	// ============= Annotation Handlers =============
+	// ============= Annotation Mouse Handlers =============
 	function getMousePos(e: MouseEvent) {
-		if (!canvasRef) return { x: 0, y: 0 };
-		const rect = canvasRef.getBoundingClientRect();
-		const scaleX = canvasRef.width / rect.width;
-		const scaleY = canvasRef.height / rect.height;
+		const canvas = ctx.getCanvasRef();
+		if (!canvas) return { x: 0, y: 0 };
+		const rect = canvas.getBoundingClientRect();
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
 		return {
 			x: (e.clientX - rect.left) * scaleX,
 			y: (e.clientY - rect.top) * scaleY
@@ -346,7 +131,8 @@
 	}
 
 	function handleMouseDown(e: MouseEvent) {
-		if (!annotationCtx || !isRecording) return;
+		const annotationCtx = ctx.getAnnotationContext();
+		if (!annotationCtx || !ctx.isRecording) return;
 		isDrawing = true;
 		const pos = getMousePos(e);
 		annotationCtx.beginPath();
@@ -358,6 +144,7 @@
 	}
 
 	function handleMouseMove(e: MouseEvent) {
+		const annotationCtx = ctx.getAnnotationContext();
 		if (!isDrawing || !annotationCtx) return;
 		const pos = getMousePos(e);
 		annotationCtx.lineTo(pos.x, pos.y);
@@ -365,9 +152,10 @@
 	}
 
 	function handleMouseUp() {
+		const annotationCanvas = ctx.getAnnotationCanvas();
+		const annotationCtx = ctx.getAnnotationContext();
 		if (isDrawing && annotationCanvas && annotationCtx) {
 			isDrawing = false;
-			// Save to history
 			const imageData = annotationCtx.getImageData(
 				0,
 				0,
@@ -380,6 +168,8 @@
 	}
 
 	function handleUndo() {
+		const annotationCanvas = ctx.getAnnotationCanvas();
+		const annotationCtx = ctx.getAnnotationContext();
 		if (historyIndex > 0 && annotationCtx && annotationCanvas) {
 			historyIndex--;
 			annotationCtx.putImageData(annotationHistory[historyIndex], 0, 0);
@@ -390,6 +180,7 @@
 	}
 
 	function handleRedo() {
+		const annotationCtx = ctx.getAnnotationContext();
 		if (historyIndex < annotationHistory.length - 1 && annotationCtx) {
 			historyIndex++;
 			annotationCtx.putImageData(annotationHistory[historyIndex], 0, 0);
@@ -397,11 +188,18 @@
 	}
 
 	function handleClear() {
-		if (annotationCtx && annotationCanvas) {
-			annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
-			annotationHistory = [];
-			historyIndex = -1;
-		}
+		ctx.clearAnnotations();
+		annotationHistory = [];
+		historyIndex = -1;
+	}
+
+	function handleSaveVideo(metadata: any) {
+		ctx.showPreviewModal = false;
+		onUploadComplete?.({
+			videoUrl: ctx.recordedVideoUrl,
+			thumbnailUrl: ctx.thumbnail,
+			metadata
+		});
 	}
 </script>
 
@@ -409,12 +207,12 @@
 	<CardContent class="space-y-4 p-6">
 		<!-- Recording Preview -->
 		<div class="relative aspect-video bg-muted rounded-lg overflow-hidden group">
-			{#if countdown > 0}
+			{#if ctx.countdown > 0}
 				<div class="absolute inset-0 flex items-center justify-center bg-black/80">
-					<span class="text-8xl font-bold text-white animate-pulse">{countdown}</span>
+					<span class="text-8xl font-bold text-white animate-pulse">{ctx.countdown}</span>
 				</div>
-			{:else if isRecording || isPaused}
-				<!-- Main canvas (what gets recorded) -->
+			{:else if ctx.isRecording || ctx.isPaused}
+				<!-- Main canvas -->
 				<canvas
 					bind:this={canvasRef}
 					class="absolute inset-0 w-full h-full cursor-crosshair z-10"
@@ -430,14 +228,14 @@
 				>
 					<AnnotationToolbar
 						{currentTool}
-						visible={isToolbarVisible}
+						visible={true}
 						canUndo={historyIndex > 0}
 						canRedo={historyIndex < annotationHistory.length - 1}
 						onUndo={handleUndo}
 						onRedo={handleRedo}
 						onClear={handleClear}
 						onToolChange={(tool) => (currentTool = tool)}
-						onToggleVisibility={() => (isToolbarVisible = !isToolbarVisible)}
+						onToggleVisibility={() => {}}
 					/>
 				</div>
 
@@ -446,24 +244,25 @@
 					class="absolute top-4 left-4 flex items-center gap-2 bg-black/80 px-3 py-2 rounded-lg z-20"
 				>
 					<div
-						class="h-3 w-3 rounded-full {isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}"
+						class="h-3 w-3 rounded-full {ctx.isPaused
+							? 'bg-yellow-500'
+							: 'bg-red-500 animate-pulse'}"
 					></div>
-					<span class="text-white font-mono text-sm">{formatTime(recordingTime)}</span>
-					<span class="text-white/60 text-xs">/ {formatTime(settings.maxDuration)}</span>
+					<span class="text-white font-mono text-sm">{ctx.formatTime(ctx.recordingTime)}</span>
+					<span class="text-white/60 text-xs">/ {ctx.formatTime(ctx.settings.maxDuration)}</span>
 				</div>
 
 				<!-- Webcam Controls Overlay -->
-				{#if settings.includeWebcam}
+				{#if ctx.settings.includeWebcam}
 					<div class="absolute top-4 right-4 flex flex-col gap-2 z-20">
-						<!-- Position Controls -->
 						<div class="bg-black/70 backdrop-blur-sm rounded-lg p-2 space-y-1">
 							<span class="text-white/60 text-xs block text-center">Position</span>
 							<div class="grid grid-cols-3 gap-0.5">
 								{#each ['top-left', 'center', 'top-right', 'bottom-left', '', 'bottom-right'] as pos, i}
 									{#if pos}
 										<button
-											class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-xs {settings.webcamPosition ===
-											pos
+											class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-xs {ctx.settings
+												.webcamPosition === pos
 												? 'bg-primary text-white'
 												: ''}"
 											onclick={() => ctx.setWebcamPosition(pos as WebcamPosition)}
@@ -476,13 +275,11 @@
 								{/each}
 							</div>
 						</div>
-
-						<!-- Size Controls -->
 						<div class="bg-black/70 backdrop-blur-sm rounded-lg p-2 flex items-center gap-1">
 							{#each ['small', 'medium', 'large'] as size}
 								<button
-									class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-sm {settings.webcamSize ===
-									size
+									class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-sm {ctx.settings
+										.webcamSize === size
 										? 'bg-primary/50'
 										: ''}"
 									onclick={() => ctx.setWebcamSize(size as WebcamSize)}
@@ -490,29 +287,27 @@
 								>
 							{/each}
 						</div>
-
-						<!-- Shape Toggle -->
 						<button
 							class="bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1 text-white/80 text-xs hover:bg-black/80 flex items-center justify-center gap-1"
 							onclick={() => ctx.toggleWebcamShape()}
 						>
-							{#if settings.webcamShape === 'rectangle'}
+							{#if ctx.settings.webcamShape === 'rectangle'}
 								<span class="w-3 h-2 border border-current rounded-sm"></span>
 							{:else}
 								<span class="w-3 h-3 border border-current rounded-full"></span>
 							{/if}
-							<span>{settings.webcamShape}</span>
+							<span>{ctx.settings.webcamShape}</span>
 						</button>
 					</div>
 				{/if}
 
-				{#if isPaused}
+				{#if ctx.isPaused}
 					<div class="absolute inset-0 flex items-center justify-center bg-black/40">
 						<Badge variant="secondary" class="text-lg px-4 py-2">Paused</Badge>
 					</div>
 				{/if}
-			{:else if videoBlob}
-				<video src={recordedVideoUrl} class="w-full h-full object-contain" controls>
+			{:else if ctx.videoBlob}
+				<video src={ctx.recordedVideoUrl} class="w-full h-full object-contain" controls>
 					<track kind="captions" />
 				</video>
 			{:else}
@@ -525,17 +320,17 @@
 				</div>
 			{/if}
 
-			<!-- Hidden video elements -->
-			<video bind:this={videoPreview} class="hidden" muted playsinline
+			<!-- Hidden video elements for streams -->
+			<video bind:this={videoPreviewRef} class="hidden" muted playsinline
 				><track kind="captions" /></video
 			>
-			<video bind:this={webcamPreview} class="hidden" muted playsinline
+			<video bind:this={webcamPreviewRef} class="hidden" muted playsinline
 				><track kind="captions" /></video
 			>
 		</div>
 
-		<!-- Settings Panel -->
-		{#if !isRecording && !videoBlob}
+		<!-- Settings Panel (only when not recording) -->
+		{#if !ctx.isRecording && !ctx.videoBlob}
 			<div class="space-y-4">
 				<div class="flex items-center justify-between">
 					<div class="space-y-0.5">
@@ -543,21 +338,21 @@
 						<p class="text-sm text-muted-foreground">Show picture-in-picture</p>
 					</div>
 					<Switch
-						checked={settings.includeWebcam}
+						checked={ctx.settings.includeWebcam}
 						onCheckedChange={(v) => ctx.updateSettings({ includeWebcam: v })}
 					/>
 				</div>
 
-				{#if settings.includeWebcam}
+				{#if ctx.settings.includeWebcam}
 					<div class="ml-4 space-y-3 pt-2 border-l-2 border-muted pl-4">
 						<div class="space-y-2">
 							<Label class="text-sm">Position</Label>
 							<Select
 								type="single"
-								value={settings.webcamPosition}
+								value={ctx.settings.webcamPosition}
 								onValueChange={(v) => ctx.setWebcamPosition(v as WebcamPosition)}
 							>
-								<SelectTrigger class="h-8">{settings.webcamPosition}</SelectTrigger>
+								<SelectTrigger class="h-8">{ctx.settings.webcamPosition}</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="top-left">Top Left</SelectItem>
 									<SelectItem value="top-right">Top Right</SelectItem>
@@ -567,15 +362,14 @@
 								</SelectContent>
 							</Select>
 						</div>
-
 						<div class="space-y-2">
 							<Label class="text-sm">Size</Label>
 							<Select
 								type="single"
-								value={settings.webcamSize}
+								value={ctx.settings.webcamSize}
 								onValueChange={(v) => ctx.setWebcamSize(v as WebcamSize)}
 							>
-								<SelectTrigger class="h-8">{settings.webcamSize}</SelectTrigger>
+								<SelectTrigger class="h-8">{ctx.settings.webcamSize}</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="small">Small (15%)</SelectItem>
 									<SelectItem value="medium">Medium (20%)</SelectItem>
@@ -583,15 +377,14 @@
 								</SelectContent>
 							</Select>
 						</div>
-
 						<div class="space-y-2">
 							<Label class="text-sm">Shape</Label>
 							<Select
 								type="single"
-								value={settings.webcamShape}
+								value={ctx.settings.webcamShape}
 								onValueChange={(v) => ctx.updateSettings({ webcamShape: v as WebcamShape })}
 							>
-								<SelectTrigger class="h-8">{settings.webcamShape}</SelectTrigger>
+								<SelectTrigger class="h-8">{ctx.settings.webcamShape}</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="rectangle">Rectangle</SelectItem>
 									<SelectItem value="circle">Circle</SelectItem>
@@ -607,7 +400,7 @@
 						<p class="text-sm text-muted-foreground">Record computer audio</p>
 					</div>
 					<Switch
-						checked={settings.includeSystemAudio}
+						checked={ctx.settings.includeSystemAudio}
 						onCheckedChange={(v) => ctx.updateSettings({ includeSystemAudio: v })}
 					/>
 				</div>
@@ -618,7 +411,7 @@
 						<p class="text-sm text-muted-foreground">Record voice</p>
 					</div>
 					<Switch
-						checked={settings.includeMicAudio}
+						checked={ctx.settings.includeMicAudio}
 						onCheckedChange={(v) => ctx.updateSettings({ includeMicAudio: v })}
 					/>
 				</div>
@@ -627,8 +420,8 @@
 
 		<!-- Controls -->
 		<div class="flex items-center justify-center gap-2">
-			{#if !isRecording && !videoBlob && countdown === 0}
-				<Button onclick={handleStartRecording} size="lg" class="gap-2">
+			{#if !ctx.isRecording && !ctx.videoBlob && ctx.countdown === 0}
+				<Button onclick={() => ctx.startRecording()} size="lg" class="gap-2">
 					<Circle class="h-5 w-5" />
 					Start Recording
 				</Button>
@@ -653,11 +446,11 @@
 								<span class="text-muted-foreground">Cancel</span>
 								<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">Esc</kbd>
 							</div>
-							{#if settings.includeWebcam}
+							{#if ctx.settings.includeWebcam}
 								<div class="border-t pt-2">
 									<h5 class="font-medium text-xs mb-1">Webcam Controls</h5>
 									<div class="grid grid-cols-2 gap-y-1 text-xs">
-										<span class="text-muted-foreground">Move Position</span>
+										<span class="text-muted-foreground">Cycle Position</span>
 										<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">↑↓←→</kbd>
 										<span class="text-muted-foreground">Cycle Size</span>
 										<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">+</kbd>
@@ -669,43 +462,47 @@
 						</div>
 					</PopoverContent>
 				</Popover>
-			{:else if countdown > 0}
+			{:else if ctx.countdown > 0}
 				<Button onclick={() => ctx.cancelRecording()} size="lg" variant="outline">Cancel</Button>
-			{:else if isRecording}
+			{:else if ctx.isRecording}
 				<Button onclick={() => ctx.togglePause()} size="lg" variant="secondary" class="gap-2">
-					{#if isPaused}
-						<Play class="h-5 w-5" />
-						Resume
+					{#if ctx.isPaused}
+						<Play class="h-5 w-5" /> Resume
 					{:else}
-						<Pause class="h-5 w-5" />
-						Pause
+						<Pause class="h-5 w-5" /> Pause
 					{/if}
 				</Button>
 				<Button onclick={() => ctx.stopRecording()} size="lg" variant="destructive" class="gap-2">
-					<Square class="h-5 w-5" />
-					Stop
+					<Square class="h-5 w-5" /> Stop
 				</Button>
-			{:else if videoBlob}
+			{:else if ctx.videoBlob}
 				<Button variant="outline" onclick={() => ctx.reset()}>Record Again</Button>
 				<Button onclick={() => (ctx.showPreviewModal = true)}>Use This Recording</Button>
 			{/if}
 		</div>
 
-		{#if videoBlob}
+		{#if ctx.videoBlob}
 			<div class="text-sm text-center text-muted-foreground">
-				Duration: {formatTime(recordingTime)} • Size: {(videoBlob.size / 1024 / 1024).toFixed(2)} MB
+				Duration: {ctx.formatTime(ctx.recordingTime)} • Size: {(
+					ctx.videoBlob.size /
+					1024 /
+					1024
+				).toFixed(2)} MB
 			</div>
 		{/if}
 	</CardContent>
 </Card>
 
-{#if showPreviewModal}
+{#if ctx.showPreviewModal}
 	<VideoPreviewModal
 		bind:open={ctx.showPreviewModal}
-		videoUrl={recordedVideoUrl}
+		videoUrl={ctx.recordedVideoUrl}
 		{reviewId}
 		onSave={handleSaveVideo}
-		onReRecord={handleReRecord}
-		onDiscard={handleDiscard}
+		onReRecord={() => {
+			ctx.reset();
+			ctx.startRecording();
+		}}
+		onDiscard={() => ctx.reset()}
 	/>
 {/if}

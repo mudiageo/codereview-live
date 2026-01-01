@@ -385,28 +385,29 @@
 				<div class="flex items-center gap-1">
 					{#each openTabs as tab (tab.path)}
 						{@const icon = getFileIcon(tab.name, tab.status)}
-						<button
-							onclick={() => (activeTab = tab)}
+						<div
 							class="group flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab?.path ===
 							tab.path
 								? 'bg-background border shadow-sm'
 								: 'hover:bg-muted'}"
 						>
-							<icon.component class={icon.class} />
-							<span class="max-w-32 truncate">{tab.name}</span>
-							{#if tab.additions || tab.deletions}
-								<span class="flex items-center gap-0.5 text-xs">
-									{#if tab.additions}<span class="text-green-600">+{tab.additions}</span>{/if}
-									{#if tab.deletions}<span class="text-red-600">-{tab.deletions}</span>{/if}
-								</span>
-							{/if}
+							<button onclick={() => (activeTab = tab)} class="flex items-center gap-1.5 min-w-0">
+								<icon.component class={icon.class} />
+								<span class="max-w-32 truncate">{tab.name}</span>
+								{#if tab.additions || tab.deletions}
+									<span class="flex items-center gap-0.5 text-xs">
+										{#if tab.additions}<span class="text-green-600">+{tab.additions}</span>{/if}
+										{#if tab.deletions}<span class="text-red-600">-{tab.deletions}</span>{/if}
+									</span>
+								{/if}
+							</button>
 							<button
 								onclick={(e) => closeTab(tab, e)}
-								class="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20"
+								class="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20 flex-shrink-0"
 							>
 								<X class="h-3 w-3" />
 							</button>
-						</button>
+						</div>
 					{/each}
 				</div>
 			</div>

@@ -1,6 +1,7 @@
 /**
  * Recording Context - Complete recording controller
- * Handles all recording logic including MediaRecorder, streams, intervals
+ * Handles ALL recording logic including MediaRecorder, streams, intervals,
+ * canvas compositing, webcam PIP, annotations, and timing
  * Uses Svelte's context API with $state runes for reactivity
  */
 
@@ -56,7 +57,7 @@ export class RecordingContext {
     // Settings (reactive)
     settings = $state<RecordingSettings>({ ...DEFAULT_SETTINGS });
 
-    // ============= Internal State (not reactive) =============
+    // ============= Internal State =============
     private mediaRecorder: MediaRecorder | null = null;
     private stream: MediaStream | null = null;
     private webcamStream: MediaStream | null = null;
@@ -67,10 +68,16 @@ export class RecordingContext {
     private recordingStartTime: number = 0;
     private recordingEvents: { type: string; time: number; scrollTop: number }[] = [];
 
-    // Canvas for compositing
-    private canvas: HTMLCanvasElement | null = null;
+    // Canvas elements (set by component)
+    private canvasRef: HTMLCanvasElement | null = null;
     private canvasCtx: CanvasRenderingContext2D | null = null;
+    private videoPreviewRef: HTMLVideoElement | null = null;
+    private webcamPreviewRef: HTMLVideoElement | null = null;
     private animationFrameId: number | null = null;
+
+    // Annotation canvas
+    private annotationCanvas: HTMLCanvasElement | null = null;
+    private annotationCtx: CanvasRenderingContext2D | null = null;
 
     // Callbacks
     private onStartCallback?: () => void;
@@ -79,6 +86,52 @@ export class RecordingContext {
     private onResumeCallback?: () => void;
     private onErrorCallback?: (error: Error) => void;
     private onVideoReadyCallback?: (blob: Blob, url: string) => void;
+
+    // ============= Canvas Element Setters =============
+
+    setCanvasRef(canvas: HTMLCanvasElement | null) {
+        this.canvasRef = canvas;
+        if (canvas) {
+            this.canvasCtx = canvas.getContext('2d');
+        }
+    }
+
+    setVideoPreviewRef(video: HTMLVideoElement | null) {
+        this.videoPreviewRef = video;
+    }
+
+    setWebcamPreviewRef(video: HTMLVideoElement | null) {
+        this.webcamPreviewRef = video;
+    }
+
+    getCanvasRef(): HTMLCanvasElement | null {
+        return this.canvasRef;
+    }
+
+    // ============= Annotation Canvas =============
+
+    initAnnotationCanvas() {
+        if (!this.canvasRef) return;
+
+        this.annotationCanvas = document.createElement('canvas');
+        this.annotationCanvas.width = this.canvasRef.width;
+        this.annotationCanvas.height = this.canvasRef.height;
+        this.annotationCtx = this.annotationCanvas.getContext('2d');
+    }
+
+    getAnnotationContext(): CanvasRenderingContext2D | null {
+        return this.annotationCtx;
+    }
+
+    getAnnotationCanvas(): HTMLCanvasElement | null {
+        return this.annotationCanvas;
+    }
+
+    clearAnnotations() {
+        if (this.annotationCtx && this.annotationCanvas) {
+            this.annotationCtx.clearRect(0, 0, this.annotationCanvas.width, this.annotationCanvas.height);
+        }
+    }
 
     // ============= Public API =============
 
@@ -102,6 +155,144 @@ export class RecordingContext {
         this.settings = { ...this.settings, ...newSettings };
     }
 
+    // ============= Canvas Compositing Loop =============
+
+    private startCanvasLoop() {
+        const drawFrame = () => {
+            // Skip if not recording or missing required elements
+            if (!this.canvasCtx || !this.videoPreviewRef || !this.isRecording) {
+                if (this.isRecording) {
+                    // Keep trying if we're recording but elements aren't ready
+                    this.animationFrameId = requestAnimationFrame(drawFrame);
+                }
+                return;
+            }
+
+            // Draw video frame
+            try {
+                this.canvasCtx.drawImage(
+                    this.videoPreviewRef,
+                    0,
+                    0,
+                    this.canvasRef!.width,
+                    this.canvasRef!.height
+                );
+            } catch (e) {
+                // Video might not be ready yet
+                this.animationFrameId = requestAnimationFrame(drawFrame);
+                return;
+            }
+
+            // Draw webcam PIP if enabled
+            if (this.settings.includeWebcam && this.webcamPreviewRef && this.webcamStream) {
+                this.drawWebcamPIP();
+            }
+
+            // Draw annotation layer on top
+            if (this.annotationCanvas && this.annotationCanvas.width > 0 && this.annotationCanvas.height > 0) {
+                this.canvasCtx.drawImage(this.annotationCanvas, 0, 0);
+            }
+
+            this.animationFrameId = requestAnimationFrame(drawFrame);
+        };
+
+        this.animationFrameId = requestAnimationFrame(drawFrame);
+    }
+
+    private stopCanvasLoop() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+    }
+
+    private drawWebcamPIP() {
+        if (!this.canvasCtx || !this.webcamPreviewRef || !this.canvasRef) return;
+
+        const pip = this.getWebcamPIPRect();
+
+        this.canvasCtx.save();
+
+        // Draw shadow/border
+        this.canvasCtx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        this.canvasCtx.shadowBlur = 10;
+        this.canvasCtx.fillStyle = '#000';
+
+        if (this.settings.webcamShape === 'circle') {
+            const radius = Math.min(pip.width, pip.height) / 2;
+            const centerX = pip.x + pip.width / 2;
+            const centerY = pip.y + pip.height / 2;
+
+            this.canvasCtx.beginPath();
+            this.canvasCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            this.canvasCtx.clip();
+
+            // Draw webcam within clipped circle
+            const aspectRatio = this.webcamPreviewRef.videoWidth / this.webcamPreviewRef.videoHeight;
+            let drawWidth = pip.width;
+            let drawHeight = pip.height;
+            let offsetX = 0;
+            let offsetY = 0;
+
+            if (aspectRatio > pip.width / pip.height) {
+                drawHeight = pip.width / aspectRatio;
+                offsetY = (pip.height - drawHeight) / 2;
+            } else {
+                drawWidth = pip.height * aspectRatio;
+                offsetX = (pip.width - drawWidth) / 2;
+            }
+
+            this.canvasCtx.drawImage(
+                this.webcamPreviewRef,
+                pip.x + offsetX,
+                pip.y + offsetY,
+                drawWidth,
+                drawHeight
+            );
+        } else {
+            // Rectangle
+            this.canvasCtx.fillRect(pip.x - 2, pip.y - 2, pip.width + 4, pip.height + 4);
+            this.canvasCtx.drawImage(this.webcamPreviewRef, pip.x, pip.y, pip.width, pip.height);
+        }
+
+        this.canvasCtx.restore();
+    }
+
+    getWebcamPIPRect(): { x: number; y: number; width: number; height: number } {
+        if (!this.canvasRef) return { x: 0, y: 0, width: 0, height: 0 };
+
+        const sizeMultipliers = { small: 0.15, medium: 0.2, large: 0.3 };
+        const multiplier = sizeMultipliers[this.settings.webcamSize];
+        const pipWidth = this.canvasRef.width * multiplier;
+        const pipHeight = (pipWidth * 3) / 4;
+        const padding = 20;
+
+        let x = padding;
+        let y = padding;
+
+        switch (this.settings.webcamPosition) {
+            case 'top-left':
+                // Default values
+                break;
+            case 'top-right':
+                x = this.canvasRef.width - pipWidth - padding;
+                break;
+            case 'bottom-left':
+                y = this.canvasRef.height - pipHeight - padding;
+                break;
+            case 'bottom-right':
+                x = this.canvasRef.width - pipWidth - padding;
+                y = this.canvasRef.height - pipHeight - padding;
+                break;
+            case 'center':
+                x = (this.canvasRef.width - pipWidth) / 2;
+                y = (this.canvasRef.height - pipHeight) / 2;
+                break;
+        }
+
+        return { x, y, width: pipWidth, height: pipHeight };
+    }
+
     // ============= Recording Control =============
 
     async startRecording(): Promise<boolean> {
@@ -118,6 +309,12 @@ export class RecordingContext {
 
             this.stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
 
+            // Setup video preview
+            if (this.videoPreviewRef && this.stream) {
+                this.videoPreviewRef.srcObject = this.stream;
+                await this.videoPreviewRef.play();
+            }
+
             // Get webcam stream if enabled
             if (this.settings.includeWebcam) {
                 try {
@@ -125,23 +322,55 @@ export class RecordingContext {
                         video: { width: 320, height: 240 },
                         audio: false
                     });
+                    if (this.webcamPreviewRef && this.webcamStream) {
+                        this.webcamPreviewRef.srcObject = this.webcamStream;
+                        await this.webcamPreviewRef.play();
+                    }
                 } catch (e) {
                     console.warn('Could not get webcam stream:', e);
                 }
             }
+
+            // Setup canvas dimensions from video track
+            if (this.canvasRef && this.stream) {
+                const videoTrack = this.stream.getVideoTracks()[0];
+                const trackSettings = videoTrack.getSettings();
+                this.canvasRef.width = trackSettings.width || 1920;
+                this.canvasRef.height = trackSettings.height || 1080;
+            }
+
+            // Initialize annotation canvas
+            this.initAnnotationCanvas();
 
             // Start countdown
             if (this.settings.countdownDuration > 0) {
                 await this.runCountdown();
             }
 
-            // Setup MediaRecorder
+            // Start canvas compositing loop
+            this.startCanvasLoop();
+
+            // Create canvas stream for recording (includes all compositing)
+            if (this.canvasRef) {
+                this.canvasStream = this.canvasRef.captureStream(30);
+
+                // Add audio track if available
+                if (this.stream) {
+                    const audioTracks = this.stream.getAudioTracks();
+                    audioTracks.forEach(track => this.canvasStream!.addTrack(track));
+                }
+            }
+
+            // Setup MediaRecorder with canvas stream
+            const recordingStream = this.canvasStream || this.stream;
+            if (!recordingStream) throw new Error('No stream available for recording');
+
             const options: MediaRecorderOptions = {
                 mimeType: this.getSupportedMimeType(),
                 videoBitsPerSecond: this.getVideoBitrate()
             };
 
-            this.mediaRecorder = new MediaRecorder(this.stream, options);
+            this.mediaRecorder = new MediaRecorder(recordingStream, options);
             this.recordedChunks = [];
 
             this.mediaRecorder.ondataavailable = (event) => {
@@ -151,6 +380,7 @@ export class RecordingContext {
             };
 
             this.mediaRecorder.onstop = async () => {
+                this.stopCanvasLoop();
                 await this.processRecording();
             };
 
@@ -213,6 +443,7 @@ export class RecordingContext {
         this.isRecording = false;
         this.isPaused = false;
         this.stopTimer();
+        this.stopCanvasLoop();
         this.onEndCallback?.();
     }
 
@@ -281,7 +512,7 @@ export class RecordingContext {
         return [...this.recordedChunks];
     }
 
-    // ============= Internal Methods =============
+    // ============= Timer Logic =============
 
     private startTimer() {
         if (this.recordingInterval) return;
@@ -316,6 +547,8 @@ export class RecordingContext {
             }, 1000);
         });
     }
+
+    // ============= Video Processing =============
 
     private async processRecording() {
         if (this.recordedChunks.length === 0) return;
@@ -402,29 +635,27 @@ export class RecordingContext {
 
     private getVideoBitrate(): number {
         const bitrates: Record<RecordingQuality, number> = {
-            low: 1000000,     // 1 Mbps
-            medium: 2500000,  // 2.5 Mbps
-            high: 5000000     // 5 Mbps
+            low: 1000000, // 1 Mbps
+            medium: 2500000, // 2.5 Mbps
+            high: 5000000 // 5 Mbps
         };
         return bitrates[this.settings.quality];
     }
 
+    // ============= Cleanup =============
+
     cleanup() {
         this.stopTimer();
+        this.stopCanvasLoop();
 
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);
             this.countdownInterval = null;
         }
 
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-
-        this.stream?.getTracks().forEach(t => t.stop());
-        this.webcamStream?.getTracks().forEach(t => t.stop());
-        this.canvasStream?.getTracks().forEach(t => t.stop());
+        this.stream?.getTracks().forEach((t) => t.stop());
+        this.webcamStream?.getTracks().forEach((t) => t.stop());
+        this.canvasStream?.getTracks().forEach((t) => t.stop());
 
         this.mediaRecorder = null;
         this.stream = null;
@@ -445,6 +676,7 @@ export class RecordingContext {
         this.showPreviewModal = false;
         this.recordedChunks = [];
         this.recordingEvents = [];
+        this.clearAnnotations();
     }
 
     // Check if we have an active recording session
