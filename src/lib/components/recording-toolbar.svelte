@@ -7,7 +7,6 @@
 	import Minimize2 from '@lucide/svelte/icons/minimize-2';
 	import Maximize2 from '@lucide/svelte/icons/maximize-2';
 	import Move from '@lucide/svelte/icons/move';
-	import Move from '@lucide/svelte/icons/move';
 	import PenTool from '@lucide/svelte/icons/pen-tool';
 	import Circle from '@lucide/svelte/icons/circle';
 	import Monitor from '@lucide/svelte/icons/monitor';
@@ -174,7 +173,6 @@
 						>
 							<Circle class="h-4 w-4" />
 						</Button>
-					</div>
 					</div>
 
 					<Button

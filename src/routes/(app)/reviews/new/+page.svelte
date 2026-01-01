@@ -610,6 +610,10 @@
 		onGoToRecorder={() => (step = 3)}
 		isAnnotationMode={recordingCtx.isAnnotationMode}
 		onToggleAnnotation={() => (recordingCtx.isAnnotationMode = !recordingCtx.isAnnotationMode)}
+		webcamPosition={recordingCtx.settings.webcamPosition}
+		onCyclePosition={() => recordingCtx.cycleWebcamPosition()}
+		onCycleSize={() => recordingCtx.cycleWebcamSize()}
+		onToggleShape={() => recordingCtx.toggleWebcamShape()}
 	/>
 {/if}
 
@@ -671,8 +675,16 @@
 					files={importedFiles}
 					mode="diff"
 					{importSource}
+					aiAnalysis={analysis}
+					checklist={{
+						items: checklistItems,
+						notes: checklistNotes,
+						template: checklistTemplate
+					}}
 					onBack={() => (showCodeWorkspace = false)}
-					onFileChange={handleWorkspaceFileChange}
+					onRunAI={runAIAnalysis}
+					onAutoCheck={handleAutoCheck}
+					onChecklistChange={(items) => (checklistItems = items)}
 				/>
 			</div>
 		</div>
@@ -1177,23 +1189,7 @@
 						</Card>
 					</div>
 
-					<!-- AI Panel -->
-					<div class="space-y-4">
-						<AIAnalysisPanel
-							{analysis}
-							loading={analysisLoading}
-							onAnalyze={runAIAnalysis}
-							{code}
-						/>
-
-						<ReviewChecklist
-							bind:selectedTemplate={checklistTemplate}
-							bind:checkedItems={checklistItems}
-							aiNotes={checklistNotes}
-							loading={checklistLoading}
-							onAutoCheck={handleAutoCheck}
-						/>
-					</div>
+					<!-- AI/Checklist removed (moved to workspace) -->
 				</div>
 			{/if}
 		</div>

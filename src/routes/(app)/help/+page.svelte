@@ -166,6 +166,47 @@
 				</AccordionContent>
 			</AccordionItem>
 
+			<AccordionItem value="smart-chapters">
+				<AccordionTrigger>What are Smart Chapters?</AccordionTrigger>
+				<AccordionContent>
+					<p class="text-sm">Smart Chapters make navigating multi-file reviews effortless:</p>
+					<ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+						<li>
+							<strong>Automatic Detection:</strong> When you switch files during a recording, we automatically
+							mark it.
+						</li>
+						<li>
+							<strong>Smart Navigation:</strong> During playback, the workspace automatically switches
+							to the file being discussed.
+						</li>
+						<li>
+							<strong>Timeline Markers:</strong> See exactly which file is being discussed at any point
+							in the video timeline.
+						</li>
+					</ul>
+				</AccordionContent>
+			</AccordionItem>
+
+			<AccordionItem value="ai-summary">
+				<AccordionTrigger>What is the AI Executive Summary?</AccordionTrigger>
+				<AccordionContent>
+					<p class="text-sm">Get a high-level overview of any review instantly:</p>
+					<ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+						<li>
+							<strong>Instant Context:</strong> AI generates a concise summary of all changes in the review.
+						</li>
+						<li>
+							<strong>Premium Insight:</strong> Displayed in a beautiful summary card at the top of the
+							review.
+						</li>
+						<li>
+							<strong>Always Up-to-Date:</strong> Re-run analysis to update the summary as the review
+							evolves.
+						</li>
+					</ul>
+				</AccordionContent>
+			</AccordionItem>
+
 			<AccordionItem value="storage">
 				<AccordionTrigger>Where are my videos stored?</AccordionTrigger>
 				<AccordionContent>
