@@ -5,9 +5,10 @@
  * Uses Svelte's context API with $state runes for reactivity
  */
 
-import { getContext, setContext } from 'svelte';
+import { createContext } from 'svelte';
 
-const RECORDING_CONTEXT_KEY = Symbol('recording-context');
+// Type-safe context using Svelte's createContext
+const [getRecordingContextInternal, setRecordingContextInternal] = createContext<RecordingContext>('recording-context');
 
 export type RecordingQuality = 'low' | 'medium' | 'high';
 export type WebcamPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
@@ -696,17 +697,21 @@ export class RecordingContext {
 
 export function createRecordingContext(): RecordingContext {
     const context = new RecordingContext();
-    setContext(RECORDING_CONTEXT_KEY, context);
+    setRecordingContextInternal(context);
     return context;
 }
 
 export function getRecordingContext(): RecordingContext | undefined {
-    return getContext<RecordingContext>(RECORDING_CONTEXT_KEY);
+    try {
+        return getRecordingContextInternal();
+    } catch {
+        return undefined;
+    }
 }
 
 export function hasRecordingContext(): boolean {
     try {
-        return !!getContext<RecordingContext>(RECORDING_CONTEXT_KEY);
+        return !!getRecordingContextInternal();
     } catch {
         return false;
     }

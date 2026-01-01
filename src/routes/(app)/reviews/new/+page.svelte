@@ -24,6 +24,9 @@
 	import Play from '@lucide/svelte/icons/play';
 	import Pause from '@lucide/svelte/icons/pause';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
+	import Maximize2 from '@lucide/svelte/icons/maximize-2';
+	import Minimize2 from '@lucide/svelte/icons/minimize-2';
+	import FileCode from '@lucide/svelte/icons/file-code';
 	import AuthGuard from '$lib/components/auth-guard.svelte';
 	import PaywallDialog from '$lib/components/paywall-dialog.svelte';
 	import LimitReached from '$lib/components/limit-reached.svelte';
@@ -761,51 +764,174 @@
 							</TabsContent>
 
 							<TabsContent value="github">
-								<div class="space-y-4">
-									<Button
-										variant="outline"
-										class="w-full gap-2"
-										onclick={() => (showGitHubImport = true)}
-									>
-										<Github class="h-4 w-4" />
-										Connect GitHub
-									</Button>
-									<p class="text-sm text-muted-foreground text-center">
-										Connect your GitHub account to import pull requests
-									</p>
-								</div>
+								{#if importedFiles.length > 0 && importSource.includes('github')}
+									<!-- Imported Files Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Badge variant="secondary">
+													<FileCode class="h-3 w-3 mr-1" />
+													{importedFiles.length} files
+												</Badge>
+												<span class="text-xs text-muted-foreground truncate max-w-[200px]"
+													>{importSource}</span
+												>
+											</div>
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														importedFiles = [];
+														code = '';
+														importSource = '';
+													}}
+												>
+													Clear
+												</Button>
+											</div>
+										</div>
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace files={importedFiles} mode="diff" {importSource} />
+										</div>
+									</div>
+								{:else}
+									<div class="space-y-4">
+										<Button
+											variant="outline"
+											class="w-full gap-2"
+											onclick={() => (showGitHubImport = true)}
+										>
+											<Github class="h-4 w-4" />
+											Connect GitHub
+										</Button>
+										<p class="text-sm text-muted-foreground text-center">
+											Connect your GitHub account to import pull requests
+										</p>
+									</div>
+								{/if}
 							</TabsContent>
 
 							<TabsContent value="gitlab">
-								<div class="space-y-4">
-									<Button
-										variant="outline"
-										class="w-full gap-2"
-										onclick={() => (showGitLabImport = true)}
-									>
-										<FolderGit2 class="h-4 w-4" />
-										Connect GitLab
-									</Button>
-									<p class="text-sm text-muted-foreground text-center">
-										Connect your GitLab account to import merge requests
-									</p>
-								</div>
+								{#if importedFiles.length > 0 && importSource.includes('gitlab')}
+									<!-- Imported Files Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Badge variant="secondary">
+													<FileCode class="h-3 w-3 mr-1" />
+													{importedFiles.length} files
+												</Badge>
+												<span class="text-xs text-muted-foreground truncate max-w-[200px]"
+													>{importSource}</span
+												>
+											</div>
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														importedFiles = [];
+														code = '';
+														importSource = '';
+													}}
+												>
+													Clear
+												</Button>
+											</div>
+										</div>
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace files={importedFiles} mode="diff" {importSource} />
+										</div>
+									</div>
+								{:else}
+									<div class="space-y-4">
+										<Button
+											variant="outline"
+											class="w-full gap-2"
+											onclick={() => (showGitLabImport = true)}
+										>
+											<FolderGit2 class="h-4 w-4" />
+											Connect GitLab
+										</Button>
+										<p class="text-sm text-muted-foreground text-center">
+											Connect your GitLab account to import merge requests
+										</p>
+									</div>
+								{/if}
 							</TabsContent>
 
 							<TabsContent value="git">
-								<div class="space-y-4">
-									<Button
-										variant="outline"
-										class="w-full gap-2"
-										onclick={() => (showLocalGitBrowser = true)}
-									>
-										<FolderGit2 class="h-4 w-4" />
-										Browse Local Repository
-									</Button>
-									<p class="text-sm text-muted-foreground text-center">
-										Select a local git repository to import changes (Chrome/Edge only)
-									</p>
-								</div>
+								{#if importedFiles.length > 0 && importSource.includes('commit')}
+									<!-- Imported Files Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Badge variant="secondary">
+													<FileCode class="h-3 w-3 mr-1" />
+													{importedFiles.length} files
+												</Badge>
+												<span class="text-xs text-muted-foreground truncate max-w-[200px]"
+													>{importSource}</span
+												>
+											</div>
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														importedFiles = [];
+														code = '';
+														importSource = '';
+													}}
+												>
+													Clear
+												</Button>
+											</div>
+										</div>
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace files={importedFiles} mode="diff" {importSource} />
+										</div>
+									</div>
+								{:else}
+									<div class="space-y-4">
+										<Button
+											variant="outline"
+											class="w-full gap-2"
+											onclick={() => (showLocalGitBrowser = true)}
+										>
+											<FolderGit2 class="h-4 w-4" />
+											Browse Local Repository
+										</Button>
+										<p class="text-sm text-muted-foreground text-center">
+											Select a local git repository to import changes (Chrome/Edge only)
+										</p>
+									</div>
+								{/if}
 							</TabsContent>
 						</Tabs>
 
