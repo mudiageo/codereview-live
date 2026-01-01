@@ -10,7 +10,6 @@ import { snapdom } from '@zumer/snapdom';
 
 // Constants
 const CAPTURE_FPS = 30;
-const MIN_CAPTURE_INTERVAL = 16; // ~60fps max
 const MIN_CANVAS_WIDTH = 1280;
 const MIN_CANVAS_HEIGHT = 720;
 const DEFAULT_CANVAS_WIDTH = 1920;
@@ -113,9 +112,6 @@ export class RecordingContext {
 	// Annotation canvas
 	private annotationCanvas: HTMLCanvasElement | null = null;
 	private annotationCtx: CanvasRenderingContext2D | null = null;
-
-	// Performance tracking
-	private lastCaptureTime: number = 0;
 
 	// Webcam PIP caching
 	private cachedPIPRect: { x: number; y: number; width: number; height: number } | null = null;
@@ -603,13 +599,6 @@ export class RecordingContext {
 	}
 
 	private async captureDOMToCanvas(): Promise<void> {
-		// Throttle captures to avoid excessive CPU usage
-		const now = performance.now();
-		if (now - this.lastCaptureTime < MIN_CAPTURE_INTERVAL) {
-			return;
-		}
-		this.lastCaptureTime = now;
-
 		if (!this.workspaceElement || !this.masterCtx || !this.masterCanvas) return;
 
 		try {
@@ -660,17 +649,21 @@ export class RecordingContext {
 				// Detect if we're falling behind
 				const drift = frameStartTime - expectedTime;
 				if (drift > frameDuration) {
-					droppedFrames++;
 					const framesToSkip = Math.floor(drift / frameDuration);
+					droppedFrames += framesToSkip;
 					expectedTime += framesToSkip * frameDuration;
 
 					// Only log every 5 seconds to avoid performance impact
 					if (frameStartTime - lastDropLogTime > 5000) {
 						console.warn(
-							`[Performance] Dropped ${framesToSkip} frame(s), total dropped: ${droppedFrames}`
+							`[Performance] Dropped ${framesToSkip} frame(s) to catch up, total dropped: ${droppedFrames}`
 						);
 						lastDropLogTime = frameStartTime;
 					}
+
+					// Schedule the next frame and skip processing the current one
+					scheduleNextFrame();
+					return;
 				}
 
 				// Skip frame if paused, but continue loop
@@ -1123,16 +1116,46 @@ export class RecordingContext {
 			try {
 				// Consolidate chunks if there are more than the threshold
 				if (this.recordedChunks.length > CHUNK_CONSOLIDATION_THRESHOLD) {
-					console.log(`[Memory] Consolidating ${this.recordedChunks.length} chunks`);
-					const mimeType = this.getSupportedMimeType();
+					console.log(`[Memory] Offloading consolidation of ${this.recordedChunks.length} chunks`);
 
 					// Keep recent chunks separate for faster access during active recording
 					// Only consolidate older chunks to reduce memory pressure
 					const chunksToConsolidate = this.recordedChunks.slice(0, -RECENT_CHUNKS_TO_KEEP);
 					const recentChunks = this.recordedChunks.slice(-RECENT_CHUNKS_TO_KEEP);
 
-					const consolidatedBlob = new Blob(chunksToConsolidate, { type: mimeType });
-					this.recordedChunks = [consolidatedBlob, ...recentChunks];
+					// Clear immediately to allow new chunks
+					this.recordedChunks = [...recentChunks];
+
+					// Use a Web Worker for non-blocking blob consolidation
+					const worker = new Worker(new URL('./blob-worker.js', import.meta.url), {
+						type: 'module'
+					});
+
+					worker.onmessage = (e: MessageEvent) => {
+						// Check for error response
+						if (e.data.error) {
+							console.error('[Memory] Blob consolidation worker error:', e.data.error);
+							// If worker fails, put the chunks back to avoid data loss
+							this.recordedChunks.unshift(...chunksToConsolidate);
+							worker.terminate();
+							return;
+						}
+
+						// Prepend the consolidated blob to the chunks array
+						this.recordedChunks.unshift(e.data);
+						console.log('[Memory] Consolidation complete.');
+						worker.terminate();
+					};
+
+					worker.onerror = (e) => {
+						console.error('[Memory] Blob consolidation worker error:', e);
+						// If worker fails, put the chunks back to avoid data loss
+						this.recordedChunks.unshift(...chunksToConsolidate);
+						worker.terminate();
+					};
+
+					const mimeType = this.getSupportedMimeType();
+					worker.postMessage({ chunks: chunksToConsolidate, mimeType });
 				}
 			} catch (error) {
 				console.error('Error during memory cleanup:', error);
