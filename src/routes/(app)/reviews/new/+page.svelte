@@ -291,7 +291,7 @@
 		if (files.length > 0) {
 			importedFiles = files;
 			importSource = data.prUrl;
-			showCodeWorkspace = true;
+			// Don't auto-fullscreen - show inline in the tab
 		}
 
 		toast.success('Pull request imported successfully');
@@ -314,7 +314,7 @@
 		if (files.length > 0) {
 			importedFiles = files;
 			importSource = data.mrUrl;
-			showCodeWorkspace = true;
+			// Don't auto-fullscreen - show inline in the tab
 		}
 
 		toast.success('Merge request imported successfully');
@@ -337,7 +337,7 @@
 		if (files.length > 0) {
 			importedFiles = files;
 			importSource = `commit: ${data.commitHash}`;
-			showCodeWorkspace = true;
+			// Don't auto-fullscreen - show inline in the tab
 		}
 
 		toast.success('Git commit imported successfully');
@@ -420,7 +420,7 @@
 			if (files.length > 0) {
 				importedFiles = files;
 				importSource = fileName;
-				showCodeWorkspace = true;
+				// Don't auto-fullscreen - show inline in the tab
 
 				// Calculate totals
 				let totalAdditions = 0;
@@ -467,8 +467,12 @@
 					shareToken: crypto.randomUUID(),
 					isPublic: false,
 					status: 'draft',
-					aiSummary
-					// metadata: { recordingEvents: $state.snapshot(recordingEvents) }
+					aiSummary,
+					metadata: {
+						recordingEvents: $state.snapshot(recordingEvents),
+						files: $state.snapshot(importedFiles),
+						importSource
+					}
 				});
 				reviewId = draft.id;
 			} else {
@@ -485,8 +489,12 @@
 							? Math.round(uploadedMetadata.duration)
 							: null,
 					thumbnailUrl: uploadedThumbnailUrl || undefined,
-					aiSummary
-					// metadata: { recordingEvents: $state.snapshot(recordingEvents) }
+					aiSummary,
+					metadata: {
+						recordingEvents: $state.snapshot(recordingEvents),
+						files: $state.snapshot(importedFiles),
+						importSource
+					}
 				});
 			}
 			toast.success('Draft saved');
@@ -511,8 +519,12 @@
 					description,
 					codeContent: code,
 					codeLanguage: language,
-					aiSummary
-					// metadata: { recordingEvents }
+					aiSummary,
+					metadata: {
+						recordingEvents: $state.snapshot(recordingEvents),
+						files: $state.snapshot(importedFiles),
+						importSource
+					}
 				});
 			} else {
 				// Create new published review
@@ -534,7 +546,11 @@
 					isPublic: false,
 					status: 'published',
 					aiSummary,
-					metadata: { recordingEvents }
+					metadata: {
+						recordingEvents: $state.snapshot(recordingEvents),
+						files: $state.snapshot(importedFiles),
+						importSource
+					}
 				});
 			}
 
@@ -736,31 +752,72 @@
 							</TabsContent>
 
 							<TabsContent value="upload" class="space-y-4">
-								<div
-									class="border-2 border-dashed rounded-lg p-12 text-center hover:border-primary/50 transition-colors"
-								>
-									<Upload class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-									<p class="text-sm text-muted-foreground mb-2">
-										Drag & drop files or click to browse
-									</p>
-									<input
-										type="file"
-										id="file-upload"
-										class="hidden"
-										accept=".js,.ts,.py,.diff,.patch,.java,.go,.rs,.rb,.php,.c,.cpp,.cs,.html,.css"
-										onchange={handleDiffFileUpload}
-									/>
-									<Button
-										variant="outline"
-										size="sm"
-										onclick={() => document.getElementById('file-upload')?.click()}
+								{#if importedFiles.length > 0 && (importSource.endsWith('.diff') || importSource.endsWith('.patch'))}
+									<!-- Imported Files Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Badge variant="secondary">
+													<FileCode class="h-3 w-3 mr-1" />
+													{importedFiles.length} files
+												</Badge>
+												<span class="text-xs text-muted-foreground truncate max-w-[200px]"
+													>{importSource}</span
+												>
+											</div>
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														importedFiles = [];
+														code = '';
+														importSource = '';
+													}}
+												>
+													Clear
+												</Button>
+											</div>
+										</div>
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace files={importedFiles} mode="diff" {importSource} />
+										</div>
+									</div>
+								{:else}
+									<div
+										class="border-2 border-dashed rounded-lg p-12 text-center hover:border-primary/50 transition-colors"
 									>
-										Choose Files
-									</Button>
-									<p class="text-xs text-muted-foreground mt-2">
-										Supports .js, .ts, .py, .diff, .patch and more
-									</p>
-								</div>
+										<Upload class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+										<p class="text-sm text-muted-foreground mb-2">
+											Drag & drop files or click to browse
+										</p>
+										<input
+											type="file"
+											id="file-upload"
+											class="hidden"
+											accept=".js,.ts,.py,.diff,.patch,.java,.go,.rs,.rb,.php,.c,.cpp,.cs,.html,.css"
+											onchange={handleDiffFileUpload}
+										/>
+										<Button
+											variant="outline"
+											size="sm"
+											onclick={() => document.getElementById('file-upload')?.click()}
+										>
+											Choose Files
+										</Button>
+										<p class="text-xs text-muted-foreground mt-2">
+											Supports .js, .ts, .py, .diff, .patch and more
+										</p>
+									</div>
+								{/if}
 							</TabsContent>
 
 							<TabsContent value="github">

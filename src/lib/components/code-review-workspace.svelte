@@ -40,9 +40,19 @@
 		importSource?: string;
 		onFileChange?: (file: FileNode) => void;
 		onBack?: () => void;
+		onLineClick?: (line: number) => void;
+		children?: import('svelte').Snippet;
 	}
 
-	let { files = [], mode = 'diff', importSource = '', onFileChange, onBack }: Props = $props();
+	let {
+		files = [],
+		mode = 'diff',
+		importSource = '',
+		onFileChange,
+		onBack,
+		onLineClick,
+		children
+	}: Props = $props();
 
 	// State
 	let sidebarOpen = $state(true);
@@ -419,7 +429,7 @@
 				<div class="h-full">
 					{#if mode === 'diff' && activeTab.diff}
 						<div class="p-4">
-							<DiffViewer diff={activeTab.diff} filename={activeTab.path} />
+							<DiffViewer diff={activeTab.diff} filename={activeTab.path} {onLineClick} />
 						</div>
 					{:else if activeTab.content}
 						<CodeEditor
@@ -438,6 +448,7 @@
 						</div>
 					{/if}
 				</div>
+				{@render children?.()}
 			{:else}
 				<div class="flex h-full items-center justify-center text-muted-foreground">
 					<div class="text-center">
