@@ -7,6 +7,13 @@
 
 import { getContext, setContext } from 'svelte';
 
+// Constants
+const CAPTURE_FPS = 30;
+const MIN_CANVAS_WIDTH = 1280;
+const MIN_CANVAS_HEIGHT = 720;
+const DEFAULT_CANVAS_WIDTH = 1920;
+const DEFAULT_CANVAS_HEIGHT = 1080;
+
 function createContext<T>(key: string) {
     return [
         () => getContext<T>(key),
@@ -29,7 +36,7 @@ export interface AnnotationTool {
 }
 
 export interface RecordingSettings {
-    selectedSource: 'screen' | 'window' | 'camera';
+    selectedSource: 'workspace' | 'screen' | 'window' | 'camera';
     includeWebcam: boolean;
     includeSystemAudio: boolean;
     includeMicAudio: boolean;
@@ -42,7 +49,7 @@ export interface RecordingSettings {
 }
 
 const DEFAULT_SETTINGS: RecordingSettings = {
-    selectedSource: 'screen',
+    selectedSource: 'workspace',
     includeWebcam: false,
     includeSystemAudio: true,
     includeMicAudio: true,
@@ -88,6 +95,8 @@ export class RecordingContext {
     private countdownInterval: number | null = null;
     private recordingStartTime: number = 0;
     private recordingEvents: { type: string; time: number; data: any }[] = [];
+    private workspaceElement: HTMLElement | null = null; // DOM element to capture
+    private domCaptureInterval: number | null = null; // Interval for DOM capture
 
     // Canvas elements (internal master + external references)
     private masterCanvas: HTMLCanvasElement | null = null;
@@ -170,6 +179,10 @@ export class RecordingContext {
             video.srcObject = this.webcamStream;
             video.play().catch(console.error);
         }
+    }
+
+    setWorkspaceElement(element: HTMLElement | null) {
+        this.workspaceElement = element;
     }
 
     getCanvasRef(): HTMLCanvasElement | null {
@@ -501,29 +514,157 @@ export class RecordingContext {
         return { x, y, width: pipWidth, height: pipHeight };
     }
 
+    // ============= DOM Capture Methods =============
+
+    private initializeMediaRecorder(stream: MediaStream): void {
+        const options: MediaRecorderOptions = {
+            mimeType: this.getSupportedMimeType(),
+            videoBitsPerSecond: this.getVideoBitrate()
+        };
+
+        this.mediaRecorder = new MediaRecorder(stream, options);
+        this.recordedChunks = [];
+
+        this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                this.recordedChunks.push(event.data);
+            }
+        };
+
+        this.mediaRecorder.onstop = async () => {
+            this.stopCanvasLoop();
+            this.stopDOMCaptureLoop();
+            this.stopStreams();
+            await this.processRecording();
+        };
+
+        // Start recording
+        this.mediaRecorder.start(1000);
+    }
+
+    private async captureDOMToCanvas(): Promise<void> {
+        if (!this.workspaceElement || !this.masterCtx || !this.masterCanvas) return;
+
+        try {
+            // Use dynamic import to avoid bundling issues
+            const { snapdom } = await import('@zumer/snapdom');
+            
+            // Capture the DOM element to a canvas
+            const result = await snapdom(this.workspaceElement, {
+                backgroundColor: '#ffffff',
+                scale: 1,
+            });
+            
+            // Get canvas from result
+            const capturedCanvas = await result.toCanvas();
+
+            // Draw the captured canvas to our master canvas
+            this.masterCtx.drawImage(
+                capturedCanvas,
+                0,
+                0,
+                this.masterCanvas.width,
+                this.masterCanvas.height
+            );
+        } catch (error) {
+            console.error('Failed to capture DOM:', error);
+        }
+    }
+
+    private startDOMCaptureLoop() {
+        const captureFrame = async () => {
+            // Stop if not recording
+            if (!this.isRecording) {
+                return;
+            }
+            
+            // Skip frame if paused, but continue loop
+            if (this.isPaused) {
+                this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / CAPTURE_FPS);
+                return;
+            }
+
+            if (!this.masterCtx || !this.masterCanvas) {
+                this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / CAPTURE_FPS);
+                return;
+            }
+
+            // 1. Capture DOM to MASTER canvas
+            await this.captureDOMToCanvas();
+
+            // 2. Draw webcam PIP to MASTER canvas
+            if (this.settings.includeWebcam && this.webcamVideo && this.webcamStream) {
+                this.drawWebcamPIP(this.masterCtx, this.masterCanvas);
+            }
+
+            // 3. Draw annotation layer to MASTER canvas
+            if (this.annotationCanvas && this.annotationCanvas.width > 0 && this.annotationCanvas.height > 0) {
+                this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
+            }
+
+            // 4. Sync to UI canvas if available (User Preview)
+            if (this.uiCtx && this.canvasRef) {
+                try {
+                    // Resize UI canvas if needed to match master
+                    if (this.canvasRef.width !== this.masterCanvas.width ||
+                        this.canvasRef.height !== this.masterCanvas.height) {
+                        this.canvasRef.width = this.masterCanvas.width;
+                        this.canvasRef.height = this.masterCanvas.height;
+                    }
+
+                    this.uiCtx.drawImage(this.masterCanvas, 0, 0);
+                } catch (e) {
+                    console.warn('Failed to draw to UI canvas', e);
+                }
+            }
+
+            // Schedule next capture
+            this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / CAPTURE_FPS);
+        };
+
+        captureFrame();
+    }
+
+    private stopDOMCaptureLoop() {
+        if (this.domCaptureInterval) {
+            clearTimeout(this.domCaptureInterval);
+            this.domCaptureInterval = null;
+        }
+    }
+
     // ============= Recording Control =============
 
     async startRecording(): Promise<boolean> {
         if (this.isRecording) return false;
 
         try {
-            // Get screen/window stream
-            const displayMediaOptions: DisplayMediaStreamOptions = {
-                video: {
-                    displaySurface: this.settings.selectedSource === 'window' ? 'window' : 'monitor'
-                } as any,
-                audio: this.settings.includeSystemAudio
-            };
+            const isWorkspaceCapture = this.settings.selectedSource === 'workspace';
+            
+            // Only use getDisplayMedia if screen or window is selected
+            if (this.settings.selectedSource === 'screen' || this.settings.selectedSource === 'window') {
+                // Get screen/window stream
+                const displayMediaOptions: DisplayMediaStreamOptions = {
+                    video: {
+                        displaySurface: this.settings.selectedSource === 'window' ? 'window' : 'monitor'
+                    } as any,
+                    audio: this.settings.includeSystemAudio
+                };
 
-            this.stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+                this.stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
 
-            // Setup internal video element for persistence
-            await this.setupInternalVideo(this.stream, 'screen');
+                // Setup internal video element for persistence
+                await this.setupInternalVideo(this.stream, 'screen');
 
-            // Attach to UI preview if available (legacy support)
-            if (this.videoPreviewRef) {
-                this.videoPreviewRef.srcObject = this.stream;
-                this.videoPreviewRef.play().catch(console.error);
+                // Attach to UI preview if available (legacy support)
+                if (this.videoPreviewRef) {
+                    this.videoPreviewRef.srcObject = this.stream;
+                    this.videoPreviewRef.play().catch(console.error);
+                }
+            } else if (isWorkspaceCapture) {
+                // For workspace capture, verify we have a workspace element
+                if (!this.workspaceElement) {
+                    throw new Error('No workspace element set for DOM capture');
+                }
             }
 
             // Get webcam stream if enabled
@@ -546,69 +687,80 @@ export class RecordingContext {
                 }
             }
 
-            // Determine dimensions from video track
-            let width = 1920;
-            let height = 1080;
-            if (this.stream) {
+            // Determine dimensions
+            let width = DEFAULT_CANVAS_WIDTH;
+            let height = DEFAULT_CANVAS_HEIGHT;
+            
+            if (isWorkspaceCapture && this.workspaceElement) {
+                // Use workspace element dimensions
+                const rect = this.workspaceElement.getBoundingClientRect();
+                width = rect.width > 0 ? Math.max(rect.width, MIN_CANVAS_WIDTH) : DEFAULT_CANVAS_WIDTH;
+                height = rect.height > 0 ? Math.max(rect.height, MIN_CANVAS_HEIGHT) : DEFAULT_CANVAS_HEIGHT;
+            } else if (this.stream) {
+                // Use video track dimensions for screen/window capture
                 const videoTrack = this.stream.getVideoTracks()[0];
                 const trackSettings = videoTrack.getSettings();
-                width = trackSettings.width || 1920;
-                height = trackSettings.height || 1080;
+                width = trackSettings.width || DEFAULT_CANVAS_WIDTH;
+                height = trackSettings.height || DEFAULT_CANVAS_HEIGHT;
+            }
+            // Add mic audio track if available
+            if (this.micStream) {
+                const micAudioTracks = this.micStream.getAudioTracks();
+                micAudioTracks.forEach(track => this.canvasStream!.addTrack(track));
             }
 
             // Initialize MASTER canvas
             this.initMasterCanvas(width, height);
-
-            // Initialize annotation canvas (if not already done by master init)
-            // this.initAnnotationCanvas(); // Handled by initMasterCanvas
 
             // Start countdown
             if (this.settings.countdownDuration > 0) {
                 await this.runCountdown();
             }
 
-            // Start canvas compositing loop
-            this.startCanvasLoop();
-
-            // Capture stream from MASTER canvas for recording
-            if (this.masterCanvas) {
-                this.canvasStream = this.masterCanvas.captureStream(30);
-
-                // Add audio track if available
-                if (this.stream) {
-                    const audioTracks = this.stream.getAudioTracks();
-                    audioTracks.forEach(track => this.canvasStream!.addTrack(track));
-                }
-            }
-
-            // Setup MediaRecorder with canvas stream
-            const recordingStream = this.canvasStream || this.stream;
-            if (!recordingStream) throw new Error('No stream available for recording');
-
-            const options: MediaRecorderOptions = {
-                mimeType: this.getSupportedMimeType(),
-                videoBitsPerSecond: this.getVideoBitrate()
-            };
-
-            this.mediaRecorder = new MediaRecorder(recordingStream, options);
-            this.recordedChunks = [];
-
-            this.mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    this.recordedChunks.push(event.data);
-                }
-            };
-
-            this.mediaRecorder.onstop = async () => {
-                this.stopCanvasLoop();
-                this.stopStreams(); // Stop inputs when recording is done
-                await this.processRecording();
-            };
-
-            // Start recording
-            this.mediaRecorder.start(1000);
+              
+            // SET isRecording BEFORE starting the loop
             this.isRecording = true;
             this.isPaused = false;
+            
+            // Start appropriate capture loop
+            if (isWorkspaceCapture) {
+                // DOM capture - set up canvas stream and MediaRecorder before starting loop
+                // Start DOM capture loop first (which will continuously update the canvas)
+                this.startDOMCaptureLoop();
+                
+                // Capture stream from MASTER canvas for recording
+                if (this.masterCanvas) {
+                    this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
+                }
+
+                // Setup MediaRecorder with canvas stream
+                const recordingStream = this.canvasStream;
+                if (!recordingStream) throw new Error('No stream available for recording');
+
+                this.initializeMediaRecorder(recordingStream);
+            } else {
+                // Screen/window capture - set up MediaRecorder immediately
+                this.startCanvasLoop();
+                
+                // Capture stream from MASTER canvas for recording
+                if (this.masterCanvas) {
+                    this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
+
+                    // Add audio track if available (from screen/window capture)
+                    if (this.stream) {
+                        const audioTracks = this.stream.getAudioTracks();
+                        audioTracks.forEach(track => this.canvasStream!.addTrack(track));
+                    }
+                }
+
+                // Setup MediaRecorder with canvas stream
+                const recordingStream = this.canvasStream;
+                if (!recordingStream) throw new Error('No stream available for recording');
+
+                this.initializeMediaRecorder(recordingStream);
+            }
+
+            
             this.recordingTime = 0;
             this.recordingStartTime = Date.now();
             this.recordingEvents = [];
@@ -883,6 +1035,7 @@ export class RecordingContext {
     cleanup() {
         this.stopTimer();
         this.stopCanvasLoop();
+        this.stopDOMCaptureLoop();
 
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);

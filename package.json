@@ -78,6 +78,7 @@
 		"@ffmpeg/util": "^0.12.2",
 		"@octokit/rest": "^22.0.1",
 		"@tauri-apps/plugin-fs": "~2",
+		"@zumer/snapdom": "^2.0.1",
 		"better-auth": "^1.4.4",
 		"file-saver": "^2.0.5",
 		"fluent-ffmpeg": "^2.1.3",

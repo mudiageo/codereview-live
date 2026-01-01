@@ -50,6 +50,30 @@
 		'mediaDevices' in navigator &&
 		'getDisplayMedia' in navigator.mediaDevices;
 
+	// Reset to workspace if screen/window selected but not supported
+	$effect(() => {
+		if (!supportsScreenCapture && 
+		    (ctx.settings.selectedSource === 'screen' || ctx.settings.selectedSource === 'window')) {
+			ctx.updateSettings({ selectedSource: 'workspace' });
+		}
+	});
+
+	// Helper to get display label for selected source
+	function getSourceLabel(source: string): string {
+		switch (source) {
+			case 'workspace':
+				return 'Code Workspace';
+			case 'screen':
+				return 'Screen';
+			case 'window':
+				return 'Window';
+			case 'camera':
+				return 'Camera';
+			default:
+				return 'Unknown';
+		}
+	}
+
 	// Pass refs to context when they're available
 	$effect(() => {
 		if (canvasRef) ctx.setCanvasRef(canvasRef);
@@ -247,6 +271,38 @@
 		<!-- Settings Panel (only when not recording) -->
 		{#if !ctx.isRecording && !ctx.videoBlob}
 			<div class="space-y-4">
+				<!-- Recording Source Selector -->
+				<div class="space-y-2">
+					<Label>Recording Source</Label>
+					<Select
+						type="single"
+						value={ctx.settings.selectedSource}
+						onValueChange={(v) => {
+							if (v === 'workspace' || v === 'screen' || v === 'window' || v === 'camera') {
+								ctx.updateSettings({ selectedSource: v });
+							}
+						}}
+					>
+						<SelectTrigger>{getSourceLabel(ctx.settings.selectedSource)}</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="workspace">Code Workspace (Default)</SelectItem>
+							{#if supportsScreenCapture}
+								<SelectItem value="screen">Screen</SelectItem>
+								<SelectItem value="window">Window</SelectItem>
+							{/if}
+						</SelectContent>
+					</Select>
+					<p class="text-xs text-muted-foreground">
+						{#if ctx.settings.selectedSource === 'workspace'}
+							Captures the code editor workspace
+						{:else if ctx.settings.selectedSource === 'screen'}
+							Captures your entire screen
+						{:else}
+							Captures a specific window
+						{/if}
+					</p>
+				</div>
+
 				<div class="flex items-center justify-between">
 					<div class="space-y-0.5">
 						<Label>Include Webcam</Label>
@@ -309,16 +365,19 @@
 					</div>
 				{/if}
 
-				<div class="flex items-center justify-between">
-					<div class="space-y-0.5">
-						<Label>System Audio</Label>
-						<p class="text-sm text-muted-foreground">Record computer audio</p>
+				<!-- Only show audio options for screen/window capture -->
+				{#if ctx.settings.selectedSource === 'screen' || ctx.settings.selectedSource === 'window'}
+					<div class="flex items-center justify-between">
+						<div class="space-y-0.5">
+							<Label>System Audio</Label>
+							<p class="text-sm text-muted-foreground">Record computer audio</p>
+						</div>
+						<Switch
+							checked={ctx.settings.includeSystemAudio}
+							onCheckedChange={(v) => ctx.updateSettings({ includeSystemAudio: v })}
+						/>
 					</div>
-					<Switch
-						checked={ctx.settings.includeSystemAudio}
-						onCheckedChange={(v) => ctx.updateSettings({ includeSystemAudio: v })}
-					/>
-				</div>
+				{/if}
 
 				<div class="flex items-center justify-between">
 					<div class="space-y-0.5">

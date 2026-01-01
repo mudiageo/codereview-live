@@ -26,6 +26,9 @@ importers:
       '@tauri-apps/plugin-fs':
         specifier: ~2
         version: 2.4.4
+      '@zumer/snapdom':
+        specifier: ^2.0.1
+        version: 2.0.1
       better-auth:
         specifier: ^1.4.4
         version: 1.4.4(@sveltejs/kit@2.49.1(@sveltejs/vite-plugin-svelte@6.2.1(svelte@5.45.6)(vite@8.0.0-beta.0(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)))(svelte@5.45.6)(vite@8.0.0-beta.0(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)))(svelte@5.45.6)
@@ -1749,6 +1752,9 @@ packages:
 
   '@vitest/utils@4.0.14':
     resolution: {integrity: sha512-hLqXZKAWNg8pI+SQXyXxWCTOpA3MvsqcbVeNgSi8x/CSN2wi26dSzn1wrOhmCmFjEvN9p8/kLFRHa6PI8jHazw==}
+
+  '@zumer/snapdom@2.0.1':
+    resolution: {integrity: sha512-78/qbYl2FTv4H6qaXcNfAujfIOSzdvs83NW63VbyC9QA3sqNPfPvhn4xYMO6Gy11hXwJUEhd0z65yKiNzDwy9w==}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -5348,6 +5354,8 @@ snapshots:
     dependencies:
       '@vitest/pretty-format': 4.0.14
       tinyrainbow: 3.0.3
+
+  '@zumer/snapdom@2.0.1': {}
 
   acorn-jsx@5.3.2(acorn@8.15.0):
     dependencies:
