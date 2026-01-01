@@ -712,6 +712,11 @@ export class RecordingContext {
                 await this.runCountdown();
             }
 
+              
+            // SET isRecording BEFORE starting the loop
+            this.isRecording = true;
+            this.isPaused = false;
+            
             // Start appropriate capture loop
             if (isWorkspaceCapture) {
                 // DOM capture - set up canvas stream and MediaRecorder before starting loop
@@ -750,8 +755,7 @@ export class RecordingContext {
                 this.initializeMediaRecorder(recordingStream);
             }
 
-            this.isRecording = true;
-            this.isPaused = false;
+            
             this.recordingTime = 0;
             this.recordingStartTime = Date.now();
             this.recordingEvents = [];
