@@ -605,7 +605,7 @@ export class RecordingContext {
             }
 
             // 4. Initialize canvas stream on first frame (after content is drawn)
-            if (isFirstFrame && this.masterCanvas) {
+            if (isFirstFrame && this.masterCanvas && !this.mediaRecorder) {
                 isFirstFrame = false;
                 this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
                 
