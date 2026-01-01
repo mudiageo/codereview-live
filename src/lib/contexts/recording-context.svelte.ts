@@ -572,8 +572,6 @@ export class RecordingContext {
     }
 
     private startDOMCaptureLoop() {
-        let isFirstFrame = true;
-        
         const captureFrame = async () => {
             // Stop if not recording
             if (!this.isRecording) {
@@ -604,18 +602,7 @@ export class RecordingContext {
                 this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
             }
 
-            // 4. Initialize canvas stream on first frame (after content is drawn)
-            if (isFirstFrame && this.masterCanvas && !this.mediaRecorder) {
-                isFirstFrame = false;
-                this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
-                
-                // Setup MediaRecorder now that we have content
-                if (this.canvasStream) {
-                    this.initializeMediaRecorder(this.canvasStream);
-                }
-            }
-
-            // 5. Sync to UI canvas if available (User Preview)
+            // 4. Sync to UI canvas if available (User Preview)
             if (this.uiCtx && this.canvasRef) {
                 try {
                     // Resize UI canvas if needed to match master
@@ -727,8 +714,20 @@ export class RecordingContext {
 
             // Start appropriate capture loop
             if (isWorkspaceCapture) {
-                // DOM capture will initialize MediaRecorder on first frame
+                // DOM capture - set up canvas stream and MediaRecorder before starting loop
+                // Start DOM capture loop first (which will continuously update the canvas)
                 this.startDOMCaptureLoop();
+                
+                // Capture stream from MASTER canvas for recording
+                if (this.masterCanvas) {
+                    this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
+                }
+
+                // Setup MediaRecorder with canvas stream
+                const recordingStream = this.canvasStream;
+                if (!recordingStream) throw new Error('No stream available for recording');
+
+                this.initializeMediaRecorder(recordingStream);
             } else {
                 // Screen/window capture - set up MediaRecorder immediately
                 this.startCanvasLoop();
