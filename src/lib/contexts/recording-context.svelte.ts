@@ -516,6 +516,32 @@ export class RecordingContext {
 
     // ============= DOM Capture Methods =============
 
+    private initializeMediaRecorder(stream: MediaStream): void {
+        const options: MediaRecorderOptions = {
+            mimeType: this.getSupportedMimeType(),
+            videoBitsPerSecond: this.getVideoBitrate()
+        };
+
+        this.mediaRecorder = new MediaRecorder(stream, options);
+        this.recordedChunks = [];
+
+        this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                this.recordedChunks.push(event.data);
+            }
+        };
+
+        this.mediaRecorder.onstop = async () => {
+            this.stopCanvasLoop();
+            this.stopDOMCaptureLoop();
+            this.stopStreams();
+            await this.processRecording();
+        };
+
+        // Start recording
+        this.mediaRecorder.start(1000);
+    }
+
     private async captureDOMToCanvas(): Promise<void> {
         if (!this.workspaceElement || !this.masterCtx || !this.masterCanvas) return;
 
@@ -585,29 +611,7 @@ export class RecordingContext {
                 
                 // Setup MediaRecorder now that we have content
                 if (this.canvasStream) {
-                    const options: MediaRecorderOptions = {
-                        mimeType: this.getSupportedMimeType(),
-                        videoBitsPerSecond: this.getVideoBitrate()
-                    };
-
-                    this.mediaRecorder = new MediaRecorder(this.canvasStream, options);
-                    this.recordedChunks = [];
-
-                    this.mediaRecorder.ondataavailable = (event) => {
-                        if (event.data.size > 0) {
-                            this.recordedChunks.push(event.data);
-                        }
-                    };
-
-                    this.mediaRecorder.onstop = async () => {
-                        this.stopCanvasLoop();
-                        this.stopDOMCaptureLoop();
-                        this.stopStreams();
-                        await this.processRecording();
-                    };
-
-                    // Start recording
-                    this.mediaRecorder.start(1000);
+                    this.initializeMediaRecorder(this.canvasStream);
                 }
             }
 
@@ -744,29 +748,7 @@ export class RecordingContext {
                 const recordingStream = this.canvasStream;
                 if (!recordingStream) throw new Error('No stream available for recording');
 
-                const options: MediaRecorderOptions = {
-                    mimeType: this.getSupportedMimeType(),
-                    videoBitsPerSecond: this.getVideoBitrate()
-                };
-
-                this.mediaRecorder = new MediaRecorder(recordingStream, options);
-                this.recordedChunks = [];
-
-                this.mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        this.recordedChunks.push(event.data);
-                    }
-                };
-
-                this.mediaRecorder.onstop = async () => {
-                    this.stopCanvasLoop();
-                    this.stopDOMCaptureLoop();
-                    this.stopStreams(); // Stop inputs when recording is done
-                    await this.processRecording();
-                };
-
-                // Start recording
-                this.mediaRecorder.start(1000);
+                this.initializeMediaRecorder(recordingStream);
             }
 
             this.isRecording = true;
