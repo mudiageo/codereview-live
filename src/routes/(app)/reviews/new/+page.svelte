@@ -99,7 +99,7 @@
 	// Smart Recording Workflow State
 	let showRecordingIndicator = $state(false);
 	let mediaRecorderRef = $state<ReturnType<typeof MediaRecorder>>();
-	let workspaceContainerRef = $state<HTMLElement>();
+	let workspaceContainerRef: HTMLElement = $state();
 
 	// Create recording context for state persistence across component mounts
 	const recordingCtx = createRecordingContext();
