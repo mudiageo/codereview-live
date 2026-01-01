@@ -40,7 +40,8 @@
 	import { createClientVideoStorage } from '$lib/utils/client-video-storage';
 	import MediaRecorder from '$lib/components/media-recorder.svelte';
 	import VideoUploader from '$lib/components/video-uploader.svelte';
-	import { RefreshCw, Upload } from 'lucide-svelte/icons';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import Upload from '@lucide/svelte/icons/upload';
 	import type { FileNode } from '$lib/components/code-review-workspace.svelte';
 	import { analyzeCodeAI, checkReviewItemsAI } from '$lib/ai.remote';
 	import { checklistTemplates, getTemplate } from '$lib/config/checklist-templates';
