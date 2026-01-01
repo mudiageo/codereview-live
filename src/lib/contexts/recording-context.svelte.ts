@@ -29,7 +29,7 @@ export interface AnnotationTool {
 }
 
 export interface RecordingSettings {
-    selectedSource: 'screen' | 'window' | 'camera';
+    selectedSource: 'workspace' | 'screen' | 'window' | 'camera';
     includeWebcam: boolean;
     includeSystemAudio: boolean;
     includeMicAudio: boolean;
@@ -42,7 +42,7 @@ export interface RecordingSettings {
 }
 
 const DEFAULT_SETTINGS: RecordingSettings = {
-    selectedSource: 'screen',
+    selectedSource: 'workspace',
     includeWebcam: false,
     includeSystemAudio: true,
     includeMicAudio: true,
@@ -88,6 +88,8 @@ export class RecordingContext {
     private countdownInterval: number | null = null;
     private recordingStartTime: number = 0;
     private recordingEvents: { type: string; time: number; data: any }[] = [];
+    private workspaceElement: HTMLElement | null = null; // DOM element to capture
+    private domCaptureInterval: number | null = null; // Interval for DOM capture
 
     // Canvas elements (internal master + external references)
     private masterCanvas: HTMLCanvasElement | null = null;
@@ -170,6 +172,10 @@ export class RecordingContext {
             video.srcObject = this.webcamStream;
             video.play().catch(console.error);
         }
+    }
+
+    setWorkspaceElement(element: HTMLElement | null) {
+        this.workspaceElement = element;
     }
 
     getCanvasRef(): HTMLCanvasElement | null {
@@ -501,29 +507,125 @@ export class RecordingContext {
         return { x, y, width: pipWidth, height: pipHeight };
     }
 
+    // ============= DOM Capture Methods =============
+
+    private async captureDOMToCanvas(): Promise<void> {
+        if (!this.workspaceElement || !this.masterCtx || !this.masterCanvas) return;
+
+        try {
+            // Use dynamic import to avoid bundling issues
+            const { default: snapdom } = await import('@zumer/snapdom');
+            
+            // Capture the DOM element to a canvas
+            const capturedCanvas = await snapdom(this.workspaceElement, {
+                backgroundColor: '#ffffff',
+                scale: 1,
+            });
+
+            // Draw the captured canvas to our master canvas
+            this.masterCtx.drawImage(
+                capturedCanvas,
+                0,
+                0,
+                this.masterCanvas.width,
+                this.masterCanvas.height
+            );
+        } catch (error) {
+            console.error('Failed to capture DOM:', error);
+        }
+    }
+
+    private startDOMCaptureLoop() {
+        const captureFrame = async () => {
+            if (!this.isRecording || this.isPaused) {
+                if (this.isRecording && !this.isPaused) {
+                    // Keep trying if we're recording but not paused
+                    this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / 30); // 30 FPS
+                }
+                return;
+            }
+
+            if (!this.masterCtx || !this.masterCanvas) {
+                this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / 30);
+                return;
+            }
+
+            // 1. Capture DOM to MASTER canvas
+            await this.captureDOMToCanvas();
+
+            // 2. Draw webcam PIP to MASTER canvas
+            if (this.settings.includeWebcam && this.webcamVideo && this.webcamStream) {
+                this.drawWebcamPIP(this.masterCtx, this.masterCanvas);
+            }
+
+            // 3. Draw annotation layer to MASTER canvas
+            if (this.annotationCanvas && this.annotationCanvas.width > 0 && this.annotationCanvas.height > 0) {
+                this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
+            }
+
+            // 4. Sync to UI canvas if available (User Preview)
+            if (this.uiCtx && this.canvasRef) {
+                try {
+                    // Resize UI canvas if needed to match master
+                    if (this.canvasRef.width !== this.masterCanvas.width ||
+                        this.canvasRef.height !== this.masterCanvas.height) {
+                        this.canvasRef.width = this.masterCanvas.width;
+                        this.canvasRef.height = this.masterCanvas.height;
+                    }
+
+                    this.uiCtx.drawImage(this.masterCanvas, 0, 0);
+                } catch (e) {
+                    console.warn('Failed to draw to UI canvas', e);
+                }
+            }
+
+            // Schedule next capture
+            this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / 30); // 30 FPS
+        };
+
+        captureFrame();
+    }
+
+    private stopDOMCaptureLoop() {
+        if (this.domCaptureInterval) {
+            clearTimeout(this.domCaptureInterval);
+            this.domCaptureInterval = null;
+        }
+    }
+
     // ============= Recording Control =============
 
     async startRecording(): Promise<boolean> {
         if (this.isRecording) return false;
 
         try {
-            // Get screen/window stream
-            const displayMediaOptions: DisplayMediaStreamOptions = {
-                video: {
-                    displaySurface: this.settings.selectedSource === 'window' ? 'window' : 'monitor'
-                } as any,
-                audio: this.settings.includeSystemAudio
-            };
+            const isWorkspaceCapture = this.settings.selectedSource === 'workspace';
+            
+            // Only use getDisplayMedia if screen or window is selected
+            if (this.settings.selectedSource === 'screen' || this.settings.selectedSource === 'window') {
+                // Get screen/window stream
+                const displayMediaOptions: DisplayMediaStreamOptions = {
+                    video: {
+                        displaySurface: this.settings.selectedSource === 'window' ? 'window' : 'monitor'
+                    } as any,
+                    audio: this.settings.includeSystemAudio
+                };
 
-            this.stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+                this.stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
 
-            // Setup internal video element for persistence
-            await this.setupInternalVideo(this.stream, 'screen');
+                // Setup internal video element for persistence
+                await this.setupInternalVideo(this.stream, 'screen');
 
-            // Attach to UI preview if available (legacy support)
-            if (this.videoPreviewRef) {
-                this.videoPreviewRef.srcObject = this.stream;
-                this.videoPreviewRef.play().catch(console.error);
+                // Attach to UI preview if available (legacy support)
+                if (this.videoPreviewRef) {
+                    this.videoPreviewRef.srcObject = this.stream;
+                    this.videoPreviewRef.play().catch(console.error);
+                }
+            } else if (isWorkspaceCapture) {
+                // For workspace capture, verify we have a workspace element
+                if (!this.workspaceElement) {
+                    throw new Error('No workspace element set for DOM capture');
+                }
             }
 
             // Get webcam stream if enabled
@@ -546,10 +648,17 @@ export class RecordingContext {
                 }
             }
 
-            // Determine dimensions from video track
+            // Determine dimensions
             let width = 1920;
             let height = 1080;
-            if (this.stream) {
+            
+            if (isWorkspaceCapture && this.workspaceElement) {
+                // Use workspace element dimensions
+                const rect = this.workspaceElement.getBoundingClientRect();
+                width = Math.max(rect.width, 1280) || 1920;
+                height = Math.max(rect.height, 720) || 1080;
+            } else if (this.stream) {
+                // Use video track dimensions for screen/window capture
                 const videoTrack = this.stream.getVideoTracks()[0];
                 const trackSettings = videoTrack.getSettings();
                 width = trackSettings.width || 1920;
@@ -559,22 +668,23 @@ export class RecordingContext {
             // Initialize MASTER canvas
             this.initMasterCanvas(width, height);
 
-            // Initialize annotation canvas (if not already done by master init)
-            // this.initAnnotationCanvas(); // Handled by initMasterCanvas
-
             // Start countdown
             if (this.settings.countdownDuration > 0) {
                 await this.runCountdown();
             }
 
-            // Start canvas compositing loop
-            this.startCanvasLoop();
+            // Start appropriate capture loop
+            if (isWorkspaceCapture) {
+                this.startDOMCaptureLoop();
+            } else {
+                this.startCanvasLoop();
+            }
 
             // Capture stream from MASTER canvas for recording
             if (this.masterCanvas) {
                 this.canvasStream = this.masterCanvas.captureStream(30);
 
-                // Add audio track if available
+                // Add audio track if available (from screen/window capture)
                 if (this.stream) {
                     const audioTracks = this.stream.getAudioTracks();
                     audioTracks.forEach(track => this.canvasStream!.addTrack(track));
@@ -582,7 +692,7 @@ export class RecordingContext {
             }
 
             // Setup MediaRecorder with canvas stream
-            const recordingStream = this.canvasStream || this.stream;
+            const recordingStream = this.canvasStream;
             if (!recordingStream) throw new Error('No stream available for recording');
 
             const options: MediaRecorderOptions = {
@@ -601,6 +711,7 @@ export class RecordingContext {
 
             this.mediaRecorder.onstop = async () => {
                 this.stopCanvasLoop();
+                this.stopDOMCaptureLoop();
                 this.stopStreams(); // Stop inputs when recording is done
                 await this.processRecording();
             };
@@ -883,6 +994,7 @@ export class RecordingContext {
     cleanup() {
         this.stopTimer();
         this.stopCanvasLoop();
+        this.stopDOMCaptureLoop();
 
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);

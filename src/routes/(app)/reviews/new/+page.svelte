@@ -99,9 +99,17 @@
 	// Smart Recording Workflow State
 	let showRecordingIndicator = $state(false);
 	let mediaRecorderRef = $state<ReturnType<typeof MediaRecorder>>();
+	let workspaceContainerRef = $state<HTMLElement>();
 
 	// Create recording context for state persistence across component mounts
 	const recordingCtx = createRecordingContext();
+
+	// Set workspace element when container is available
+	$effect(() => {
+		if (workspaceContainerRef) {
+			recordingCtx.setWorkspaceElement(workspaceContainerRef);
+		}
+	});
 
 	// Bind local state to context for reactivity
 	let isPaused = $derived(recordingCtx.isPaused);
@@ -349,8 +357,8 @@
 		recordingStartTime = Date.now();
 		recordingEvents = [];
 		showRecordingIndicator = true;
-		// User can navigate to other steps manually
-		// The floating RecordingToolbar will appear when they leave step 3
+		// Auto-navigate to step 2 (code workspace) when recording starts
+		step = 2;
 	}
 
 	function handleRecordingEnd() {
@@ -758,6 +766,7 @@
 
 			{#if step === 2}
 				<!-- Step 2: Add Code -->
+				<div bind:this={workspaceContainerRef}>
 				<Card>
 					<CardHeader>
 						<CardTitle>Add Code</CardTitle>
@@ -1104,6 +1113,7 @@
 						</div>
 					</CardContent>
 				</Card>
+				</div>
 			{/if}
 
 			{#if step === 3}
