@@ -7,6 +7,13 @@
 
 import { getContext, setContext } from 'svelte';
 
+// Constants
+const CAPTURE_FPS = 30;
+const MIN_CANVAS_WIDTH = 1280;
+const MIN_CANVAS_HEIGHT = 720;
+const DEFAULT_CANVAS_WIDTH = 1920;
+const DEFAULT_CANVAS_HEIGHT = 1080;
+
 function createContext<T>(key: string) {
     return [
         () => getContext<T>(key),
@@ -540,16 +547,19 @@ export class RecordingContext {
 
     private startDOMCaptureLoop() {
         const captureFrame = async () => {
-            if (!this.isRecording || this.isPaused) {
-                if (this.isRecording && !this.isPaused) {
-                    // Keep trying if we're recording but not paused
-                    this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / 30); // 30 FPS
-                }
+            // Stop if not recording
+            if (!this.isRecording) {
+                return;
+            }
+            
+            // Skip frame if paused, but continue loop
+            if (this.isPaused) {
+                this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / CAPTURE_FPS);
                 return;
             }
 
             if (!this.masterCtx || !this.masterCanvas) {
-                this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / 30);
+                this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / CAPTURE_FPS);
                 return;
             }
 
@@ -583,7 +593,7 @@ export class RecordingContext {
             }
 
             // Schedule next capture
-            this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / 30); // 30 FPS
+            this.domCaptureInterval = window.setTimeout(captureFrame, 1000 / CAPTURE_FPS);
         };
 
         captureFrame();
@@ -652,20 +662,20 @@ export class RecordingContext {
             }
 
             // Determine dimensions
-            let width = 1920;
-            let height = 1080;
+            let width = DEFAULT_CANVAS_WIDTH;
+            let height = DEFAULT_CANVAS_HEIGHT;
             
             if (isWorkspaceCapture && this.workspaceElement) {
                 // Use workspace element dimensions
                 const rect = this.workspaceElement.getBoundingClientRect();
-                width = Math.max(rect.width, 1280) || 1920;
-                height = Math.max(rect.height, 720) || 1080;
+                width = rect.width > 0 ? Math.max(rect.width, MIN_CANVAS_WIDTH) : DEFAULT_CANVAS_WIDTH;
+                height = rect.height > 0 ? Math.max(rect.height, MIN_CANVAS_HEIGHT) : DEFAULT_CANVAS_HEIGHT;
             } else if (this.stream) {
                 // Use video track dimensions for screen/window capture
                 const videoTrack = this.stream.getVideoTracks()[0];
                 const trackSettings = videoTrack.getSettings();
-                width = trackSettings.width || 1920;
-                height = trackSettings.height || 1080;
+                width = trackSettings.width || DEFAULT_CANVAS_WIDTH;
+                height = trackSettings.height || DEFAULT_CANVAS_HEIGHT;
             }
 
             // Initialize MASTER canvas
@@ -685,7 +695,7 @@ export class RecordingContext {
 
             // Capture stream from MASTER canvas for recording
             if (this.masterCanvas) {
-                this.canvasStream = this.masterCanvas.captureStream(30);
+                this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
 
                 // Add audio track if available (from screen/window capture)
                 if (this.stream) {

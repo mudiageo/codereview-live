@@ -50,6 +50,22 @@
 		'mediaDevices' in navigator &&
 		'getDisplayMedia' in navigator.mediaDevices;
 
+	// Helper to get display label for selected source
+	function getSourceLabel(source: string): string {
+		switch (source) {
+			case 'workspace':
+				return 'Code Workspace';
+			case 'screen':
+				return 'Screen';
+			case 'window':
+				return 'Window';
+			case 'camera':
+				return 'Camera';
+			default:
+				return 'Unknown';
+		}
+	}
+
 	// Pass refs to context when they're available
 	$effect(() => {
 		if (canvasRef) ctx.setCanvasRef(canvasRef);
@@ -253,9 +269,13 @@
 					<Select
 						type="single"
 						value={ctx.settings.selectedSource}
-						onValueChange={(v) => ctx.updateSettings({ selectedSource: v as 'workspace' | 'screen' | 'window' })}
+						onValueChange={(v) => {
+							if (v === 'workspace' || v === 'screen' || v === 'window' || v === 'camera') {
+								ctx.updateSettings({ selectedSource: v });
+							}
+						}}
 					>
-						<SelectTrigger>{ctx.settings.selectedSource === 'workspace' ? 'Code Workspace' : ctx.settings.selectedSource === 'screen' ? 'Screen' : 'Window'}</SelectTrigger>
+						<SelectTrigger>{getSourceLabel(ctx.settings.selectedSource)}</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="workspace">Code Workspace (Default)</SelectItem>
 							{#if supportsScreenCapture}
