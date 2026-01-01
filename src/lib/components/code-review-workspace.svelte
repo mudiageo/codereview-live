@@ -68,7 +68,8 @@
 		onChecklistChange,
 		onRunAI,
 		onAutoCheck,
-		children
+		children,
+		activeFilePath
 	}: Props = $props();
 
 	// State
@@ -153,9 +154,12 @@
 		return { additions, deletions, files: files.filter((f) => f.type === 'file').length };
 	});
 
-	// Auto-select first file
+	// Auto-select first file or respect activeFilePath
 	$effect(() => {
-		if (!activeTab && files.length > 0) {
+		if (activeFilePath && activeFilePath !== activeTab?.path) {
+			const found = files.find((f) => f.path === activeFilePath);
+			if (found) openFile(found);
+		} else if (!activeTab && files.length > 0 && !activeFilePath) {
 			const firstFile = files.find((f) => f.type === 'file');
 			if (firstFile) {
 				openFile(firstFile);
@@ -436,6 +440,12 @@
 							<div class="text-center py-8 text-muted-foreground">
 								<Bot class="h-8 w-8 mx-auto mb-2 opacity-50" />
 								<p>No AI analysis available yet.</p>
+								{#if onRunAI}
+									<Button variant="outline" size="sm" class="mt-4" onclick={onRunAI}>
+										<Sparkles class="h-4 w-4 mr-2" />
+										Run Analysis
+									</Button>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -454,6 +464,13 @@
 										).length}
 									</Badge>
 								</div>
+
+								{#if onAutoCheck}
+									<Button variant="outline" size="sm" class="w-full mb-4" onclick={onAutoCheck}>
+										<Bot class="h-4 w-4 mr-2" />
+										Auto-check with AI
+									</Button>
+								{/if}
 
 								<div class="space-y-2">
 									{#each Object.keys(checklist.items) as item}

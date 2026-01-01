@@ -117,6 +117,8 @@
 		})) as FileNode[];
 	});
 
+	let activeFilePath = $state<string | undefined>(undefined);
+
 	let currentFilePath = $state('');
 
 	function handleFileChange(file: FileNode) {
@@ -201,11 +203,17 @@
 	}
 
 	// --- Helpers ---
-	const videoMarkers = $derived(
-		threadedComments
+	const videoMarkers = $derived([
+		...threadedComments
 			.filter((c) => c.videoTimestamp)
-			.map((c) => ({ time: c.videoTimestamp, label: c.authorName || 'User' }))
-	);
+			.map((c) => ({ time: c.videoTimestamp, label: c.authorName || 'User' })),
+		...(review.metadata?.recordingEvents || [])
+			.filter((e: any) => e.type === 'file-change')
+			.map((e: any) => ({
+				time: e.time / 1000,
+				label: `File: ${e.data.path.split('/').pop()}`
+			}))
+	]);
 
 	function getInitials(name: string) {
 		return name
@@ -239,9 +247,18 @@
 	function handleTimeUpdate(time: number) {
 		currentTime = time;
 
-		// Sync code scrolling would need to be implemented within CodeReviewWorkspace
-		// or by exposing a scrollTo method on it.
-		// For now, we'll skip scroll sync or implement it later if needed.
+		// Smart Navigation: Switch file based on recording events
+		if (review.metadata?.recordingEvents) {
+			const events = review.metadata.recordingEvents as any[];
+			// Find last file-change event before current time
+			const lastEvent = events
+				.filter((e) => e.type === 'file-change' && e.time <= time * 1000)
+				.sort((a, b) => b.time - a.time)[0];
+
+			if (lastEvent && lastEvent.data?.path && lastEvent.data.path !== activeFilePath) {
+				activeFilePath = lastEvent.data.path;
+			}
+		}
 	}
 
 	async function postComment() {
@@ -372,6 +389,30 @@
 		</div>
 	</div>
 
+	<!-- AI Executive Summary -->
+	{#if review.aiSummary}
+		<div class="px-4 py-2 bg-muted/10 border-b">
+			<Card class="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-primary/20">
+				<CardContent class="p-4 flex gap-4">
+					<div class="shrink-0 mt-1">
+						<div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+							<Sparkles class="h-4 w-4 text-primary" />
+						</div>
+					</div>
+					<div class="space-y-1">
+						<h3 class="font-semibold text-sm flex items-center gap-2">
+							AI Executive Summary
+							<Badge variant="outline" class="text-[10px] px-1 py-0 h-4">Beta</Badge>
+						</h3>
+						<p class="text-sm text-muted-foreground leading-relaxed">
+							{review.aiSummary}
+						</p>
+					</div>
+				</CardContent>
+			</Card>
+		</div>
+	{/if}
+
 	<div class="flex-1 min-h-0 relative">
 		<!-- Desktop Layout: Split View -->
 		<div class="hidden lg:flex h-full">
@@ -381,6 +422,7 @@
 					<CodeReviewWorkspace
 						files={fileNodes}
 						mode={'diff'}
+						{activeFilePath}
 						onLineClick={handleLineClick}
 						onFileChange={handleFileChange}
 					>

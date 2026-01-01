@@ -381,6 +381,34 @@ export class RecordingContext {
                 this.drawWebcamPIP(this.masterCtx, this.masterCanvas!);
             }
 
+            // 3. Draw annotation layer to MASTER canvas
+            if (this.annotationCanvas && this.annotationCanvas.width > 0 && this.annotationCanvas.height > 0) {
+                this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
+            }
+
+            // 4. Sync to UI canvas if available (User Preview)
+            if (this.uiCtx && this.canvasRef) {
+                try {
+                    // Resize UI canvas if needed to match master
+                    if (this.canvasRef.width !== this.masterCanvas!.width ||
+                        this.canvasRef.height !== this.masterCanvas!.height) {
+                        this.canvasRef.width = this.masterCanvas!.width;
+                        this.canvasRef.height = this.masterCanvas!.height;
+                    }
+
+                    this.uiCtx.drawImage(this.masterCanvas!, 0, 0);
+                } catch (e) {
+                    console.warn('Failed to draw to UI canvas', e);
+                }
+            }
+
+            // Loop
+            this.animationFrameId = requestAnimationFrame(drawFrame);
+        };
+
+        this.animationFrameId = requestAnimationFrame(drawFrame);
+    }
+
 
 
 

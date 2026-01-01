@@ -825,7 +825,20 @@
 											</div>
 										</div>
 										<div class="border rounded-lg h-[400px] overflow-hidden">
-											<CodeReviewWorkspace files={importedFiles} mode="diff" {importSource} />
+											<CodeReviewWorkspace
+												files={importedFiles}
+												mode="diff"
+												{importSource}
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+											/>
 										</div>
 									</div>
 								{:else}
@@ -894,7 +907,20 @@
 											</div>
 										</div>
 										<div class="border rounded-lg h-[400px] overflow-hidden">
-											<CodeReviewWorkspace files={importedFiles} mode="diff" {importSource} />
+											<CodeReviewWorkspace
+												files={importedFiles}
+												mode="diff"
+												{importSource}
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+											/>
 										</div>
 									</div>
 								{:else}
@@ -951,7 +977,20 @@
 											</div>
 										</div>
 										<div class="border rounded-lg h-[400px] overflow-hidden">
-											<CodeReviewWorkspace files={importedFiles} mode="diff" {importSource} />
+											<CodeReviewWorkspace
+												files={importedFiles}
+												mode="diff"
+												{importSource}
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+											/>
 										</div>
 									</div>
 								{:else}
@@ -1008,7 +1047,20 @@
 											</div>
 										</div>
 										<div class="border rounded-lg h-[400px] overflow-hidden">
-											<CodeReviewWorkspace files={importedFiles} mode="diff" {importSource} />
+											<CodeReviewWorkspace
+												files={importedFiles}
+												mode="diff"
+												{importSource}
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+											/>
 										</div>
 									</div>
 								{:else}
@@ -1045,8 +1097,8 @@
 
 			{#if step === 3}
 				<!-- Step 3: Add Video -->
-				<div class="grid gap-4 lg:grid-cols-3">
-					<div class="lg:col-span-2">
+				<div class="grid gap-4 lg:grid-cols-1">
+					<div class="lg:col-span-1">
 						<Card>
 							<CardHeader>
 								<CardTitle>Video Walkthrough</CardTitle>
