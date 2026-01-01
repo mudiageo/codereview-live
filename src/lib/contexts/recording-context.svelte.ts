@@ -15,6 +15,9 @@ const MIN_CANVAS_WIDTH = 1280;
 const MIN_CANVAS_HEIGHT = 720;
 const DEFAULT_CANVAS_WIDTH = 1920;
 const DEFAULT_CANVAS_HEIGHT = 1080;
+// Memory management constants
+const CHUNK_CONSOLIDATION_THRESHOLD = 100; // Consolidate when chunks exceed this number
+const RECENT_CHUNKS_TO_KEEP = 20; // Keep recent chunks separate for faster access
 
 function createContext<T>(key: string) {
 	return [() => getContext<T>(key), (value: T) => setContext(key, value)] as const;
@@ -1075,6 +1078,8 @@ export class RecordingContext {
 	}
 
 	private getSupportedMimeType(): string {
+		// VP8 is prioritized for faster real-time encoding (better performance)
+		// VP9 provides better compression but is slower (affects recording quality vs performance trade-off)
 		const types = [
 			'video/webm;codecs=vp8,opus', // VP8 first - faster encoding
 			'video/webm;codecs=vp9,opus',
@@ -1104,15 +1109,15 @@ export class RecordingContext {
 	private startMemoryCleanup() {
 		// Run cleanup every 30 seconds
 		this.memoryCleanupInterval = window.setInterval(() => {
-			// Consolidate chunks if there are more than 100
-			if (this.recordedChunks.length > 100) {
+			// Consolidate chunks if there are more than the threshold
+			if (this.recordedChunks.length > CHUNK_CONSOLIDATION_THRESHOLD) {
 				console.log(`[Memory] Consolidating ${this.recordedChunks.length} chunks`);
 				const mimeType = this.getSupportedMimeType();
 
-				// Keep the last 20 chunks separate for faster access during active recording
-				// Only consolidate older chunks
-				const chunksToConsolidate = this.recordedChunks.slice(0, -20);
-				const recentChunks = this.recordedChunks.slice(-20);
+				// Keep recent chunks separate for faster access during active recording
+				// Only consolidate older chunks to reduce memory pressure
+				const chunksToConsolidate = this.recordedChunks.slice(0, -RECENT_CHUNKS_TO_KEEP);
+				const recentChunks = this.recordedChunks.slice(-RECENT_CHUNKS_TO_KEEP);
 
 				const consolidatedBlob = new Blob(chunksToConsolidate, { type: mimeType });
 				this.recordedChunks = [consolidatedBlob, ...recentChunks];
