@@ -631,6 +631,7 @@ export class RecordingContext {
 		const frameDuration = 1000 / CAPTURE_FPS;
 		let expectedTime = performance.now() + frameDuration;
 		let droppedFrames = 0;
+		let lastDropLogTime = 0;
 
 		const captureFrame = async () => {
 			// Stop if not recording
@@ -646,9 +647,14 @@ export class RecordingContext {
 				droppedFrames++;
 				const framesToSkip = Math.floor(drift / frameDuration);
 				expectedTime += framesToSkip * frameDuration;
-				console.warn(
-					`[Performance] Dropped ${framesToSkip} frame(s), total dropped: ${droppedFrames}`
-				);
+
+				// Only log every 5 seconds to avoid performance impact
+				if (frameStartTime - lastDropLogTime > 5000) {
+					console.warn(
+						`[Performance] Dropped ${framesToSkip} frame(s), total dropped: ${droppedFrames}`
+					);
+					lastDropLogTime = frameStartTime;
+				}
 			}
 
 			// Skip frame if paused, but continue loop
@@ -1102,8 +1108,14 @@ export class RecordingContext {
 			if (this.recordedChunks.length > 100) {
 				console.log(`[Memory] Consolidating ${this.recordedChunks.length} chunks`);
 				const mimeType = this.getSupportedMimeType();
-				const consolidatedBlob = new Blob(this.recordedChunks, { type: mimeType });
-				this.recordedChunks = [consolidatedBlob];
+
+				// Keep the last 20 chunks separate for faster access during active recording
+				// Only consolidate older chunks
+				const chunksToConsolidate = this.recordedChunks.slice(0, -20);
+				const recentChunks = this.recordedChunks.slice(-20);
+
+				const consolidatedBlob = new Blob(chunksToConsolidate, { type: mimeType });
+				this.recordedChunks = [consolidatedBlob, ...recentChunks];
 			}
 		}, 30000);
 	}
