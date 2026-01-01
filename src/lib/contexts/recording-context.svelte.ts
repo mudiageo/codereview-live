@@ -1123,18 +1123,22 @@ export class RecordingContext {
 	private startMemoryCleanup() {
 		// Run cleanup every 30 seconds
 		this.memoryCleanupInterval = window.setInterval(() => {
-			// Consolidate chunks if there are more than the threshold
-			if (this.recordedChunks.length > CHUNK_CONSOLIDATION_THRESHOLD) {
-				console.log(`[Memory] Consolidating ${this.recordedChunks.length} chunks`);
-				const mimeType = this.getSupportedMimeType();
+			try {
+				// Consolidate chunks if there are more than the threshold
+				if (this.recordedChunks.length > CHUNK_CONSOLIDATION_THRESHOLD) {
+					console.log(`[Memory] Consolidating ${this.recordedChunks.length} chunks`);
+					const mimeType = this.getSupportedMimeType();
 
-				// Keep recent chunks separate for faster access during active recording
-				// Only consolidate older chunks to reduce memory pressure
-				const chunksToConsolidate = this.recordedChunks.slice(0, -RECENT_CHUNKS_TO_KEEP);
-				const recentChunks = this.recordedChunks.slice(-RECENT_CHUNKS_TO_KEEP);
+					// Keep recent chunks separate for faster access during active recording
+					// Only consolidate older chunks to reduce memory pressure
+					const chunksToConsolidate = this.recordedChunks.slice(0, -RECENT_CHUNKS_TO_KEEP);
+					const recentChunks = this.recordedChunks.slice(-RECENT_CHUNKS_TO_KEEP);
 
-				const consolidatedBlob = new Blob(chunksToConsolidate, { type: mimeType });
-				this.recordedChunks = [consolidatedBlob, ...recentChunks];
+					const consolidatedBlob = new Blob(chunksToConsolidate, { type: mimeType });
+					this.recordedChunks = [consolidatedBlob, ...recentChunks];
+				}
+			} catch (error) {
+				console.error('Error during memory cleanup:', error);
 			}
 		}, 30000);
 	}
