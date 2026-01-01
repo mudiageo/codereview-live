@@ -50,6 +50,14 @@
 		'mediaDevices' in navigator &&
 		'getDisplayMedia' in navigator.mediaDevices;
 
+	// Reset to workspace if screen/window selected but not supported
+	$effect(() => {
+		if (!supportsScreenCapture && 
+		    (ctx.settings.selectedSource === 'screen' || ctx.settings.selectedSource === 'window')) {
+			ctx.updateSettings({ selectedSource: 'workspace' });
+		}
+	});
+
 	// Helper to get display label for selected source
 	function getSourceLabel(source: string): string {
 		switch (source) {

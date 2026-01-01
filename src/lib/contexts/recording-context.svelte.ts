@@ -546,6 +546,8 @@ export class RecordingContext {
     }
 
     private startDOMCaptureLoop() {
+        let isFirstFrame = true;
+        
         const captureFrame = async () => {
             // Stop if not recording
             if (!this.isRecording) {
@@ -576,7 +578,40 @@ export class RecordingContext {
                 this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
             }
 
-            // 4. Sync to UI canvas if available (User Preview)
+            // 4. Initialize canvas stream on first frame (after content is drawn)
+            if (isFirstFrame && this.masterCanvas) {
+                isFirstFrame = false;
+                this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
+                
+                // Setup MediaRecorder now that we have content
+                if (this.canvasStream) {
+                    const options: MediaRecorderOptions = {
+                        mimeType: this.getSupportedMimeType(),
+                        videoBitsPerSecond: this.getVideoBitrate()
+                    };
+
+                    this.mediaRecorder = new MediaRecorder(this.canvasStream, options);
+                    this.recordedChunks = [];
+
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            this.recordedChunks.push(event.data);
+                        }
+                    };
+
+                    this.mediaRecorder.onstop = async () => {
+                        this.stopCanvasLoop();
+                        this.stopDOMCaptureLoop();
+                        this.stopStreams();
+                        await this.processRecording();
+                    };
+
+                    // Start recording
+                    this.mediaRecorder.start(1000);
+                }
+            }
+
+            // 5. Sync to UI canvas if available (User Preview)
             if (this.uiCtx && this.canvasRef) {
                 try {
                     // Resize UI canvas if needed to match master
@@ -688,49 +723,52 @@ export class RecordingContext {
 
             // Start appropriate capture loop
             if (isWorkspaceCapture) {
+                // DOM capture will initialize MediaRecorder on first frame
                 this.startDOMCaptureLoop();
             } else {
+                // Screen/window capture - set up MediaRecorder immediately
                 this.startCanvasLoop();
+                
+                // Capture stream from MASTER canvas for recording
+                if (this.masterCanvas) {
+                    this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
+
+                    // Add audio track if available (from screen/window capture)
+                    if (this.stream) {
+                        const audioTracks = this.stream.getAudioTracks();
+                        audioTracks.forEach(track => this.canvasStream!.addTrack(track));
+                    }
+                }
+
+                // Setup MediaRecorder with canvas stream
+                const recordingStream = this.canvasStream;
+                if (!recordingStream) throw new Error('No stream available for recording');
+
+                const options: MediaRecorderOptions = {
+                    mimeType: this.getSupportedMimeType(),
+                    videoBitsPerSecond: this.getVideoBitrate()
+                };
+
+                this.mediaRecorder = new MediaRecorder(recordingStream, options);
+                this.recordedChunks = [];
+
+                this.mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        this.recordedChunks.push(event.data);
+                    }
+                };
+
+                this.mediaRecorder.onstop = async () => {
+                    this.stopCanvasLoop();
+                    this.stopDOMCaptureLoop();
+                    this.stopStreams(); // Stop inputs when recording is done
+                    await this.processRecording();
+                };
+
+                // Start recording
+                this.mediaRecorder.start(1000);
             }
 
-            // Capture stream from MASTER canvas for recording
-            if (this.masterCanvas) {
-                this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
-
-                // Add audio track if available (from screen/window capture)
-                if (this.stream) {
-                    const audioTracks = this.stream.getAudioTracks();
-                    audioTracks.forEach(track => this.canvasStream!.addTrack(track));
-                }
-            }
-
-            // Setup MediaRecorder with canvas stream
-            const recordingStream = this.canvasStream;
-            if (!recordingStream) throw new Error('No stream available for recording');
-
-            const options: MediaRecorderOptions = {
-                mimeType: this.getSupportedMimeType(),
-                videoBitsPerSecond: this.getVideoBitrate()
-            };
-
-            this.mediaRecorder = new MediaRecorder(recordingStream, options);
-            this.recordedChunks = [];
-
-            this.mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    this.recordedChunks.push(event.data);
-                }
-            };
-
-            this.mediaRecorder.onstop = async () => {
-                this.stopCanvasLoop();
-                this.stopDOMCaptureLoop();
-                this.stopStreams(); // Stop inputs when recording is done
-                await this.processRecording();
-            };
-
-            // Start recording
-            this.mediaRecorder.start(1000);
             this.isRecording = true;
             this.isPaused = false;
             this.recordingTime = 0;
