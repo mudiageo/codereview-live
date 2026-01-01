@@ -479,15 +479,14 @@
 					isPublic: false,
 					status: 'draft',
 					aiSummary,
-						recordingEvents: $state.snapshot(recordingEvents),
-						files: $state.snapshot(importedFiles),
-						importSource,
-						aiAnalysis: $state.snapshot(analysis),
-						checklist: {
-							items: $state.snapshot(checklistItems),
-							notes: $state.snapshot(checklistNotes),
-							template: checklistTemplate
-						}
+					recordingEvents: $state.snapshot(recordingEvents),
+					files: $state.snapshot(importedFiles),
+					importSource,
+					aiAnalysis: $state.snapshot(analysis),
+					checklist: {
+						items: $state.snapshot(checklistItems),
+						notes: $state.snapshot(checklistNotes),
+						template: checklistTemplate
 					}
 				});
 				reviewId = draft.id;
