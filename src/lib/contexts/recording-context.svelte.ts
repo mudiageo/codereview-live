@@ -87,7 +87,7 @@ export class RecordingContext {
     private recordingInterval: number | null = null;
     private countdownInterval: number | null = null;
     private recordingStartTime: number = 0;
-    private recordingEvents: { type: string; time: number; scrollTop: number }[] = [];
+    private recordingEvents: { type: string; time: number; data: any }[] = [];
 
     // Canvas elements (internal master + external references)
     private masterCanvas: HTMLCanvasElement | null = null;
@@ -127,6 +127,34 @@ export class RecordingContext {
         this.initAnnotationCanvas(width, height);
     }
 
+    // ============= Internal Video Elements (Persistent Source) =============
+    private screenVideo: HTMLVideoElement | null = null;
+    private webcamVideo: HTMLVideoElement | null = null;
+
+    // ============= UI Element Refs =============
+    private canvasRef: HTMLCanvasElement | null = null;
+    private uiCtx: CanvasRenderingContext2D | null = null;
+
+    // We keeping these for potential direct binding but they are no longer the primary loop source
+    private videoPreviewRef: HTMLVideoElement | null = null;
+    private webcamPreviewRef: HTMLVideoElement | null = null;
+    private animationFrameId: number | null = null;
+
+    private async setupInternalVideo(stream: MediaStream, type: 'screen' | 'webcam') {
+        const v = document.createElement('video');
+        v.srcObject = stream;
+        v.muted = true;
+        v.playsInline = true;
+        v.autoplay = true;
+        await v.play();
+
+        if (type === 'screen') {
+            this.screenVideo = v;
+        } else {
+            this.webcamVideo = v;
+        }
+    }
+
     setCanvasRef(canvas: HTMLCanvasElement | null) {
         this.canvasRef = canvas;
         if (canvas) {
@@ -138,10 +166,18 @@ export class RecordingContext {
 
     setVideoPreviewRef(video: HTMLVideoElement | null) {
         this.videoPreviewRef = video;
+        if (video && this.stream) {
+            video.srcObject = this.stream;
+            video.play().catch(console.error);
+        }
     }
 
     setWebcamPreviewRef(video: HTMLVideoElement | null) {
         this.webcamPreviewRef = video;
+        if (video && this.webcamStream) {
+            video.srcObject = this.webcamStream;
+            video.play().catch(console.error);
+        }
     }
 
     getCanvasRef(): HTMLCanvasElement | null {
@@ -316,7 +352,8 @@ export class RecordingContext {
     private startCanvasLoop() {
         const drawFrame = () => {
             // Ensure master canvas exists and we have source material
-            if (!this.masterCtx || !this.videoPreviewRef || !this.isRecording) {
+            // We now rely on internal screenVideo, not videoPreviewRef
+            if (!this.masterCtx || !this.screenVideo || !this.isRecording) {
                 if (this.isRecording) {
                     // Keep trying if we're recording but elements aren't ready
                     this.animationFrameId = requestAnimationFrame(drawFrame);
@@ -327,7 +364,7 @@ export class RecordingContext {
             // 1. Draw video frame to MASTER canvas
             try {
                 this.masterCtx.drawImage(
-                    this.videoPreviewRef,
+                    this.screenVideo,
                     0,
                     0,
                     this.masterCanvas!.width,
@@ -340,36 +377,15 @@ export class RecordingContext {
             }
 
             // 2. Draw webcam PIP to MASTER canvas
-            if (this.settings.includeWebcam && this.webcamPreviewRef && this.webcamStream) {
+            if (this.settings.includeWebcam && this.webcamVideo && this.webcamStream) {
                 this.drawWebcamPIP(this.masterCtx, this.masterCanvas!);
             }
 
-            // 3. Draw annotation layer to MASTER canvas
-            if (this.annotationCanvas && this.annotationCanvas.width > 0 && this.annotationCanvas.height > 0) {
-                this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
-            }
 
-            // 4. Sync to UI canvas if available (User Preview)
-            if (this.uiCtx && this.canvasRef) {
-                try {
-                    // Resize UI canvas if needed to match master
-                    if (this.canvasRef.width !== this.masterCanvas!.width ||
-                        this.canvasRef.height !== this.masterCanvas!.height) {
-                        this.canvasRef.width = this.masterCanvas!.width;
-                        this.canvasRef.height = this.masterCanvas!.height;
-                    }
 
-                    this.uiCtx.drawImage(this.masterCanvas!, 0, 0);
-                } catch (e) {
-                    console.warn('Failed to draw to UI canvas', e);
-                }
-            }
 
-            this.animationFrameId = requestAnimationFrame(drawFrame);
-        };
 
-        this.animationFrameId = requestAnimationFrame(drawFrame);
-    }
+
 
     private stopCanvasLoop() {
         if (this.animationFrameId) {
@@ -379,7 +395,7 @@ export class RecordingContext {
     }
 
     private drawWebcamPIP(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
-        if (!ctx || !this.webcamPreviewRef) return;
+        if (!ctx || !this.webcamVideo) return;
 
         const pip = this.getWebcamPIPRect(canvas);
 
@@ -400,7 +416,7 @@ export class RecordingContext {
             ctx.clip();
 
             // Draw webcam within clipped circle
-            const aspectRatio = this.webcamPreviewRef.videoWidth / this.webcamPreviewRef.videoHeight;
+            const aspectRatio = this.webcamVideo.videoWidth / this.webcamVideo.videoHeight;
             let drawWidth = pip.width;
             let drawHeight = pip.height;
             let offsetX = 0;
@@ -415,7 +431,7 @@ export class RecordingContext {
             }
 
             ctx.drawImage(
-                this.webcamPreviewRef,
+                this.webcamVideo,
                 pip.x + offsetX,
                 pip.y + offsetY,
                 drawWidth,
@@ -424,7 +440,7 @@ export class RecordingContext {
         } else {
             // Rectangle
             ctx.fillRect(pip.x - 2, pip.y - 2, pip.width + 4, pip.height + 4);
-            ctx.drawImage(this.webcamPreviewRef, pip.x, pip.y, pip.width, pip.height);
+            ctx.drawImage(this.webcamVideo, pip.x, pip.y, pip.width, pip.height);
         }
 
         ctx.restore();
@@ -481,10 +497,13 @@ export class RecordingContext {
 
             this.stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
 
-            // Setup video preview source
-            if (this.videoPreviewRef && this.stream) {
+            // Setup internal video element for persistence
+            await this.setupInternalVideo(this.stream, 'screen');
+
+            // Attach to UI preview if available (legacy support)
+            if (this.videoPreviewRef) {
                 this.videoPreviewRef.srcObject = this.stream;
-                await this.videoPreviewRef.play();
+                this.videoPreviewRef.play().catch(console.error);
             }
 
             // Get webcam stream if enabled
@@ -494,9 +513,13 @@ export class RecordingContext {
                         video: { width: 320, height: 240 },
                         audio: false
                     });
-                    if (this.webcamPreviewRef && this.webcamStream) {
+
+                    // Setup internal video element for persistence
+                    await this.setupInternalVideo(this.webcamStream, 'webcam');
+
+                    if (this.webcamPreviewRef) {
                         this.webcamPreviewRef.srcObject = this.webcamStream;
-                        await this.webcamPreviewRef.play();
+                        this.webcamPreviewRef.play().catch(console.error);
                     }
                 } catch (e) {
                     console.warn('Could not get webcam stream:', e);
@@ -663,10 +686,11 @@ export class RecordingContext {
 
     // ============= Recording Events =============
 
-    addRecordingEvent(event: { type: string; scrollTop: number }) {
+    addEvent(type: string, data: any) {
         if (this.isRecording) {
             this.recordingEvents.push({
-                ...event,
+                type,
+                data,
                 time: Date.now() - this.recordingStartTime
             });
         }

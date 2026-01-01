@@ -84,7 +84,7 @@
 	let showLocalGitBrowser = $state(false);
 	let analysis = $state<CodeAnalysis | null>(null);
 	let analysisLoading = $state(false);
-	let recordingEvents = $state<{ type: string; time: number; scrollTop: number }[]>([]);
+	let recordingEvents = $state<{ type: string; time: number; data: any }[]>([]);
 	let recordingStartTime = $state(0);
 	let checklistTemplate = $state('general');
 	let checklistItems = $state<Record<string, boolean>>({});
@@ -395,7 +395,17 @@
 			recordingEvents.push({
 				type: 'scroll',
 				time: Date.now() - recordingStartTime,
-				scrollTop: target.scrollTop
+				data: { scrollTop: target.scrollTop }
+			});
+		}
+	}
+
+	function handleWorkspaceFileChange(file: FileNode) {
+		if (isRecording) {
+			recordingEvents.push({
+				type: 'file-change',
+				time: Date.now() - recordingStartTime,
+				data: { path: file.path }
 			});
 		}
 	}
@@ -469,10 +479,15 @@
 					isPublic: false,
 					status: 'draft',
 					aiSummary,
-					metadata: {
 						recordingEvents: $state.snapshot(recordingEvents),
 						files: $state.snapshot(importedFiles),
-						importSource
+						importSource,
+						aiAnalysis: $state.snapshot(analysis),
+						checklist: {
+							items: $state.snapshot(checklistItems),
+							notes: $state.snapshot(checklistNotes),
+							template: checklistTemplate
+						}
 					}
 				});
 				reviewId = draft.id;
@@ -494,7 +509,13 @@
 					metadata: {
 						recordingEvents: $state.snapshot(recordingEvents),
 						files: $state.snapshot(importedFiles),
-						importSource
+						importSource,
+						aiAnalysis: $state.snapshot(analysis),
+						checklist: {
+							items: $state.snapshot(checklistItems),
+							notes: $state.snapshot(checklistNotes),
+							template: checklistTemplate
+						}
 					}
 				});
 			}
@@ -524,7 +545,13 @@
 					metadata: {
 						recordingEvents: $state.snapshot(recordingEvents),
 						files: $state.snapshot(importedFiles),
-						importSource
+						importSource,
+						aiAnalysis: $state.snapshot(analysis),
+						checklist: {
+							items: $state.snapshot(checklistItems),
+							notes: $state.snapshot(checklistNotes),
+							template: checklistTemplate
+						}
 					}
 				});
 			} else {
@@ -550,7 +577,13 @@
 					metadata: {
 						recordingEvents: $state.snapshot(recordingEvents),
 						files: $state.snapshot(importedFiles),
-						importSource
+						importSource,
+						aiAnalysis: $state.snapshot(analysis),
+						checklist: {
+							items: $state.snapshot(checklistItems),
+							notes: $state.snapshot(checklistNotes),
+							template: checklistTemplate
+						}
 					}
 				});
 			}
@@ -639,6 +672,7 @@
 					mode="diff"
 					{importSource}
 					onBack={() => (showCodeWorkspace = false)}
+					onFileChange={handleWorkspaceFileChange}
 				/>
 			</div>
 		</div>

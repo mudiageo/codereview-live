@@ -18,6 +18,9 @@
 	import X from '@lucide/svelte/icons/x';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeft from '@lucide/svelte/icons/panel-left';
+	import CheckSquare from '@lucide/svelte/icons/check-square';
+	import Bot from '@lucide/svelte/icons/bot';
+	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import Menu from '@lucide/svelte/icons/menu';
 	import { LanguageDetector } from '$lib/utils/language-detector';
 
@@ -38,9 +41,18 @@
 		files: FileNode[];
 		mode?: 'view' | 'diff';
 		importSource?: string;
+		aiAnalysis?: any;
+		checklist?: {
+			items: Record<string, boolean>;
+			notes: Record<string, string>;
+			template: string;
+		};
 		onFileChange?: (file: FileNode) => void;
 		onBack?: () => void;
 		onLineClick?: (line: number) => void;
+		onChecklistChange?: (items: Record<string, boolean>) => void;
+		onRunAI?: () => void;
+		onAutoCheck?: () => void;
 		children?: import('svelte').Snippet;
 	}
 
@@ -48,15 +60,21 @@
 		files = [],
 		mode = 'diff',
 		importSource = '',
+		aiAnalysis = null,
+		checklist = null,
 		onFileChange,
 		onBack,
 		onLineClick,
+		onChecklistChange,
+		onRunAI,
+		onAutoCheck,
 		children
 	}: Props = $props();
 
 	// State
 	let sidebarOpen = $state(true);
 	let sidebarWidth = $state(280);
+	let activeSidebarTab = $state<'files' | 'ai' | 'checklist'>('files');
 	let mobileDrawerOpen = $state(false);
 	let searchQuery = $state('');
 	let expandedDirs = $state<Set<string>>(new Set());
@@ -288,178 +306,325 @@
 			: 'hidden lg:flex'} {sidebarOpen ? '' : 'lg:w-0 lg:overflow-hidden'}"
 		style={sidebarOpen ? `width: ${sidebarWidth}px` : ''}
 	>
-		<!-- Sidebar Header -->
-		<div class="flex items-center justify-between border-b p-3">
-			<div class="flex items-center gap-2">
-				<h3 class="text-sm font-semibold">Files</h3>
-				<Badge variant="secondary" class="text-xs">
-					{totalStats().files}
-				</Badge>
-			</div>
-			<Button
-				variant="ghost"
-				size="icon"
-				class="h-7 w-7 lg:hidden"
-				onclick={() => (mobileDrawerOpen = false)}
-			>
-				<X class="h-4 w-4" />
-			</Button>
-		</div>
-
-		<!-- Stats -->
-		{#if mode === 'diff'}
-			<div class="flex items-center gap-2 border-b px-3 py-2 text-xs">
-				<Badge variant="outline" class="text-green-600">+{totalStats().additions}</Badge>
-				<Badge variant="outline" class="text-red-600">-{totalStats().deletions}</Badge>
-				{#if importSource}
-					<span class="ml-auto text-muted-foreground truncate">{importSource}</span>
-				{/if}
-			</div>
-		{/if}
-
-		<!-- Search -->
-		<div class="border-b p-2">
-			<div class="relative">
-				<Search class="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-				<Input placeholder="Filter files..." bind:value={searchQuery} class="h-8 pl-8 text-sm" />
-			</div>
-		</div>
-
-		<!-- File Tree -->
-		<ScrollArea class="flex-1">
-			<div class="p-2">
-				{#each fileTree() as node (node.path)}
-					{@render FileTreeNode(node, 0)}
-				{/each}
-			</div>
-		</ScrollArea>
-
-		<!-- Keyboard Hints -->
-		<div class="border-t p-2 text-xs text-muted-foreground">
-			<div class="flex items-center justify-between">
-				<span>j/k navigate</span>
-				<span>[ toggle sidebar</span>
-			</div>
-		</div>
-
-		<!-- Resize Handle -->
-		<button
-			class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/20 transition-colors {isDragging
-				? 'bg-primary/30'
-				: ''}"
-			onmousedown={handleResizeStart}
-			aria-label="Resize sidebar"
-		></button>
-	</aside>
-
-	<!-- Main Content -->
-	<main class="flex flex-1 flex-col overflow-hidden">
-		<!-- Header Bar -->
-		<div class="flex items-center gap-2 border-b px-2 py-1.5 bg-muted/20">
-			<!-- Mobile Menu Button -->
-			<Button
-				variant="ghost"
-				size="icon"
-				class="h-8 w-8 lg:hidden"
-				onclick={() => (mobileDrawerOpen = true)}
-			>
-				<Menu class="h-4 w-4" />
-			</Button>
-
-			<!-- Sidebar Toggle (Desktop) -->
-			<Button
-				variant="ghost"
-				size="icon"
-				class="hidden lg:flex h-8 w-8"
-				onclick={() => (sidebarOpen = !sidebarOpen)}
-				title="Toggle sidebar ([)"
-			>
-				{#if sidebarOpen}
-					<PanelLeftClose class="h-4 w-4" />
-				{:else}
-					<PanelLeft class="h-4 w-4" />
-				{/if}
-			</Button>
-
-			<!-- Back Button -->
-			{#if onBack}
-				<Button variant="ghost" size="sm" onclick={onBack} class="gap-1">
-					<ChevronLeft class="h-4 w-4" />
-					<span class="hidden sm:inline">Back to Editor</span>
-				</Button>
-				<Separator orientation="vertical" class="h-6" />
-			{/if}
-
-			<!-- File Tabs -->
-			<div class="flex-1 overflow-x-auto">
-				<div class="flex items-center gap-1">
-					{#each openTabs as tab (tab.path)}
-						{@const icon = getFileIcon(tab.name, tab.status)}
-						<div
-							class="group flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab?.path ===
-							tab.path
-								? 'bg-background border shadow-sm'
-								: 'hover:bg-muted'}"
-						>
-							<button onclick={() => (activeTab = tab)} class="flex items-center gap-1.5 min-w-0">
-								<icon.component class={icon.class} />
-								<span class="max-w-32 truncate">{tab.name}</span>
-								{#if tab.additions || tab.deletions}
-									<span class="flex items-center gap-0.5 text-xs">
-										{#if tab.additions}<span class="text-green-600">+{tab.additions}</span>{/if}
-										{#if tab.deletions}<span class="text-red-600">-{tab.deletions}</span>{/if}
-									</span>
-								{/if}
-							</button>
-							<button
-								onclick={(e) => closeTab(tab, e)}
-								class="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20 flex-shrink-0"
-							>
-								<X class="h-3 w-3" />
-							</button>
-						</div>
-					{/each}
+		<aside
+			class="flex flex-col border-r bg-muted/30 transition-all duration-200 {mobileDrawerOpen
+				? 'fixed inset-y-0 left-0 z-50 w-80'
+				: 'hidden lg:flex'} {sidebarOpen ? '' : 'lg:w-0 lg:overflow-hidden'}"
+			style={sidebarOpen ? `width: ${sidebarWidth}px` : ''}
+		>
+			<!-- Sidebar Tabs/Header -->
+			<div class="flex items-center justify-between border-b p-2 bg-muted/50">
+				<div class="flex items-center gap-1 rounded-lg bg-background border p-1">
+					<Button
+						variant={activeSidebarTab === 'files' ? 'secondary' : 'ghost'}
+						size="sm"
+						class="h-7 w-7 px-0"
+						title="Files"
+						onclick={() => (activeSidebarTab = 'files')}
+					>
+						<Folder class="h-4 w-4" />
+					</Button>
+					<Button
+						variant={activeSidebarTab === 'ai' ? 'secondary' : 'ghost'}
+						size="sm"
+						class="h-7 w-7 px-0"
+						title="AI Analysis"
+						onclick={() => (activeSidebarTab = 'ai')}
+					>
+						<Bot class="h-4 w-4" />
+					</Button>
+					<Button
+						variant={activeSidebarTab === 'checklist' ? 'secondary' : 'ghost'}
+						size="sm"
+						class="h-7 w-7 px-0"
+						title="Checklist"
+						onclick={() => (activeSidebarTab = 'checklist')}
+					>
+						<CheckSquare class="h-4 w-4" />
+					</Button>
 				</div>
-			</div>
-		</div>
 
-		<!-- File Content -->
-		<div class="flex-1 overflow-auto">
-			{#if activeTab}
-				<div class="h-full">
-					{#if mode === 'diff' && activeTab.diff}
-						<div class="p-4">
-							<DiffViewer diff={activeTab.diff} filename={activeTab.path} {onLineClick} />
-						</div>
-					{:else if activeTab.content}
-						<CodeEditor
-							value={activeTab.content}
-							language={activeTab.language || 'text'}
-							readonly
-							showLineNumbers
-							class="h-full"
-						/>
-					{:else}
-						<div class="flex h-full items-center justify-center text-muted-foreground">
-							<div class="text-center">
-								<FileText class="mx-auto h-12 w-12 opacity-20" />
-								<p class="mt-4">No content available</p>
-							</div>
-						</div>
+				<div class="flex items-center gap-2">
+					{#if activeSidebarTab === 'files'}
+						<Badge variant="secondary" class="text-xs">
+							{totalStats().files}
+						</Badge>
 					{/if}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="h-7 w-7 lg:hidden"
+						onclick={() => (mobileDrawerOpen = false)}
+					>
+						<X class="h-4 w-4" />
+					</Button>
 				</div>
-				{@render children?.()}
-			{:else}
-				<div class="flex h-full items-center justify-center text-muted-foreground">
-					<div class="text-center">
-						<Folder class="mx-auto h-12 w-12 opacity-20" />
-						<p class="mt-4">Select a file to view</p>
-						<p class="text-sm mt-1">Use the file tree on the left or press j/k to navigate</p>
+			</div>
+
+			<!-- FILES PANEL -->
+			{#if activeSidebarTab === 'files'}
+				<!-- Stats -->
+				{#if mode === 'diff'}
+					<div class="flex items-center gap-2 border-b px-3 py-2 text-xs">
+						<Badge variant="outline" class="text-green-600">+{totalStats().additions}</Badge>
+						<Badge variant="outline" class="text-red-600">-{totalStats().deletions}</Badge>
+						{#if importSource}
+							<span class="ml-auto text-muted-foreground truncate">{importSource}</span>
+						{/if}
+					</div>
+				{/if}
+
+				<!-- Search -->
+				<div class="border-b p-2">
+					<div class="relative">
+						<Search
+							class="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+						/>
+						<Input
+							placeholder="Filter files..."
+							bind:value={searchQuery}
+							class="h-8 pl-8 text-sm"
+						/>
 					</div>
 				</div>
+
+				<!-- File Tree -->
+				<ScrollArea class="flex-1">
+					<div class="p-2">
+						{#each fileTree() as node (node.path)}
+							{@render FileTreeNode(node, 0)}
+						{/each}
+					</div>
+				</ScrollArea>
+			{:else if activeSidebarTab === 'ai'}
+				<!-- AI PANEL -->
+				<ScrollArea class="flex-1">
+					<div class="p-4 space-y-4">
+						{#if aiAnalysis}
+							<div class="space-y-4">
+								<div>
+									<h4 class="font-semibold mb-2 flex items-center gap-2">
+										<Sparkles class="h-4 w-4 text-primary" />
+										Summary
+									</h4>
+									<p class="text-sm text-muted-foreground">{aiAnalysis.summary}</p>
+								</div>
+
+								{#if aiAnalysis.keyIssues?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 text-destructive">Key Issues</h4>
+										<ul class="list-disc list-inside text-sm text-muted-foreground space-y-1">
+											{#each aiAnalysis.keyIssues as issue}
+												<li>{issue}</li>
+											{/each}
+										</ul>
+									</div>
+								{/if}
+
+								{#if aiAnalysis.suggestions?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 text-blue-500">Suggestions</h4>
+										<ul class="list-disc list-inside text-sm text-muted-foreground space-y-1">
+											{#each aiAnalysis.suggestions as suggestion}
+												<li>{suggestion}</li>
+											{/each}
+										</ul>
+									</div>
+								{/if}
+							</div>
+						{:else}
+							<div class="text-center py-8 text-muted-foreground">
+								<Bot class="h-8 w-8 mx-auto mb-2 opacity-50" />
+								<p>No AI analysis available yet.</p>
+							</div>
+						{/if}
+					</div>
+				</ScrollArea>
+			{:else if activeSidebarTab === 'checklist'}
+				<!-- CHECKLIST PANEL -->
+				<ScrollArea class="flex-1">
+					<div class="p-4">
+						{#if checklist}
+							<div class="space-y-4">
+								<div class="flex items-center justify-between">
+									<h4 class="font-semibold">Review Checklist</h4>
+									<Badge variant="outline" class="text-xs">
+										{Object.values(checklist.items).filter(Boolean).length}/{Object.keys(
+											checklist.items
+										).length}
+									</Badge>
+								</div>
+
+								<div class="space-y-2">
+									{#each Object.keys(checklist.items) as item}
+										<div
+											class="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border transition-colors"
+										>
+											<input
+												type="checkbox"
+												id={item}
+												checked={checklist.items[item]}
+												onchange={(e) => {
+													const newItems = { ...checklist?.items, [item]: e.currentTarget.checked };
+													onChecklistChange?.(newItems);
+												}}
+												class="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+											/>
+											<div class="space-y-1">
+												<label
+													for={item}
+													class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+												>
+													{item}
+												</label>
+												{#if checklist.notes?.[item]}
+													<p class="text-xs text-muted-foreground bg-muted/50 p-1.5 rounded">
+														<Bot class="h-3 w-3 inline mr-1 text-primary" />
+														{checklist.notes[item]}
+													</p>
+												{/if}
+											</div>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{:else}
+							<div class="text-center py-8 text-muted-foreground">
+								<CheckSquare class="h-8 w-8 mx-auto mb-2 opacity-50" />
+								<p>No checklist available.</p>
+							</div>
+						{/if}
+					</div>
+				</ScrollArea>
 			{/if}
-		</div>
-	</main>
+
+			<!-- Keyboard Hints -->
+			<div class="border-t p-2 text-xs text-muted-foreground">
+				<div class="flex items-center justify-between">
+					<span>j/k navigate</span>
+					<span>[ toggle sidebar</span>
+				</div>
+			</div>
+
+			<!-- Resize Handle -->
+			<button
+				class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/20 transition-colors {isDragging
+					? 'bg-primary/30'
+					: ''}"
+				onmousedown={handleResizeStart}
+				aria-label="Resize sidebar"
+			></button>
+		</aside>
+
+		<!-- Main Content -->
+		<main class="flex flex-1 flex-col overflow-hidden">
+			<!-- Header Bar -->
+			<div class="flex items-center gap-2 border-b px-2 py-1.5 bg-muted/20">
+				<!-- Mobile Menu Button -->
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-8 w-8 lg:hidden"
+					onclick={() => (mobileDrawerOpen = true)}
+				>
+					<Menu class="h-4 w-4" />
+				</Button>
+
+				<!-- Sidebar Toggle (Desktop) -->
+				<Button
+					variant="ghost"
+					size="icon"
+					class="hidden lg:flex h-8 w-8"
+					onclick={() => (sidebarOpen = !sidebarOpen)}
+					title="Toggle sidebar ([)"
+				>
+					{#if sidebarOpen}
+						<PanelLeftClose class="h-4 w-4" />
+					{:else}
+						<PanelLeft class="h-4 w-4" />
+					{/if}
+				</Button>
+
+				<!-- Back Button -->
+				{#if onBack}
+					<Button variant="ghost" size="sm" onclick={onBack} class="gap-1">
+						<ChevronLeft class="h-4 w-4" />
+						<span class="hidden sm:inline">Back to Editor</span>
+					</Button>
+					<Separator orientation="vertical" class="h-6" />
+				{/if}
+
+				<!-- File Tabs -->
+				<div class="flex-1 overflow-x-auto">
+					<div class="flex items-center gap-1">
+						{#each openTabs as tab (tab.path)}
+							{@const icon = getFileIcon(tab.name, tab.status)}
+							<div
+								class="group flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab?.path ===
+								tab.path
+									? 'bg-background border shadow-sm'
+									: 'hover:bg-muted'}"
+							>
+								<button onclick={() => (activeTab = tab)} class="flex items-center gap-1.5 min-w-0">
+									<icon.component class={icon.class} />
+									<span class="max-w-32 truncate">{tab.name}</span>
+									{#if tab.additions || tab.deletions}
+										<span class="flex items-center gap-0.5 text-xs">
+											{#if tab.additions}<span class="text-green-600">+{tab.additions}</span>{/if}
+											{#if tab.deletions}<span class="text-red-600">-{tab.deletions}</span>{/if}
+										</span>
+									{/if}
+								</button>
+								<button
+									onclick={(e) => closeTab(tab, e)}
+									class="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20 flex-shrink-0"
+								>
+									<X class="h-3 w-3" />
+								</button>
+							</div>
+						{/each}
+					</div>
+				</div>
+			</div>
+
+			<!-- File Content -->
+			<div class="flex-1 overflow-auto">
+				{#if activeTab}
+					<div class="h-full">
+						{#if mode === 'diff' && activeTab.diff}
+							<div class="p-4">
+								<DiffViewer diff={activeTab.diff} filename={activeTab.path} {onLineClick} />
+							</div>
+						{:else if activeTab.content}
+							<CodeEditor
+								value={activeTab.content}
+								language={activeTab.language || 'text'}
+								readonly
+								showLineNumbers
+								class="h-full"
+							/>
+						{:else}
+							<div class="flex h-full items-center justify-center text-muted-foreground">
+								<div class="text-center">
+									<FileText class="mx-auto h-12 w-12 opacity-20" />
+									<p class="mt-4">No content available</p>
+								</div>
+							</div>
+						{/if}
+					</div>
+					{@render children?.()}
+				{:else}
+					<div class="flex h-full items-center justify-center text-muted-foreground">
+						<div class="text-center">
+							<Folder class="mx-auto h-12 w-12 opacity-20" />
+							<p class="mt-4">Select a file to view</p>
+							<p class="text-sm mt-1">Use the file tree on the left or press j/k to navigate</p>
+						</div>
+					</div>
+				{/if}
+			</div>
+		</main>
+	</aside>
 </div>
 
 <!-- Recursive File Tree Node Snippet -->

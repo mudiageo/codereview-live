@@ -22,6 +22,11 @@
 		onGoToRecorder?: () => void;
 		isAnnotationMode?: boolean;
 		onToggleAnnotation?: () => void;
+		// Webcam controls
+		webcamPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
+		onCyclePosition?: () => void;
+		onCycleSize?: () => void;
+		onToggleShape?: () => void;
 	}
 
 	let {
@@ -35,7 +40,11 @@
 		onStop,
 		onGoToRecorder,
 		isAnnotationMode = false,
-		onToggleAnnotation
+		onToggleAnnotation,
+		webcamPosition,
+		onCyclePosition,
+		onCycleSize,
+		onToggleShape
 	}: Props = $props();
 
 	let isMinimized = $state(false);
@@ -132,6 +141,20 @@
 					>
 						<PenTool class="h-4 w-4" />
 					</Button>
+
+					<!-- Webcam Controls -->
+					<div class="flex items-center gap-0.5 mx-1">
+						<Button
+							size="sm"
+							variant="ghost"
+							class="h-7 w-7 p-0 text-white hover:bg-white/20"
+							onclick={onCyclePosition}
+							title="Move Webcam"
+						>
+							<Move class="h-4 w-4" />
+						</Button>
+					</div>
+
 					<Button
 						size="sm"
 						variant="ghost"

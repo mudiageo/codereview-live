@@ -129,6 +129,13 @@ export const reviews = pgTable('reviews', {
     tags?: string[];
     files?: any[];
     importSource?: string;
+    aiAnalysis?: any;
+    recordingEvents?: { type: string; time: number; data: any }[];
+    checklist?: {
+      items: Record<string, boolean>;
+      notes: Record<string, string>;
+      template: string;
+    };
   }>(),
   viewCount: integer('view_count').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
