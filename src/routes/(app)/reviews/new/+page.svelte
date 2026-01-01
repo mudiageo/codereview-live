@@ -695,30 +695,20 @@
 									</TabsList>
 
 									<TabsContent value="record" class="space-y-4">
-										{#if reviewId}
-											<MediaRecorder
-												bind:this={mediaRecorderRef}
-												{reviewId}
-												onUploadComplete={(result) => {
-													uploadedVideoUrl = result.videoUrl;
-													uploadedThumbnailUrl = result.thumbnailUrl;
-													uploadedMetadata = result.metadata;
-													isRecording = false;
-													toast.success('Video attached to review');
-												}}
-												onStart={handleRecordingStart}
-												onEnd={handleRecordingEnd}
-												onPause={handleRecordingPause}
-												onResume={handleRecordingResume}
-												maxDuration={600}
-												quality="high"
-											/>
-										{:else}
+										{#if !reviewId}
 											<div class="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg">
 												<p>Please save draft first to enable recording</p>
 												<Button variant="outline" size="sm" onclick={saveDraft} class="mt-2">
 													<Save class="h-4 w-4 mr-2" /> Save Draft
 												</Button>
+											</div>
+										{:else}
+											<!-- MediaRecorder is rendered in the persistent container below -->
+											<div class="text-sm text-muted-foreground text-center py-2">
+												<p>
+													Recording controls are below. The recorder will persist even when
+													navigating to other steps.
+												</p>
 											</div>
 										{/if}
 									</TabsContent>
@@ -779,6 +769,30 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- Persistent MediaRecorder - stays mounted to preserve recording state -->
+		{#if reviewId}
+			<div class={step === 3 ? '' : 'fixed -left-[9999px] opacity-0 pointer-events-none'}>
+				<MediaRecorder
+					bind:this={mediaRecorderRef}
+					{reviewId}
+					onUploadComplete={(result) => {
+						uploadedVideoUrl = result.videoUrl;
+						uploadedThumbnailUrl = result.thumbnailUrl;
+						uploadedMetadata = result.metadata;
+						isRecording = false;
+						showRecordingIndicator = false;
+						toast.success('Video attached to review');
+					}}
+					onStart={handleRecordingStart}
+					onEnd={handleRecordingEnd}
+					onPause={handleRecordingPause}
+					onResume={handleRecordingResume}
+					maxDuration={600}
+					quality="high"
+				/>
+			</div>
+		{/if}
 	{/if}
 </AuthGuard>
 
