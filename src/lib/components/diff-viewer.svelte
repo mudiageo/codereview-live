@@ -11,6 +11,7 @@
   import Lightbulb from '@lucide/svelte/icons/lightbulb';
   import Shield from '@lucide/svelte/icons/shield';
   import Zap from '@lucide/svelte/icons/zap';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
   import { toast } from 'svelte-sonner';
   import type { CodeAnalysis } from '$lib/server/ai';
 
@@ -20,9 +21,10 @@
     viewMode?: 'unified' | 'split';
     onLineClick?: (lineNumber: number) => void;
     aiAnalysis?: CodeAnalysis;
+    onExplainCode?: (lineNumber: number, code: string) => void;
   }
 
-  let { diff, filename = 'changes.diff', viewMode = $bindable('unified'), onLineClick, aiAnalysis }: Props = $props();
+  let { diff, filename = 'changes.diff', viewMode = $bindable('unified'), onLineClick, aiAnalysis, onExplainCode }: Props = $props();
 
   interface DiffLine {
     type: 'add' | 'remove' | 'context' | 'header';
@@ -261,49 +263,61 @@
                 <div class="flex-1">
                   <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
                 </div>
-                {#if annotations.length > 0}
-                  <Popover>
-                    <PopoverTrigger>
-                      {#snippet child(props)}
-                        <button
-                          {...props}
-                          type="button"
-                          class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity {getAnnotationColor(annotations)}"
-                        >
-                          {#each annotations as annotation}
-                            {@const Icon = getAnnotationIcon(annotation.type)}
-                            <Icon class="h-4 w-4 inline-block ml-1" />
-                          {/each}
-                        </button>
-                      {/snippet}
-                    </PopoverTrigger>
-                    <PopoverContent class="w-80">
-                      <div class="space-y-3">
-                        {#each annotations as annotation}
+                <div class="flex items-center gap-1">
+                  {#if annotations.length > 0}
+                    <Popover>
+                      <PopoverTrigger>
+                        {#snippet child(props)}
+                          <button
+                            {...props}
+                            type="button"
+                            class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity {getAnnotationColor(annotations)}"
+                          >
+                            {#each annotations as annotation}
                               {@const Icon = getAnnotationIcon(annotation.type)}
-                          <div class="text-sm">
-                            <div class="flex items-center gap-2 mb-1">
-                              <Icon class="h-4 w-4 {getAnnotationColor(annotation)}" />
-                              <span class="font-semibold capitalize {getAnnotationColor(annotation)}">
-                                {annotation.type}
-                              </span>
-                              {#if annotation.severity}
-                                <Badge variant="outline" class="text-xs">{annotation.severity}</Badge>
-                              {/if}
-                              {#if annotation.impact}
-                                <Badge variant="outline" class="text-xs">{annotation.impact}</Badge>
+                              <Icon class="h-4 w-4 inline-block ml-1" />
+                            {/each}
+                          </button>
+                        {/snippet}
+                      </PopoverTrigger>
+                      <PopoverContent class="w-80">
+                        <div class="space-y-3">
+                          {#each annotations as annotation}
+                                {@const Icon = getAnnotationIcon(annotation.type)}
+                            <div class="text-sm">
+                              <div class="flex items-center gap-2 mb-1">
+                                <Icon class="h-4 w-4 {getAnnotationColor(annotation)}" />
+                                <span class="font-semibold capitalize {getAnnotationColor(annotation)}">
+                                  {annotation.type}
+                                </span>
+                                {#if annotation.severity}
+                                  <Badge variant="outline" class="text-xs">{annotation.severity}</Badge>
+                                {/if}
+                                {#if annotation.impact}
+                                  <Badge variant="outline" class="text-xs">{annotation.impact}</Badge>
+                                {/if}
+                              </div>
+                              <p class="text-muted-foreground">{annotation.description}</p>
+                              {#if annotation.item.suggestion}
+                                <p class="mt-1 text-xs text-muted-foreground">💡 {annotation.item.suggestion}</p>
                               {/if}
                             </div>
-                            <p class="text-muted-foreground">{annotation.description}</p>
-                            {#if annotation.item.suggestion}
-                              <p class="mt-1 text-xs text-muted-foreground">💡 {annotation.item.suggestion}</p>
-                            {/if}
-                          </div>
-                        {/each}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                {/if}
+                          {/each}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  {/if}
+                  {#if onExplainCode && line.content.trim() && line.type !== 'header'}
+                    <button
+                      type="button"
+                      class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded p-1"
+                      onclick={() => line.lineNumber?.new && onExplainCode(line.lineNumber.new, line.content)}
+                      title="Explain this code with AI"
+                    >
+                      <Sparkles class="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    </button>
+                  {/if}
+                </div>
               </div>
             </div>
           {/each}
@@ -314,7 +328,8 @@
           <div class="border-r">
             {#each parsedDiff() as line, i (i)}
               {#if line.type !== 'add'}
-                <div class="flex {getLineClass(line.type)}">
+                {@const annotations = line.lineNumber?.old ? getLineAnnotations(line.lineNumber.old) : []}
+                <div class="flex {getLineClass(line.type)} relative group">
                   <button
                     class="w-12 flex-shrink-0 text-center text-muted-foreground/60 border-r px-2 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
                     onclick={() => onLineClick && line.lineNumber?.old && onLineClick(line.lineNumber.old)}
@@ -322,8 +337,20 @@
                   >
                     {line.lineNumber?.old || ''}
                   </button>
-                  <div class="flex-1 px-4 py-1 whitespace-pre-wrap break-all">
-                    <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
+                  <div class="flex-1 px-4 py-1 whitespace-pre-wrap break-all flex items-center justify-between">
+                    <div class="flex-1">
+                      <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
+                    </div>
+                    {#if onExplainCode && line.content.trim() && line.type !== 'header'}
+                      <button
+                        type="button"
+                        class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded p-1"
+                        onclick={() => line.lineNumber?.old && onExplainCode(line.lineNumber.old, line.content)}
+                        title="Explain this code with AI"
+                      >
+                        <Sparkles class="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </button>
+                    {/if}
                   </div>
                 </div>
               {:else}
@@ -335,7 +362,8 @@
           <div>
             {#each parsedDiff() as line, i (i)}
               {#if line.type !== 'remove'}
-                <div class="flex {getLineClass(line.type)}">
+                {@const annotations = line.lineNumber?.new ? getLineAnnotations(line.lineNumber.new) : []}
+                <div class="flex {getLineClass(line.type)} relative group">
                   <button
                     class="w-12 flex-shrink-0 text-center text-muted-foreground/60 border-r px-2 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
                     onclick={() => onLineClick && line.lineNumber?.new && onLineClick(line.lineNumber.new)}
@@ -343,8 +371,20 @@
                   >
                     {line.lineNumber?.new || ''}
                   </button>
-                  <div class="flex-1 px-4 py-1 whitespace-pre-wrap break-all">
-                    <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
+                  <div class="flex-1 px-4 py-1 whitespace-pre-wrap break-all flex items-center justify-between">
+                    <div class="flex-1">
+                      <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
+                    </div>
+                    {#if onExplainCode && line.content.trim() && line.type !== 'header'}
+                      <button
+                        type="button"
+                        class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded p-1"
+                        onclick={() => line.lineNumber?.new && onExplainCode(line.lineNumber.new, line.content)}
+                        title="Explain this code with AI"
+                      >
+                        <Sparkles class="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </button>
+                    {/if}
                   </div>
                 </div>
               {:else}

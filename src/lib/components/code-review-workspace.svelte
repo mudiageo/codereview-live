@@ -4,6 +4,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import { Separator } from '$lib/components/ui/separator';
+	import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
 	import CodeEditor from './code-editor.svelte';
 	import DiffViewer from './diff-viewer.svelte';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -22,7 +23,9 @@
 	import Bot from '@lucide/svelte/icons/bot';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import Menu from '@lucide/svelte/icons/menu';
+	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import { LanguageDetector } from '$lib/utils/language-detector';
+	import { toast } from 'svelte-sonner';
 
 	export interface FileNode {
 		name: string;
@@ -82,6 +85,11 @@
 	let openTabs = $state<FileNode[]>([]);
 	let activeTab = $state<FileNode | null>(null);
 	let isDragging = $state(false);
+	let explainDialogOpen = $state(false);
+	let explainLoading = $state(false);
+	let explainContent = $state('');
+	let explainCode = $state('');
+	let explainLineNumber = $state(0);
 
 	const languageDetector = new LanguageDetector();
 
@@ -91,6 +99,40 @@
 		if (file) {
 			openFile(file);
 			onLineClick?.(lineNumber);
+		}
+	}
+
+	// Handler for AI code explanation
+	async function handleExplainCode(lineNumber: number, code: string) {
+		explainLineNumber = lineNumber;
+		explainCode = code;
+		explainDialogOpen = true;
+		explainLoading = true;
+		explainContent = '';
+
+		try {
+			const language = activeTab?.language || 'javascript';
+			const response = await fetch('/api/ai/explain', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					code: code.trim(),
+					language
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to get explanation');
+			}
+
+			const data = await response.json();
+			explainContent = data.explanation || 'No explanation available';
+		} catch (error) {
+			console.error('Error explaining code:', error);
+			toast.error('Failed to explain code. Please try again.');
+			explainContent = 'Failed to load explanation. Please try again.';
+		} finally {
+			explainLoading = false;
 		}
 	}
 
@@ -763,7 +805,7 @@
 					<div class="h-full">
 						{#if mode === 'diff' && activeTab.diff}
 							<div class="p-4">
-								<DiffViewer diff={activeTab.diff} filename={activeTab.path} {onLineClick} {aiAnalysis} />
+								<DiffViewer diff={activeTab.diff} filename={activeTab.path} {onLineClick} {aiAnalysis} onExplainCode={handleExplainCode} />
 							</div>
 						{:else if activeTab.content}
 							<CodeEditor
@@ -846,6 +888,51 @@
 		</button>
 	{/if}
 {/snippet}
+
+<!-- AI Code Explanation Dialog -->
+<Dialog bind:open={explainDialogOpen}>
+	<DialogContent class="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+		<DialogHeader>
+			<DialogTitle class="flex items-center gap-2">
+				<Sparkles class="h-5 w-5 text-purple-600" />
+				AI Code Explanation
+				{#if explainLineNumber > 0}
+					<Badge variant="outline">Line {explainLineNumber}</Badge>
+				{/if}
+			</DialogTitle>
+			<DialogDescription>
+				Understanding the selected code
+			</DialogDescription>
+		</DialogHeader>
+		
+		<div class="flex-1 overflow-auto space-y-4">
+			<!-- Original Code -->
+			<div class="space-y-2">
+				<h4 class="text-sm font-semibold">Code:</h4>
+				<pre class="p-3 bg-muted rounded-lg text-xs overflow-x-auto"><code>{explainCode}</code></pre>
+			</div>
+			
+			<!-- Explanation -->
+			<div class="space-y-2">
+				<h4 class="text-sm font-semibold">Explanation:</h4>
+				{#if explainLoading}
+					<div class="flex items-center justify-center p-8">
+						<Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+						<span class="ml-2 text-sm text-muted-foreground">Analyzing code...</span>
+					</div>
+				{:else}
+					<div class="prose prose-sm max-w-none p-3 bg-muted/50 rounded-lg">
+						{@html explainContent.replace(/\n/g, '<br>')}
+					</div>
+				{/if}
+			</div>
+		</div>
+		
+		<div class="flex justify-end gap-2 pt-4 border-t">
+			<Button variant="outline" onclick={() => explainDialogOpen = false}>Close</Button>
+		</div>
+	</DialogContent>
+</Dialog>
 
 <style>
 	.file-tree-directory {
