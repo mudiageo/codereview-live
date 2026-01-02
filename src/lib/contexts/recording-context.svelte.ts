@@ -9,7 +9,7 @@ import { getContext, setContext } from 'svelte';
 import { snapdom } from '@zumer/snapdom';
 
 // Constants
-const CAPTURE_FPS = 30;
+const CAPTURE_FPS = 10; // Reduced from 30 - DOM capture is expensive, 10fps is sufficient for screen recording
 const MIN_CANVAS_WIDTH = 1280;
 const MIN_CANVAS_HEIGHT = 720;
 const DEFAULT_CANVAS_WIDTH = 1920;
@@ -99,6 +99,7 @@ export class RecordingContext {
 	private recordingEvents: { type: string; time: number; data: any }[] = [];
 	private workspaceElement: HTMLElement | null = null; // DOM element to capture
 	private domCaptureInterval: number | null = null; // Interval for DOM capture
+	private isCapturing: boolean = false; // Prevent concurrent captures
 
 	// Canvas elements (internal master + external references)
 	private masterCanvas: HTMLCanvasElement | null = null;
@@ -108,6 +109,7 @@ export class RecordingContext {
 	private videoPreviewRef: HTMLVideoElement | null = null;
 	private webcamPreviewRef: HTMLVideoElement | null = null;
 	private animationFrameId: number | null = null;
+	private uiUpdateFrameId: number | null = null; // Separate RAF for UI updates
 
 	// Annotation canvas
 	private annotationCanvas: HTMLCanvasElement | null = null;
@@ -380,6 +382,29 @@ export class RecordingContext {
 
 	// ============= Canvas Compositing Loop =============
 
+	private startUIUpdateLoop() {
+		// Use requestAnimationFrame for smooth 60fps UI updates
+		// This is decoupled from the capture loop which runs at 10fps
+		const updateUI = () => {
+			if (!this.isRecording) {
+				this.uiUpdateFrameId = null;
+				return;
+			}
+
+			this.syncToUICanvas();
+			this.uiUpdateFrameId = requestAnimationFrame(updateUI);
+		};
+
+		this.uiUpdateFrameId = requestAnimationFrame(updateUI);
+	}
+
+	private stopUIUpdateLoop() {
+		if (this.uiUpdateFrameId) {
+			cancelAnimationFrame(this.uiUpdateFrameId);
+			this.uiUpdateFrameId = null;
+		}
+	}
+
 	private syncToUICanvas() {
 		if (this.uiCtx && this.canvasRef && this.masterCanvas) {
 			try {
@@ -586,6 +611,7 @@ export class RecordingContext {
 			try {
 				this.stopCanvasLoop();
 				this.stopDOMCaptureLoop();
+				this.stopUIUpdateLoop();
 				this.stopStreams();
 				await this.processRecording();
 			} catch (error) {
@@ -599,7 +625,14 @@ export class RecordingContext {
 	}
 
 	private async captureDOMToCanvas(): Promise<void> {
+		// Prevent concurrent captures which can cause performance issues
+		if (this.isCapturing) {
+			return;
+		}
+
 		if (!this.workspaceElement || !this.masterCtx || !this.masterCanvas) return;
+
+		this.isCapturing = true;
 
 		try {
 			// Capture the DOM element to a canvas
@@ -621,6 +654,8 @@ export class RecordingContext {
 			);
 		} catch (error) {
 			console.error('Failed to capture DOM:', error);
+		} finally {
+			this.isCapturing = false;
 		}
 	}
 
@@ -694,8 +729,8 @@ export class RecordingContext {
 					this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
 				}
 
-				// 4. Sync to UI canvas if available (User Preview)
-				this.syncToUICanvas();
+				// 4. UI updates are handled by separate RAF loop for smoother performance
+				// No need to call syncToUICanvas() here
 
 				// Schedule next frame with drift correction
 				scheduleNextFrame();
@@ -808,6 +843,8 @@ export class RecordingContext {
 				// DOM capture - set up canvas stream and MediaRecorder before starting loop
 				// Start DOM capture loop first (which will continuously update the canvas)
 				this.startDOMCaptureLoop();
+				// Start separate UI update loop for smooth preview
+				this.startUIUpdateLoop();
 
 				// Capture stream from MASTER canvas for recording
 				if (this.masterCanvas) {
@@ -822,6 +859,8 @@ export class RecordingContext {
 			} else {
 				// Screen/window capture - set up MediaRecorder immediately
 				this.startCanvasLoop();
+				// Start separate UI update loop for smooth preview
+				this.startUIUpdateLoop();
 
 				// Capture stream from MASTER canvas for recording
 				if (this.masterCanvas) {
@@ -1184,6 +1223,7 @@ export class RecordingContext {
 		this.stopTimer();
 		this.stopCanvasLoop();
 		this.stopDOMCaptureLoop();
+		this.stopUIUpdateLoop();
 		this.stopMemoryCleanup();
 
 		if (this.countdownInterval) {
