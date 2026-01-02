@@ -280,9 +280,9 @@
                     <PopoverContent class="w-80">
                       <div class="space-y-3">
                         {#each annotations as annotation}
+                              {@const Icon = getAnnotationIcon(annotation.type)}
                           <div class="text-sm">
                             <div class="flex items-center gap-2 mb-1">
-                              {@const Icon = getAnnotationIcon(annotation.type)}
                               <Icon class="h-4 w-4 {getAnnotationColor(annotation)}" />
                               <span class="font-semibold capitalize {getAnnotationColor(annotation)}">
                                 {annotation.type}

@@ -151,7 +151,7 @@
 	});
 
 	// Stats
-	const totalStats = $derived(() => {
+	const totalStats = $derived.by(() => {
 		let additions = 0;
 		let deletions = 0;
 
@@ -354,7 +354,7 @@
 				<div class="flex items-center gap-2">
 					{#if activeSidebarTab === 'files'}
 						<Badge variant="secondary" class="text-xs">
-							{totalStats().files}
+							{totalStats.files}
 						</Badge>
 					{/if}
 					<Button
@@ -373,8 +373,8 @@
 				<!-- Stats -->
 				{#if mode === 'diff'}
 					<div class="flex items-center gap-2 border-b px-3 py-2 text-xs">
-						<Badge variant="outline" class="text-green-600">+{totalStats().additions}</Badge>
-						<Badge variant="outline" class="text-red-600">-{totalStats().deletions}</Badge>
+						<Badge variant="outline" class="text-green-600">+{totalStats.additions}</Badge>
+						<Badge variant="outline" class="text-red-600">-{totalStats.deletions}</Badge>
 						{#if importSource}
 							<span class="ml-auto text-muted-foreground truncate">{importSource}</span>
 						{/if}
