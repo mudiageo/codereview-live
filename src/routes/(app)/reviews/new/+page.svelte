@@ -563,7 +563,7 @@
 				});
 			} else {
 				// Create new published review
-				await reviewsStore.create({
+				reviewId = (await reviewsStore.create({
 					title,
 					description,
 					projectId,
@@ -592,11 +592,11 @@
 							template: checklistTemplate
 						}
 					}
-				});
+				})).id;
 			}
 
 			toast.success('Review published!');
-			goto('/reviews');
+			goto(`/reviews/${reviewId}`);
 		} catch (error) {
 			toast.error('Failed to publish review');
 		}
