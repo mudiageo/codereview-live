@@ -778,7 +778,7 @@
 					<div class="h-full">
 						{#if mode === 'diff' && activeTab.diff}
 							<div class="p-4">
-								<DiffViewer diff={activeTab.diff} filename={activeTab.path} {onLineClick} />
+								<DiffViewer diff={activeTab.diff} filename={activeTab.path} {onLineClick} {aiAnalysis} />
 							</div>
 						{:else if activeTab.content}
 							<CodeEditor

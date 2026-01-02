@@ -3,9 +3,14 @@
   import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
   import { Button } from '$lib/components/ui/button';
   import { Badge } from '$lib/components/ui/badge';
+  import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
   import { LanguageDetector } from '$lib/utils/language-detector';
   import GitCompare from '@lucide/svelte/icons/git-compare';
   import Copy from '@lucide/svelte/icons/copy';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import Lightbulb from '@lucide/svelte/icons/lightbulb';
+  import Shield from '@lucide/svelte/icons/shield';
+  import Zap from '@lucide/svelte/icons/zap';
   import { toast } from 'svelte-sonner';
 
   interface Props {
@@ -13,9 +18,10 @@
     filename?: string;
     viewMode?: 'unified' | 'split';
     onLineClick?: (lineNumber: number) => void;
+    aiAnalysis?: any;
   }
 
-  let { diff, filename = 'changes.diff', viewMode = $bindable('unified'), onLineClick }: Props = $props();
+  let { diff, filename = 'changes.diff', viewMode = $bindable('unified'), onLineClick, aiAnalysis }: Props = $props();
 
   interface DiffLine {
     type: 'add' | 'remove' | 'context' | 'header';
@@ -115,6 +121,75 @@
         return '';
     }
   }
+
+  // Get AI analysis items for a specific line
+  function getLineAnnotations(lineNumber: number) {
+    if (!aiAnalysis) return [];
+    
+    const annotations: Array<{
+      type: 'bug' | 'security' | 'suggestion' | 'performance' | 'smell';
+      severity?: string;
+      impact?: string;
+      description: string;
+      item: any;
+    }> = [];
+
+    // Check bugs
+    aiAnalysis.bugs?.forEach((bug: any) => {
+      if (bug.line === lineNumber) {
+        annotations.push({ type: 'bug', severity: bug.severity, description: bug.description, item: bug });
+      }
+    });
+
+    // Check security issues (may not have line numbers)
+    aiAnalysis.securityIssues?.forEach((issue: any) => {
+      if (issue.line === lineNumber) {
+        annotations.push({ type: 'security', severity: issue.severity, description: issue.description, item: issue });
+      }
+    });
+
+    // Check suggestions
+    aiAnalysis.suggestions?.forEach((suggestion: any) => {
+      if (suggestion.line === lineNumber) {
+        annotations.push({ type: 'suggestion', impact: suggestion.impact, description: suggestion.description, item: suggestion });
+      }
+    });
+
+    // Check code smells
+    aiAnalysis.codeSmells?.forEach((smell: any) => {
+      if (smell.line === lineNumber) {
+        annotations.push({ type: 'smell', description: smell.description, item: smell });
+      }
+    });
+
+    return annotations;
+  }
+
+  function getAnnotationIcon(type: string) {
+    switch (type) {
+      case 'bug':
+        return AlertCircle;
+      case 'security':
+        return Shield;
+      case 'suggestion':
+        return Lightbulb;
+      case 'performance':
+      case 'smell':
+        return Zap;
+      default:
+        return AlertCircle;
+    }
+  }
+
+  function getAnnotationColor(annotation: any) {
+    if (annotation.severity) {
+      return annotation.severity === 'critical' || annotation.severity === 'high' 
+        ? 'text-destructive' 
+        : 'text-orange-500';
+    }
+    if (annotation.impact === 'high') return 'text-orange-500';
+    return 'text-blue-500';
+  }
 </script>
 
 <div class="space-y-4">
@@ -158,7 +233,8 @@
         <!-- Unified View -->
         <div class="font-mono text-xs">
           {#each parsedDiff() as line, i (i)}
-            <div class="flex {getLineClass(line.type)}">
+            {@const annotations = line.lineNumber?.new ? getLineAnnotations(line.lineNumber.new) : []}
+            <div class="flex {getLineClass(line.type)} relative group">
               <button
                 class="w-16 flex-shrink-0 text-center text-muted-foreground/60 border-r px-2 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
                 onclick={() => onLineClick && line.lineNumber?.new && onLineClick(line.lineNumber.new)}
@@ -173,8 +249,53 @@
                   </span>
                 {/if}
               </button>
-              <div class="flex-1 px-4 py-1 whitespace-pre-wrap break-all">
-                <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
+              <div class="flex-1 px-4 py-1 whitespace-pre-wrap break-all flex items-center justify-between">
+                <div class="flex-1">
+                  <span class="opacity-60">{getLinePrefix(line.type)}</span>{line.content}
+                </div>
+                {#if annotations.length > 0}
+                  <Popover>
+                    <PopoverTrigger>
+                      {#snippet child(props)}
+                        <button
+                          {...props}
+                          type="button"
+                          class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity {getAnnotationColor(annotations[0])}"
+                        >
+                          {#each annotations as annotation}
+                            {@const Icon = getAnnotationIcon(annotation.type)}
+                            <Icon class="h-4 w-4 inline-block ml-1" />
+                          {/each}
+                        </button>
+                      {/snippet}
+                    </PopoverTrigger>
+                    <PopoverContent class="w-80">
+                      <div class="space-y-3">
+                        {#each annotations as annotation}
+                          <div class="text-sm">
+                            <div class="flex items-center gap-2 mb-1">
+                              {@const Icon = getAnnotationIcon(annotation.type)}
+                              <Icon class="h-4 w-4 {getAnnotationColor(annotation)}" />
+                              <span class="font-semibold capitalize {getAnnotationColor(annotation)}">
+                                {annotation.type}
+                              </span>
+                              {#if annotation.severity}
+                                <Badge variant="outline" class="text-xs">{annotation.severity}</Badge>
+                              {/if}
+                              {#if annotation.impact}
+                                <Badge variant="outline" class="text-xs">{annotation.impact}</Badge>
+                              {/if}
+                            </div>
+                            <p class="text-muted-foreground">{annotation.description}</p>
+                            {#if annotation.item.suggestion}
+                              <p class="mt-1 text-xs text-muted-foreground">💡 {annotation.item.suggestion}</p>
+                            {/if}
+                          </div>
+                        {/each}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                {/if}
               </div>
             </div>
           {/each}
