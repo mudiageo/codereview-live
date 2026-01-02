@@ -744,6 +744,7 @@
 					onRunAI={runAIAnalysis}
 					onAutoCheck={handleAutoCheck}
 					onChecklistChange={(items) => (checklistItems = items)}
+					onFileChange={handleWorkspaceFileChange}
 				/>
 			</div>
 		</div>
@@ -896,6 +897,7 @@
 												onRunAI={runAIAnalysis}
 												onAutoCheck={handleAutoCheck}
 												onChecklistChange={(items) => (checklistItems = items)}
+												onFileChange={handleWorkspaceFileChange}
 											/>
 										</div>
 									</div>
@@ -976,6 +978,7 @@
 												onRunAI={runAIAnalysis}
 												onAutoCheck={handleAutoCheck}
 												onChecklistChange={(items) => (checklistItems = items)}
+												onFileChange={handleWorkspaceFileChange}
 											/>
 										</div>
 									</div>
@@ -1059,6 +1062,7 @@
 												onRunAI={runAIAnalysis}
 												onAutoCheck={handleAutoCheck}
 												onChecklistChange={(items) => (checklistItems = items)}
+											onFileChange={handleWorkspaceFileChange}
 											/>
 										</div>
 									</div>
@@ -1129,6 +1133,7 @@
 												onRunAI={runAIAnalysis}
 												onAutoCheck={handleAutoCheck}
 												onChecklistChange={(items) => (checklistItems = items)}
+											onFileChange={handleWorkspaceFileChange}
 											/>
 										</div>
 									</div>
@@ -1199,6 +1204,7 @@
 												onRunAI={runAIAnalysis}
 												onAutoCheck={handleAutoCheck}
 												onChecklistChange={(items) => (checklistItems = items)}
+											onFileChange={handleWorkspaceFileChange}
 											/>
 										</div>
 									</div>
