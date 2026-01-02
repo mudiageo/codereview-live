@@ -644,13 +644,35 @@ export class RecordingContext {
 			// Get canvas from result
 			const capturedCanvas = await result.toCanvas();
 
-			// Draw the captured canvas to our master canvas
+			// Clear master canvas
+			this.masterCtx.clearRect(0, 0, this.masterCanvas.width, this.masterCanvas.height);
+
+			// Calculate scaling to fit while maintaining aspect ratio
+			const sourceWidth = capturedCanvas.width;
+			const sourceHeight = capturedCanvas.height;
+			const targetWidth = this.masterCanvas.width;
+			const targetHeight = this.masterCanvas.height;
+
+			// Calculate scale to fit (maintain aspect ratio, no stretching)
+			const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+			const scaledWidth = sourceWidth * scale;
+			const scaledHeight = sourceHeight * scale;
+
+			// Center the image
+			const x = (targetWidth - scaledWidth) / 2;
+			const y = (targetHeight - scaledHeight) / 2;
+
+			// Draw the captured canvas to our master canvas with proper scaling
 			this.masterCtx.drawImage(
 				capturedCanvas,
 				0,
 				0,
-				this.masterCanvas.width,
-				this.masterCanvas.height
+				sourceWidth,
+				sourceHeight,
+				x,
+				y,
+				scaledWidth,
+				scaledHeight
 			);
 		} catch (error) {
 			console.error('Failed to capture DOM:', error);
@@ -806,6 +828,24 @@ export class RecordingContext {
 				}
 			}
 
+			// Get microphone audio stream if enabled
+			let microphoneStream: MediaStream | null = null;
+			if (this.settings.includeMicAudio) {
+				try {
+					microphoneStream = await navigator.mediaDevices.getUserMedia({
+						audio: {
+							echoCancellation: true,
+							noiseSuppression: true,
+							sampleRate: 44100
+						},
+						video: false
+					});
+					console.log('Microphone audio stream acquired');
+				} catch (e) {
+					console.warn('Could not get microphone audio stream:', e);
+				}
+			}
+
 			// Determine dimensions
 			let width = DEFAULT_CANVAS_WIDTH;
 			let height = DEFAULT_CANVAS_HEIGHT;
@@ -849,6 +889,15 @@ export class RecordingContext {
 				// Capture stream from MASTER canvas for recording
 				if (this.masterCanvas) {
 					this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
+					
+					// Add microphone audio tracks if available
+					if (microphoneStream) {
+						const audioTracks = microphoneStream.getAudioTracks();
+						audioTracks.forEach((track) => {
+							this.canvasStream!.addTrack(track);
+							console.log('Added microphone audio track to canvas stream');
+						});
+					}
 				}
 
 				// Setup MediaRecorder with canvas stream
@@ -866,10 +915,22 @@ export class RecordingContext {
 				if (this.masterCanvas) {
 					this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
 
-					// Add audio track if available (from screen/window capture)
+					// Add audio track if available (from screen/window capture - system audio)
 					if (this.stream) {
 						const audioTracks = this.stream.getAudioTracks();
-						audioTracks.forEach((track) => this.canvasStream!.addTrack(track));
+						audioTracks.forEach((track) => {
+							this.canvasStream!.addTrack(track);
+							console.log('Added system audio track from display media');
+						});
+					}
+					
+					// Add microphone audio tracks if available
+					if (microphoneStream) {
+						const audioTracks = microphoneStream.getAudioTracks();
+						audioTracks.forEach((track) => {
+							this.canvasStream!.addTrack(track);
+							console.log('Added microphone audio track to canvas stream');
+						});
 					}
 				}
 

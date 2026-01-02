@@ -1281,13 +1281,29 @@
 											<MediaRecorder
 												bind:this={mediaRecorderRef}
 												{reviewId}
-												onUploadComplete={(result) => {
+												onUploadComplete={async (result) => {
 													uploadedVideoUrl = result.videoUrl;
 													uploadedThumbnailUrl = result.thumbnailUrl;
 													uploadedMetadata = result.metadata;
 													isRecording = false;
 													showRecordingIndicator = false;
-													toast.success('Video attached to review');
+													
+													// Immediately save the video URL to the review
+													try {
+														await reviewsStore.update(reviewId, {
+															videoUrl: result.videoUrl,
+															thumbnailUrl: result.thumbnailUrl,
+															videoSize: result.metadata?.size || null,
+															videoDuration:
+																result.metadata?.duration && Number.isFinite(result.metadata.duration)
+																	? Math.round(result.metadata.duration)
+																	: null
+														});
+														toast.success('Video attached to review');
+													} catch (error) {
+														console.error('Failed to save video:', error);
+														toast.error('Video recorded but failed to save');
+													}
 												}}
 												onStart={handleRecordingStart}
 												onEnd={handleRecordingEnd}
