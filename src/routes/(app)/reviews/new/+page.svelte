@@ -27,6 +27,8 @@
 	import Maximize2 from '@lucide/svelte/icons/maximize-2';
 	import Minimize2 from '@lucide/svelte/icons/minimize-2';
 	import FileCode from '@lucide/svelte/icons/file-code';
+	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
+	import X from '@lucide/svelte/icons/x';
 	import AuthGuard from '$lib/components/auth-guard.svelte';
 	import PaywallDialog from '$lib/components/paywall-dialog.svelte';
 	import LimitReached from '$lib/components/limit-reached.svelte';
@@ -422,48 +424,98 @@
 		const input = event.target as HTMLInputElement;
 		if (!input.files || input.files.length === 0) return;
 
-		const file = input.files[0];
-		const fileName = file.name;
-
-		// Check if it's a .diff or .patch file
-		if (!fileName.endsWith('.diff') && !fileName.endsWith('.patch')) {
-			toast.error('Please upload a .diff or .patch file');
-			return;
-		}
-
 		try {
-			const text = await file.text();
+			const filesArray = Array.from(input.files);
+			const processedFiles: FileNode[] = [];
 
-			// Parse diff into multi-file structure
-			const files = parseDiffToFiles(text);
-			if (files.length > 0) {
-				importedFiles = files;
-				importSource = fileName;
-				// Don't auto-fullscreen - show inline in the tab
+			for (const file of filesArray) {
+				const fileName = file.name;
+				const text = await file.text();
+
+				// Check if it's a .diff or .patch file
+				if (fileName.endsWith('.diff') || fileName.endsWith('.patch')) {
+					// Parse diff into multi-file structure
+					const files = parseDiffToFiles(text);
+					processedFiles.push(...files);
+				} else {
+					// Treat as a new file addition
+					const ext = fileName.split('.').pop()?.toLowerCase();
+					const langMap: Record<string, string> = {
+						js: 'javascript',
+						jsx: 'javascript',
+						ts: 'typescript',
+						tsx: 'typescript',
+						py: 'python',
+						go: 'go',
+						rs: 'rust',
+						rb: 'ruby',
+						php: 'php',
+						java: 'java',
+						c: 'c',
+						cpp: 'cpp',
+						cs: 'csharp',
+						svelte: 'svelte',
+						vue: 'vue',
+						html: 'html',
+						css: 'css',
+						scss: 'scss',
+						md: 'markdown'
+					};
+
+					const detectedLanguage = langMap[ext || ''] || 'text';
+					const lines = text.split('\n');
+
+					// Create a diff-like format for the file (all additions)
+					const diffContent = [
+						`diff --git a/${fileName} b/${fileName}`,
+						`new file mode 100644`,
+						`--- /dev/null`,
+						`+++ b/${fileName}`,
+						`@@ -0,0 +1,${lines.length} @@`,
+						...lines.map(line => `+${line}`)
+					].join('\n');
+
+					processedFiles.push({
+						name: fileName,
+						path: fileName,
+						type: 'file',
+						content: text,
+						diff: diffContent,
+						language: detectedLanguage,
+						status: 'added',
+						additions: lines.length,
+						deletions: 0
+					});
+				}
+			}
+
+			if (processedFiles.length > 0) {
+				importedFiles = processedFiles;
+				importSource = filesArray.length === 1 ? filesArray[0].name : `${filesArray.length} files uploaded`;
 
 				// Calculate totals
 				let totalAdditions = 0;
 				let totalDeletions = 0;
-				for (const f of files) {
+				for (const f of processedFiles) {
 					totalAdditions += f.additions || 0;
 					totalDeletions += f.deletions || 0;
 				}
 
-				title = `Imported from ${fileName}`;
-				description = `${files.length} files, ${totalAdditions} additions, ${totalDeletions} deletions`;
-				code = text;
-				language = 'diff';
+				// Combine all content for code field (for backward compatibility)
+				code = processedFiles.map(f => f.diff || f.content || '').join('\n\n');
+				language = processedFiles.length === 1 && !filesArray[0].name.endsWith('.diff') && !filesArray[0].name.endsWith('.patch') 
+					? processedFiles[0].language || 'text'
+					: 'diff';
 
-				toast.success(`Parsed ${files.length} files from diff`);
+				title = filesArray.length === 1 ? `Imported from ${filesArray[0].name}` : `Imported ${filesArray.length} files`;
+				description = `${processedFiles.length} files, ${totalAdditions} additions, ${totalDeletions} deletions`;
+
+				toast.success(`Uploaded ${processedFiles.length} file${processedFiles.length > 1 ? 's' : ''} successfully`);
 			} else {
-				// Fallback: single file
-				code = text;
-				language = 'diff';
-				title = `Imported from ${fileName}`;
-				toast.success('File uploaded successfully');
+				toast.error('No valid files found');
 			}
 		} catch (error) {
-			toast.error('Failed to parse diff file');
+			toast.error('Failed to process files');
 			console.error(error);
 		}
 	}
@@ -783,33 +835,99 @@
 							</TabsList>
 
 							<TabsContent value="paste" class="space-y-4">
-								<div class="space-y-2">
-									<Label>Language</Label>
-									<Select bind:value={language}>
-										<SelectTrigger>
-											{language || 'Auto-detect'}
-										</SelectTrigger>
-										<SelectContent>
-											{#each languages as lang}
-												<SelectItem value={lang}>
-													{lang.charAt(0).toUpperCase() + lang.slice(1)}
-												</SelectItem>
-											{/each}
-										</SelectContent>
-									</Select>
-								</div>
+								{#if code}
+									<!-- Code Review Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Label>Language</Label>
+												<Select bind:value={language}>
+													<SelectTrigger class="w-[180px]">
+														{language || 'Auto-detect'}
+													</SelectTrigger>
+													<SelectContent>
+														{#each languages as lang}
+															<SelectItem value={lang}>
+																{lang.charAt(0).toUpperCase() + lang.slice(1)}
+															</SelectItem>
+														{/each}
+													</SelectContent>
+												</Select>
+											</div>
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														code = '';
+														importedFiles = [];
+													}}
+												>
+													Clear
+												</Button>
+											</div>
+										</div>
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace
+												files={[
+													{
+														name: 'code',
+														path: 'code',
+														type: 'file',
+														content: code,
+														language: language || 'text'
+													}
+												]}
+												mode="view"
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+											/>
+										</div>
+									</div>
+								{:else}
+									<div class="space-y-2">
+										<Label>Language</Label>
+										<Select bind:value={language}>
+											<SelectTrigger>
+												{language || 'Auto-detect'}
+											</SelectTrigger>
+											<SelectContent>
+												{#each languages as lang}
+													<SelectItem value={lang}>
+														{lang.charAt(0).toUpperCase() + lang.slice(1)}
+													</SelectItem>
+												{/each}
+											</SelectContent>
+										</Select>
+									</div>
 
-								<CodeEditor
-									bind:value={code}
-									{language}
-									readonly={false}
-									showLineNumbers={true}
-									onscroll={handleEditorScroll}
-								/>
+									<CodeEditor
+										bind:value={code}
+										{language}
+										readonly={false}
+										showLineNumbers={true}
+										onscroll={handleEditorScroll}
+									/>
+								{/if}
 							</TabsContent>
 
 							<TabsContent value="upload" class="space-y-4">
-								{#if importedFiles.length > 0 && (importSource.endsWith('.diff') || importSource.endsWith('.patch'))}
+								{#if importedFiles.length > 0}
 									<!-- Imported Files Workspace -->
 									<div class="space-y-3">
 										<div class="flex items-center justify-between">
@@ -847,7 +965,7 @@
 										<div class="border rounded-lg h-[400px] overflow-hidden">
 											<CodeReviewWorkspace
 												files={importedFiles}
-												mode="diff"
+												mode={importedFiles.some(f => f.status && f.status !== 'added') ? 'diff' : 'view'}
 												{importSource}
 												aiAnalysis={analysis}
 												checklist={{
@@ -873,7 +991,8 @@
 											type="file"
 											id="file-upload"
 											class="hidden"
-											accept=".js,.ts,.py,.diff,.patch,.java,.go,.rs,.rb,.php,.c,.cpp,.cs,.html,.css"
+											accept=".js,.ts,.py,.diff,.patch,.java,.go,.rs,.rb,.php,.c,.cpp,.cs,.html,.css,.jsx,.tsx,.svelte,.vue,.md"
+											multiple
 											onchange={handleDiffFileUpload}
 										/>
 										<Button
@@ -884,7 +1003,7 @@
 											Choose Files
 										</Button>
 										<p class="text-xs text-muted-foreground mt-2">
-											Supports .js, .ts, .py, .diff, .patch and more
+											Supports multiple files: .js, .ts, .py, .diff, .patch and more
 										</p>
 									</div>
 								{/if}
@@ -1126,6 +1245,37 @@
 								<CardDescription>Record or upload a video explaining the changes</CardDescription>
 							</CardHeader>
 							<CardContent class="space-y-4">
+								<!-- Video Status Display -->
+								{#if uploadedVideoUrl}
+									<div class="p-4 border rounded-lg bg-muted/20">
+										<div class="flex items-center justify-between mb-2">
+											<div class="flex items-center gap-2">
+												<CheckCircle2 class="h-5 w-5 text-green-500" />
+												<span class="font-medium">Video attached</span>
+											</div>
+											<Button
+												variant="ghost"
+												size="sm"
+												onclick={() => {
+													uploadedVideoUrl = '';
+													uploadedThumbnailUrl = '';
+													uploadedMetadata = null;
+												}}
+											>
+												<X class="h-4 w-4 mr-1" />
+												Remove
+											</Button>
+										</div>
+										{#if uploadedMetadata?.duration}
+											<p class="text-xs text-muted-foreground">
+												Duration: {Math.floor(uploadedMetadata.duration / 60)}:{(uploadedMetadata.duration % 60)
+													.toString()
+													.padStart(2, '0')}
+											</p>
+										{/if}
+									</div>
+								{/if}
+
 								<Tabs bind:value={videoMethod} class="w-full">
 									<TabsList class="grid w-full grid-cols-2">
 										<TabsTrigger value="record">Record</TabsTrigger>
@@ -1167,8 +1317,10 @@
 											<VideoUploader
 												{reviewId}
 												onUploadComplete={(result) => {
+													uploadedVideoUrl = result.videoUrl;
+													uploadedThumbnailUrl = result.thumbnailUrl || '';
+													uploadedMetadata = { size: result.metadata?.size, duration: result.metadata?.duration };
 													toast.success('Video uploaded successfully!');
-													// You can handle the uploaded video URL here if needed
 												}}
 											/>
 										{:else}
