@@ -400,6 +400,7 @@
 					<div class="p-4 space-y-4">
 						{#if aiAnalysis}
 							<div class="space-y-4">
+								<!-- Summary -->
 								<div>
 									<h4 class="font-semibold mb-2 flex items-center gap-2">
 										<Sparkles class="h-4 w-4 text-primary" />
@@ -408,25 +409,198 @@
 									<p class="text-sm text-muted-foreground">{aiAnalysis.summary}</p>
 								</div>
 
-								{#if aiAnalysis.keyIssues?.length > 0}
+								<!-- Bugs -->
+								{#if aiAnalysis.bugs?.length > 0}
 									<div>
-										<h4 class="font-semibold mb-2 text-destructive">Key Issues</h4>
-										<ul class="list-disc list-inside text-sm text-muted-foreground space-y-1">
-											{#each aiAnalysis.keyIssues as issue}
-												<li>{issue}</li>
+										<h4 class="font-semibold mb-2 text-destructive flex items-center gap-2">
+											<span>Bugs</span>
+											<Badge variant="destructive" class="text-xs">{aiAnalysis.bugs.length}</Badge>
+										</h4>
+										<div class="space-y-2">
+											{#each aiAnalysis.bugs as bug}
+												<button
+													type="button"
+													class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+													onclick={() => {
+														if (bug.line) {
+															const file = files.find((f) => f.type === 'file');
+															if (file) {
+																openFile(file);
+																onLineClick?.(bug.line);
+															}
+														}
+													}}
+												>
+													<div class="flex items-start gap-2">
+														<Badge
+															variant={bug.severity === 'critical' || bug.severity === 'high'
+																? 'destructive'
+																: 'outline'}
+															class="text-xs shrink-0"
+														>
+															{bug.severity}
+														</Badge>
+														<div class="flex-1 min-w-0">
+															<p class="text-sm font-medium">{bug.type}</p>
+															<p class="text-xs text-muted-foreground mt-1">{bug.description}</p>
+															{#if bug.line}
+																<p class="text-xs text-primary mt-1">Line {bug.line}</p>
+															{/if}
+														</div>
+													</div>
+												</button>
 											{/each}
-										</ul>
+										</div>
 									</div>
 								{/if}
 
+								<!-- Security Issues -->
+								{#if aiAnalysis.securityIssues?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 text-orange-500 flex items-center gap-2">
+											<span>Security Issues</span>
+											<Badge variant="secondary" class="text-xs">{aiAnalysis.securityIssues.length}</Badge>
+										</h4>
+										<div class="space-y-2">
+											{#each aiAnalysis.securityIssues as issue}
+												<div class="p-3 rounded-lg border bg-orange-50 dark:bg-orange-950/20">
+													<div class="flex items-start gap-2">
+														<Badge
+															variant={issue.severity === 'critical' || issue.severity === 'high'
+																? 'destructive'
+																: 'outline'}
+															class="text-xs shrink-0"
+														>
+															{issue.severity}
+														</Badge>
+														<div class="flex-1 min-w-0">
+															<p class="text-sm font-medium">{issue.type}</p>
+															<p class="text-xs text-muted-foreground mt-1">{issue.description}</p>
+															<p class="text-xs mt-1 font-medium">→ {issue.recommendation}</p>
+														</div>
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Suggestions -->
 								{#if aiAnalysis.suggestions?.length > 0}
 									<div>
-										<h4 class="font-semibold mb-2 text-blue-500">Suggestions</h4>
-										<ul class="list-disc list-inside text-sm text-muted-foreground space-y-1">
+										<h4 class="font-semibold mb-2 text-blue-500 flex items-center gap-2">
+											<span>Suggestions</span>
+											<Badge variant="secondary" class="text-xs">{aiAnalysis.suggestions.length}</Badge>
+										</h4>
+										<div class="space-y-2">
 											{#each aiAnalysis.suggestions as suggestion}
-												<li>{suggestion}</li>
+												<button
+													type="button"
+													class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+													onclick={() => {
+														if (suggestion.line) {
+															const file = files.find((f) => f.type === 'file');
+															if (file) {
+																openFile(file);
+																onLineClick?.(suggestion.line);
+															}
+														}
+													}}
+												>
+													<div class="flex items-start gap-2">
+														<Badge variant="outline" class="text-xs shrink-0 capitalize">
+															{suggestion.type}
+														</Badge>
+														<div class="flex-1 min-w-0">
+															<p class="text-sm font-medium">{suggestion.description}</p>
+															{#if suggestion.line}
+																<p class="text-xs text-primary mt-1">Line {suggestion.line}</p>
+															{/if}
+															<Badge variant="secondary" class="text-xs mt-1">{suggestion.impact} impact</Badge>
+														</div>
+													</div>
+												</button>
 											{/each}
-										</ul>
+										</div>
+									</div>
+								{/if}
+
+								<!-- Performance Notes -->
+								{#if aiAnalysis.performanceNotes?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 text-amber-500 flex items-center gap-2">
+											<span>Performance</span>
+											<Badge variant="secondary" class="text-xs">{aiAnalysis.performanceNotes.length}</Badge>
+										</h4>
+										<div class="space-y-2">
+											{#each aiAnalysis.performanceNotes as note}
+												<div class="p-3 rounded-lg border">
+													<div class="flex items-start gap-2">
+														<Badge variant="outline" class="text-xs shrink-0">
+															{note.impact}
+														</Badge>
+														<div class="flex-1 min-w-0">
+															<p class="text-sm">{note.description}</p>
+															<p class="text-xs text-muted-foreground mt-1">→ {note.recommendation}</p>
+														</div>
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Code Smells -->
+								{#if aiAnalysis.codeSmells?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 flex items-center gap-2">
+											<span>Code Smells</span>
+											<Badge variant="secondary" class="text-xs">{aiAnalysis.codeSmells.length}</Badge>
+										</h4>
+										<div class="space-y-2">
+											{#each aiAnalysis.codeSmells as smell}
+												<button
+													type="button"
+													class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+													onclick={() => {
+														if (smell.line) {
+															const file = files.find((f) => f.type === 'file');
+															if (file) {
+																openFile(file);
+																onLineClick?.(smell.line);
+															}
+														}
+													}}
+												>
+													<div class="flex-1 min-w-0">
+														<p class="text-sm font-medium">{smell.type}</p>
+														<p class="text-xs text-muted-foreground mt-1">{smell.description}</p>
+														{#if smell.line}
+															<p class="text-xs text-primary mt-1">Line {smell.line}</p>
+														{/if}
+													</div>
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Overall Score -->
+								{#if aiAnalysis.overallScore !== undefined}
+									<div class="pt-4 border-t">
+										<div class="flex items-center justify-between">
+											<span class="text-sm font-medium">Overall Score</span>
+											<Badge
+												variant={aiAnalysis.overallScore >= 80
+													? 'default'
+													: aiAnalysis.overallScore >= 60
+														? 'secondary'
+														: 'destructive'}
+												class="text-lg px-3 py-1"
+											>
+												{aiAnalysis.overallScore}/100
+											</Badge>
+										</div>
 									</div>
 								{/if}
 							</div>
