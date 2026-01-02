@@ -106,7 +106,7 @@
 		// Then try review.files array (legacy format)
 		if (review?.files && Array.isArray(review.files) && review.files.length > 0) {
 			return review.files.map((file: any) => ({
-				name: file.name || file.filename?.split('/').pop() || file.filename || 'unknown',
+				name: file.name || file.filename?.split('/').pop() || 'unknown',
 				path: file.path || file.filename || 'unknown',
 				type: 'file' as const,
 				content: file.content || file.diff || review.codeContent || '',
