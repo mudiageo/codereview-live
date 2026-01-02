@@ -310,12 +310,6 @@
 			: 'hidden lg:flex'} {sidebarOpen ? '' : 'lg:w-0 lg:overflow-hidden'}"
 		style={sidebarOpen ? `width: ${sidebarWidth}px` : ''}
 	>
-		<aside
-			class="flex flex-col border-r bg-muted/30 transition-all duration-200 {mobileDrawerOpen
-				? 'fixed inset-y-0 left-0 z-50 w-80'
-				: 'hidden lg:flex'} {sidebarOpen ? '' : 'lg:w-0 lg:overflow-hidden'}"
-			style={sidebarOpen ? `width: ${sidebarWidth}px` : ''}
-		>
 			<!-- Sidebar Tabs/Header -->
 			<div class="flex items-center justify-between border-b p-2 bg-muted/50">
 				<div class="flex items-center gap-1 rounded-lg bg-background border p-1">
@@ -641,7 +635,6 @@
 				{/if}
 			</div>
 		</main>
-	</aside>
 </div>
 
 <!-- Recursive File Tree Node Snippet -->

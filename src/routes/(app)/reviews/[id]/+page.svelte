@@ -92,6 +92,7 @@
 	// --- File Tree & Workspace Integration ---
 	// Convert review files to FileNode[] format expected by CodeReviewWorkspace
 	const fileNodes = $derived.by(() => {
+		// First try metadata.files (new format from imports)
 		if (
 			review?.metadata?.files &&
 			Array.isArray(review.metadata.files) &&
@@ -100,38 +101,37 @@
 			return review.metadata.files as FileNode[];
 		}
 
-		if (!review?.files || review.files.length === 0) {
-			// Fallback if no files array but we have codeContent
-			if (review?.codeContent) {
-				return [
-					{
-						name: 'code',
-						path: 'code',
-						type: 'file',
-						content: review.codeContent,
-						diff: review.codeContent, // Assuming content is diff if single file? Or handled by DiffViewer logic
-						language: review.language || 'text'
-					}
-				] as FileNode[];
-			}
-			return [];
+		// Then try review.files array (legacy format)
+		if (review?.files && Array.isArray(review.files) && review.files.length > 0) {
+			return review.files.map((file: any) => ({
+				name: file.name || file.filename?.split('/').pop() || file.filename || 'unknown',
+				path: file.path || file.filename || 'unknown',
+				type: 'file' as const,
+				content: file.content || file.diff || review.codeContent || '',
+				diff: file.diff || file.content || review.codeContent || '',
+				language: file.language || review.language || review.codeLanguage || 'text',
+				additions: file.additions || 0,
+				deletions: file.deletions || 0,
+				status: file.status
+			})) as FileNode[];
 		}
 
-		return review.files.map((file: any) => ({
-			name: file.filename.split('/').pop() || file.filename,
-			path: file.filename,
-			type: 'file',
-			// CodeReviewWorkspace handles content/diff logic internally based on mode
-			// But we need to supply it here.
-			// Assuming review.files contains 'content' or 'diff'
-			// Existing implementation used 'review.codeContent' mostly.
-			// Let's assume 'content' holds diff string if it's a diff view
-			content: file.content || review.codeContent,
-			diff: file.content || review.codeContent,
-			language: file.language || review.language || 'text',
-			additions: file.additions || 0,
-			deletions: file.deletions || 0
-		})) as FileNode[];
+		// Fallback: create a single file from codeContent if available
+		if (review?.codeContent && review.codeContent.trim()) {
+			return [
+				{
+					name: review.title || 'code',
+					path: review.title || 'code',
+					type: 'file',
+					content: review.codeContent,
+					diff: review.codeContent,
+					language: review.language || review.codeLanguage || 'text'
+				}
+			] as FileNode[];
+		}
+
+		// No files found
+		return [];
 	});
 
 	let activeFilePath = $state<string | undefined>(undefined);
@@ -441,19 +441,30 @@
 	$effect(() => {
 		if (review.videoUrl?.startsWith('client://')) {
 			const id = review.videoUrl.replace('client://', '');
-			createClientVideoStorage().then((storage) => {
-				storage.get(id).then((result) => {
+			createClientVideoStorage()
+				.then((storage) => {
+					return storage.get(id);
+				})
+				.then((result) => {
 					if (result) {
 						videoSrc = URL.createObjectURL(result.blob);
+					} else {
+						console.warn('Video not found in client storage:', id);
+						videoSrc = '';
 					}
+				})
+				.catch((error) => {
+					console.error('Failed to load video from client storage:', error);
+					videoSrc = '';
 				});
-			});
-		} else {
+		} else if (review.videoUrl) {
 			videoSrc = review.videoUrl;
+		} else {
+			videoSrc = '';
 		}
 
 		return () => {
-			if (videoSrc.startsWith('blob:')) {
+			if (videoSrc && videoSrc.startsWith('blob:')) {
 				URL.revokeObjectURL(videoSrc);
 			}
 		};
