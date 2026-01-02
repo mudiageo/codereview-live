@@ -129,7 +129,12 @@
     severity?: string;
     impact?: string;
     description: string;
-    item: any;
+    item: {
+      description: string;
+      suggestion?: string;
+      recommendation?: string;
+      [key: string]: any;
+    };
   }
 
   function getLineAnnotations(lineNumber: number): LineAnnotation[] {
@@ -184,13 +189,13 @@
     }
   }
 
-  function getAnnotationColor(annotation: LineAnnotation) {
-    if (annotation.severity) {
-      return annotation.severity === 'critical' || annotation.severity === 'high' 
-        ? 'text-destructive' 
-        : 'text-orange-500';
-    }
-    if (annotation.impact === 'high') return 'text-orange-500';
+  function getAnnotationColor(annotations: LineAnnotation[]) {
+    // Use the most severe annotation color
+    const hasCritical = annotations.some(a => a.severity === 'critical' || a.severity === 'high');
+    const hasHighImpact = annotations.some(a => a.impact === 'high');
+    
+    if (hasCritical) return 'text-destructive';
+    if (hasHighImpact) return 'text-orange-500';
     return 'text-blue-500';
   }
 </script>
@@ -263,7 +268,7 @@
                         <button
                           {...props}
                           type="button"
-                          class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity {getAnnotationColor(annotations[0])}"
+                          class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity {getAnnotationColor(annotations)}"
                         >
                           {#each annotations as annotation}
                             {@const Icon = getAnnotationIcon(annotation.type)}

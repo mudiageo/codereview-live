@@ -85,6 +85,15 @@
 
 	const languageDetector = new LanguageDetector();
 
+	// Helper function to navigate to a line in the first file
+	function navigateToLine(lineNumber: number) {
+		const file = files.find((f) => f.type === 'file');
+		if (file) {
+			openFile(file);
+			onLineClick?.(lineNumber);
+		}
+	}
+
 	// Build tree structure from flat file list
 	const fileTree = $derived(() => {
 		const tree: FileNode[] = [];
@@ -421,15 +430,7 @@
 												<button
 													type="button"
 													class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-													onclick={() => {
-														if (bug.line) {
-															const file = files.find((f) => f.type === 'file');
-															if (file) {
-																openFile(file);
-																onLineClick?.(bug.line);
-															}
-														}
-													}}
+													onclick={() => bug.line && navigateToLine(bug.line)}
 												>
 													<div class="flex items-start gap-2">
 														<Badge
@@ -497,15 +498,7 @@
 												<button
 													type="button"
 													class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-													onclick={() => {
-														if (suggestion.line) {
-															const file = files.find((f) => f.type === 'file');
-															if (file) {
-																openFile(file);
-																onLineClick?.(suggestion.line);
-															}
-														}
-													}}
+													onclick={() => suggestion.line && navigateToLine(suggestion.line)}
 												>
 													<div class="flex items-start gap-2">
 														<Badge variant="outline" class="text-xs shrink-0 capitalize">
@@ -562,15 +555,7 @@
 												<button
 													type="button"
 													class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-													onclick={() => {
-														if (smell.line) {
-															const file = files.find((f) => f.type === 'file');
-															if (file) {
-																openFile(file);
-																onLineClick?.(smell.line);
-															}
-														}
-													}}
+													onclick={() => smell.line && navigateToLine(smell.line)}
 												>
 													<div class="flex-1 min-w-0">
 														<p class="text-sm font-medium">{smell.type}</p>
