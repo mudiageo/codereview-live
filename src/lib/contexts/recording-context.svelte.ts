@@ -734,28 +734,31 @@ export class RecordingContext {
 					return;
 				}
 
-				// 1. Capture DOM to MASTER canvas
-				await this.captureDOMToCanvas();
+				// Use requestAnimationFrame to prevent blocking the main thread
+				requestAnimationFrame(async () => {
+					// 1. Capture DOM to MASTER canvas
+					await this.captureDOMToCanvas();
 
-				// 2. Draw webcam PIP to MASTER canvas
-				if (this.settings.includeWebcam && this.webcamVideo && this.webcamStream) {
-					this.drawWebcamPIP(this.masterCtx, this.masterCanvas);
-				}
+					// 2. Draw webcam PIP to MASTER canvas
+					if (this.settings.includeWebcam && this.webcamVideo && this.webcamStream) {
+						this.drawWebcamPIP(this.masterCtx, this.masterCanvas);
+					}
 
-				// 3. Draw annotation layer to MASTER canvas
-				if (
-					this.annotationCanvas &&
-					this.annotationCanvas.width > 0 &&
-					this.annotationCanvas.height > 0
-				) {
-					this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
-				}
+					// 3. Draw annotation layer to MASTER canvas
+					if (
+						this.annotationCanvas &&
+						this.annotationCanvas.width > 0 &&
+						this.annotationCanvas.height > 0
+					) {
+						this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
+					}
 
-				// 4. UI updates are handled by separate RAF loop for smoother performance
-				// No need to call syncToUICanvas() here
+					// 4. UI updates are handled by separate RAF loop for smoother performance
+					// No need to call syncToUICanvas() here
 
-				// Schedule next frame with drift correction
-				scheduleNextFrame();
+					// Schedule next frame with drift correction
+					scheduleNextFrame();
+				});
 			} catch (error) {
 				console.error('Error in capture frame:', error);
 				// Continue loop even on error to prevent recording from stopping
