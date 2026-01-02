@@ -83,6 +83,8 @@
 	let isSaving = $state(false);
 	let videoMode = $state<'view' | 'record' | 'upload'>('view');
 	let mediaRecorderRef: MediaRecorder;
+	let videoLoading = $state(false);
+	let videoError = $state<string | null>(null);
 
 	$effect(() => {
 		if (review.title) editTitle = review.title;
@@ -439,6 +441,9 @@
 
 	// --- Video Resolution ---
 	$effect(() => {
+		videoLoading = true;
+		videoError = null;
+		
 		if (review.videoUrl?.startsWith('client://')) {
 			const id = review.videoUrl.replace('client://', '');
 			createClientVideoStorage()
@@ -450,17 +455,24 @@
 						videoSrc = URL.createObjectURL(result.blob);
 					} else {
 						console.warn('Video not found in client storage:', id);
+						videoError = 'Video not found in local storage. It may have been deleted or not properly saved.';
 						videoSrc = '';
 					}
 				})
 				.catch((error) => {
 					console.error('Failed to load video from client storage:', error);
+					videoError = 'Failed to load video from local storage.';
 					videoSrc = '';
+				})
+				.finally(() => {
+					videoLoading = false;
 				});
 		} else if (review.videoUrl) {
 			videoSrc = review.videoUrl;
+			videoLoading = false;
 		} else {
 			videoSrc = '';
+			videoLoading = false;
 		}
 
 		return () => {
@@ -707,7 +719,16 @@
 						{/snippet}
 					</CodeReviewWorkspace>
 				{:else}
-					<div class="flex items-center justify-center h-full text-muted-foreground">No files</div>
+					<div class="flex items-center justify-center h-full text-muted-foreground">
+						<div class="text-center p-8">
+							<FileCode class="h-16 w-16 mx-auto mb-4 opacity-20" />
+							<p class="text-lg font-medium mb-2">No code files available</p>
+							<p class="text-sm">This review doesn't have any code files to display.</p>
+							{#if review.codeContent}
+								<p class="text-xs mt-2 text-muted-foreground">Note: Raw code content exists but couldn't be displayed as files.</p>
+							{/if}
+						</div>
+					</div>
 				{/if}
 			</div>
 
@@ -715,14 +736,35 @@
 			<div class="w-[400px] flex flex-col bg-background shrink-0">
 				<div class="border-b bg-black relative min-h-[225px] flex flex-col justify-center">
 					{#if videoMode === 'view'}
-						{#if videoSrc}
+						{#if videoLoading}
+							<div class="aspect-video bg-muted flex items-center justify-center">
+								<div class="text-center text-muted-foreground p-4">
+									<RefreshCw class="h-12 w-12 mx-auto mb-2 opacity-50 animate-spin" />
+									<p>Loading video...</p>
+								</div>
+							</div>
+						{:else if videoError}
+							<div class="aspect-video bg-muted flex items-center justify-center">
+								<div class="text-center text-destructive p-4">
+									<VideoIcon class="h-12 w-12 mx-auto mb-2 opacity-50" />
+									<p class="font-medium">Video unavailable</p>
+									<p class="text-xs mt-1 text-muted-foreground">{videoError}</p>
+									{#if review.status === 'draft'}
+										<div class="mt-4 flex gap-2 justify-center">
+											<Button variant="outline" size="sm" onclick={() => (videoMode = 'record')}>Record New</Button>
+											<Button variant="outline" size="sm" onclick={() => (videoMode = 'upload')}>Upload</Button>
+										</div>
+									{/if}
+								</div>
+							</div>
+						{:else if videoSrc}
 							<VideoPlayer src={videoSrc} onTimeUpdate={handleTimeUpdate} markers={videoMarkers} />
 						{:else}
 							<div class="aspect-video bg-muted flex items-center justify-center">
 								<div class="text-center text-muted-foreground p-4">
 									<VideoIcon class="h-12 w-12 mx-auto mb-2 opacity-50" />
 									<p>No video available</p>
-									{#if review.status === 'draft' && !videoSrc}
+									{#if review.status === 'draft'}
 										<div class="mt-4 flex gap-2 justify-center">
 											<Button variant="outline" size="sm" onclick={() => (videoMode = 'record')}>Record</Button>
 											<Button variant="outline" size="sm" onclick={() => (videoMode = 'upload')}>Upload</Button>
@@ -910,7 +952,18 @@
 				</TabsList>
 
 				<TabsContent value="video" class="flex-1 mt-0 bg-black flex items-center justify-center">
-					{#if videoSrc}
+					{#if videoLoading}
+						<div class="text-center text-muted-foreground">
+							<RefreshCw class="h-8 w-8 mx-auto mb-2 animate-spin" />
+							<p>Loading video...</p>
+						</div>
+					{:else if videoError}
+						<div class="text-center text-destructive p-4">
+							<VideoIcon class="h-8 w-8 mx-auto mb-2 opacity-50" />
+							<p class="font-medium">Video unavailable</p>
+							<p class="text-xs mt-1">{videoError}</p>
+						</div>
+					{:else if videoSrc}
 						<VideoPlayer src={videoSrc} onTimeUpdate={handleTimeUpdate} markers={videoMarkers} />
 					{:else}
 						<div class="text-center text-muted-foreground">
@@ -956,6 +1009,14 @@
 								{/if}
 							{/snippet}
 						</CodeReviewWorkspace>
+					{:else}
+						<div class="flex items-center justify-center h-full text-muted-foreground">
+							<div class="text-center p-6">
+								<FileCode class="h-12 w-12 mx-auto mb-3 opacity-20" />
+								<p class="font-medium mb-1">No code files</p>
+								<p class="text-xs">This review doesn't have any code to display.</p>
+							</div>
+						</div>
 					{/if}
 				</TabsContent>
 
