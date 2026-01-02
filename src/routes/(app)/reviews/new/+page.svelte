@@ -64,6 +64,29 @@
 	import { page } from '$app/state';
 	import type { CodeAnalysis } from '$lib/server/ai';
 
+	// Language detection map (shared constant)
+	const LANGUAGE_MAP: Record<string, string> = {
+		js: 'javascript',
+		jsx: 'javascript',
+		ts: 'typescript',
+		tsx: 'typescript',
+		py: 'python',
+		go: 'go',
+		rs: 'rust',
+		rb: 'ruby',
+		php: 'php',
+		java: 'java',
+		c: 'c',
+		cpp: 'cpp',
+		cs: 'csharp',
+		svelte: 'svelte',
+		vue: 'vue',
+		html: 'html',
+		css: 'css',
+		scss: 'scss',
+		md: 'markdown'
+	};
+
 	let step = $state(1);
 	let title = $state('');
 	let description = $state('');
@@ -248,34 +271,13 @@
 
 			// Detect language from extension
 			const ext = fileName.split('.').pop()?.toLowerCase();
-			const langMap: Record<string, string> = {
-				js: 'javascript',
-				jsx: 'javascript',
-				ts: 'typescript',
-				tsx: 'typescript',
-				py: 'python',
-				go: 'go',
-				rs: 'rust',
-				rb: 'ruby',
-				php: 'php',
-				java: 'java',
-				c: 'c',
-				cpp: 'cpp',
-				cs: 'csharp',
-				svelte: 'svelte',
-				vue: 'vue',
-				html: 'html',
-				css: 'css',
-				scss: 'scss',
-				md: 'markdown'
-			};
 
 			files.push({
 				name: fileName,
 				path: filePath,
 				type: 'file',
 				diff: hunk,
-				language: langMap[ext || ''] || 'text',
+				language: LANGUAGE_MAP[ext || ''] || 'text',
 				status,
 				additions,
 				deletions
@@ -440,29 +442,7 @@
 				} else {
 					// Treat as a new file addition
 					const ext = fileName.split('.').pop()?.toLowerCase();
-					const langMap: Record<string, string> = {
-						js: 'javascript',
-						jsx: 'javascript',
-						ts: 'typescript',
-						tsx: 'typescript',
-						py: 'python',
-						go: 'go',
-						rs: 'rust',
-						rb: 'ruby',
-						php: 'php',
-						java: 'java',
-						c: 'c',
-						cpp: 'cpp',
-						cs: 'csharp',
-						svelte: 'svelte',
-						vue: 'vue',
-						html: 'html',
-						css: 'css',
-						scss: 'scss',
-						md: 'markdown'
-					};
-
-					const detectedLanguage = langMap[ext || ''] || 'text';
+					const detectedLanguage = LANGUAGE_MAP[ext || ''] || 'text';
 					const lines = text.split('\n');
 
 					// Create a diff-like format for the file (all additions)
@@ -503,9 +483,12 @@
 
 				// Combine all content for code field (for backward compatibility)
 				code = processedFiles.map(f => f.diff || f.content || '').join('\n\n');
-				language = processedFiles.length === 1 && !filesArray[0].name.endsWith('.diff') && !filesArray[0].name.endsWith('.patch') 
-					? processedFiles[0].language || 'text'
-					: 'diff';
+				
+				// Determine language: use file language if single non-diff file, else 'diff'
+				const isSingleNonDiffFile = processedFiles.length === 1 && 
+					!filesArray[0].name.endsWith('.diff') && 
+					!filesArray[0].name.endsWith('.patch');
+				language = isSingleNonDiffFile ? (processedFiles[0].language || 'text') : 'diff';
 
 				title = filesArray.length === 1 ? `Imported from ${filesArray[0].name}` : `Imported ${filesArray.length} files`;
 				description = `${processedFiles.length} files, ${totalAdditions} additions, ${totalDeletions} deletions`;
@@ -1274,9 +1257,7 @@
 										</div>
 										{#if uploadedMetadata?.duration}
 											<p class="text-xs text-muted-foreground">
-												Duration: {Math.floor(uploadedMetadata.duration / 60)}:{(uploadedMetadata.duration % 60)
-													.toString()
-													.padStart(2, '0')}
+												Duration: {formatRecordingTime(Math.round(uploadedMetadata.duration))}
 											</p>
 										{/if}
 									</div>
