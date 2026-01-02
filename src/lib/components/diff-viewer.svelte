@@ -12,13 +12,14 @@
   import Shield from '@lucide/svelte/icons/shield';
   import Zap from '@lucide/svelte/icons/zap';
   import { toast } from 'svelte-sonner';
+  import type { CodeAnalysis } from '$lib/server/ai';
 
   interface Props {
     diff: string;
     filename?: string;
     viewMode?: 'unified' | 'split';
     onLineClick?: (lineNumber: number) => void;
-    aiAnalysis?: any;
+    aiAnalysis?: CodeAnalysis;
   }
 
   let { diff, filename = 'changes.diff', viewMode = $bindable('unified'), onLineClick, aiAnalysis }: Props = $props();
@@ -123,40 +124,42 @@
   }
 
   // Get AI analysis items for a specific line
-  function getLineAnnotations(lineNumber: number) {
+  interface LineAnnotation {
+    type: 'bug' | 'security' | 'suggestion' | 'performance' | 'smell';
+    severity?: string;
+    impact?: string;
+    description: string;
+    item: any;
+  }
+
+  function getLineAnnotations(lineNumber: number): LineAnnotation[] {
     if (!aiAnalysis) return [];
     
-    const annotations: Array<{
-      type: 'bug' | 'security' | 'suggestion' | 'performance' | 'smell';
-      severity?: string;
-      impact?: string;
-      description: string;
-      item: any;
-    }> = [];
+    const annotations: LineAnnotation[] = [];
 
     // Check bugs
-    aiAnalysis.bugs?.forEach((bug: any) => {
+    aiAnalysis.bugs?.forEach((bug) => {
       if (bug.line === lineNumber) {
         annotations.push({ type: 'bug', severity: bug.severity, description: bug.description, item: bug });
       }
     });
 
     // Check security issues (may not have line numbers)
-    aiAnalysis.securityIssues?.forEach((issue: any) => {
-      if (issue.line === lineNumber) {
+    aiAnalysis.securityIssues?.forEach((issue) => {
+      if ('line' in issue && issue.line === lineNumber) {
         annotations.push({ type: 'security', severity: issue.severity, description: issue.description, item: issue });
       }
     });
 
     // Check suggestions
-    aiAnalysis.suggestions?.forEach((suggestion: any) => {
+    aiAnalysis.suggestions?.forEach((suggestion) => {
       if (suggestion.line === lineNumber) {
         annotations.push({ type: 'suggestion', impact: suggestion.impact, description: suggestion.description, item: suggestion });
       }
     });
 
     // Check code smells
-    aiAnalysis.codeSmells?.forEach((smell: any) => {
+    aiAnalysis.codeSmells?.forEach((smell) => {
       if (smell.line === lineNumber) {
         annotations.push({ type: 'smell', description: smell.description, item: smell });
       }
@@ -181,7 +184,7 @@
     }
   }
 
-  function getAnnotationColor(annotation: any) {
+  function getAnnotationColor(annotation: LineAnnotation) {
     if (annotation.severity) {
       return annotation.severity === 'critical' || annotation.severity === 'high' 
         ? 'text-destructive' 
