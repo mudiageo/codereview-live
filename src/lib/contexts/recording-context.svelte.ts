@@ -465,8 +465,8 @@ export class RecordingContext {
 				this.masterCtx.drawImage(this.annotationCanvas, 0, 0);
 			}
 
-			// 4. Sync to UI canvas if available (User Preview)
-			this.syncToUICanvas();
+			// 4. UI updates are handled by separate RAF loop for consistency
+			// No need to call syncToUICanvas() here
 
 			// Loop
 			this.animationFrameId = requestAnimationFrame(drawFrame);
