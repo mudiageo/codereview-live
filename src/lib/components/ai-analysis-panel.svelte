@@ -15,6 +15,7 @@
 	import Copy from '@lucide/svelte/icons/copy';
 	import Check from '@lucide/svelte/icons/check';
 	import { toast } from 'svelte-sonner';
+	import { settingsStore } from '$lib/stores/index.svelte';
 	import type {
 		CodeAnalysis,
 		BugReport,
@@ -32,6 +33,11 @@
 	}
 
 	let { analysis, loading = false, onAnalyze, code }: Props = $props();
+	
+	// Check if AI features are enabled
+	const aiEnabled = $derived(settingsStore.settings.aiEnabled);
+	const detectSmells = $derived(settingsStore.settings.detectSmells);
+	const suggestImprovements = $derived(settingsStore.settings.suggestImprovements);
 
 	let activeTab = $state('overview');
 	let expandedItems = $state<Set<string>>(new Set());
@@ -94,6 +100,21 @@
 	);
 </script>
 
+{#if !aiEnabled}
+	<!-- AI Features Disabled -->
+	<Card class="border-dashed">
+		<CardContent class="py-8 text-center">
+			<Sparkles class="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+			<h3 class="font-semibold mb-2">AI Features Disabled</h3>
+			<p class="text-sm text-muted-foreground mb-4">
+				Enable AI features in settings to use code analysis
+			</p>
+			<Button variant="outline" onclick={() => window.location.href = '/settings/ai'}>
+				Go to AI Settings
+			</Button>
+		</CardContent>
+	</Card>
+{:else}
 <div class="space-y-4">
 	{#if loading}
 		<!-- Loading State -->
@@ -446,3 +467,4 @@
 		</Card>
 	{/if}
 </div>
+{/if}
