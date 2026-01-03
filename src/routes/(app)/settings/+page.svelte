@@ -18,6 +18,8 @@
   let saving = $state(false);
   let fileInput: HTMLInputElement;
   
+  const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+  
   async function handleSave() {
     saving = true;
     try {
@@ -45,7 +47,7 @@
     }
     
     // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
       toast.error('File size must be less than 5MB');
       return;
     }
@@ -61,7 +63,12 @@
   
   async function handleDisconnect(provider: string) {
     try {
-      // TODO: Implement actual disconnect logic
+      // TODO: Implement OAuth account disconnection
+      // This should:
+      // 1. Call DELETE /api/oauth/disconnect with account ID
+      // 2. Revoke OAuth tokens with the provider
+      // 3. Remove account from database
+      // 4. Update UI to reflect disconnection
       await new Promise(resolve => setTimeout(resolve, 500));
       toast.success(`${provider} account disconnected`);
     } catch (error) {

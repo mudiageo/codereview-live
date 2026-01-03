@@ -39,6 +39,8 @@
     { id: '1', date: 'Dec 1, 2024', amount: '$20.00', status: 'paid' },
     { id: '2', date: 'Nov 1, 2024', amount: '$20.00', status: 'paid' },
   ];
+  
+  const PAYMENT_PROVIDER_MESSAGE = 'Payment method setup will redirect to Stripe';
 </script>
 
 <div class="space-y-6">
@@ -164,7 +166,7 @@
         </div>
         <Button 
           variant="outline"
-          onclick={() => toast.info('Payment method setup will redirect to Stripe')}
+          onclick={() => toast.info(PAYMENT_PROVIDER_MESSAGE)}
         >
           Add Payment Method
         </Button>
