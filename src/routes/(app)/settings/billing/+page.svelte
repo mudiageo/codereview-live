@@ -162,7 +162,12 @@
             <p class="text-sm text-muted-foreground">Add a payment method to upgrade</p>
           </div>
         </div>
-        <Button variant="outline">Add Payment Method</Button>
+        <Button 
+          variant="outline"
+          onclick={() => toast.info('Payment method setup will redirect to Stripe')}
+        >
+          Add Payment Method
+        </Button>
       </div>
     </CardContent>
   </Card>
@@ -183,7 +188,11 @@
               </div>
               <div class="flex items-center gap-4">
                 <span class="font-medium">{invoice.amount}</span>
-                <Button variant="ghost" size="icon">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onclick={() => toast.info(`Downloading invoice for ${invoice.date}`)}
+                >
                   <Download class="h-4 w-4" />
                 </Button>
               </div>

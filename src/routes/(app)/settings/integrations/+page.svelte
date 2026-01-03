@@ -86,11 +86,11 @@
 	}
 
 	function isConnected(provider: string) {
-		return connectedAccounts.some((acc) => acc.providerId === provider);
+		return connectedAccounts.some((acc) => acc.provider === provider);
 	}
 
 	function getConnectedAccount(provider: string) {
-		return connectedAccounts.find((acc) => acc.providerId === provider);
+		return connectedAccounts.find((acc) => acc.provider === provider);
 	}
 
 	const providers = [
@@ -173,7 +173,7 @@
 									<p class="font-medium">{account.username}</p>
 									<p class="text-sm text-muted-foreground">{account.email}</p>
 									<p class="text-xs text-muted-foreground">
-										Connectedf {new Date(account.connected_at).toLocaleDateString()}
+										Connected on {new Date(account.connected_at).toLocaleDateString()}
 									</p>
 								</div>
 							</div>

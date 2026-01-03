@@ -135,7 +135,12 @@
         </div>
       </div>
       
-      <Button variant="outline" size="sm" class="gap-2">
+      <Button 
+        variant="outline" 
+        size="sm" 
+        class="gap-2"
+        onclick={() => window.open('https://aistudio.google.com/app/apikey', '_blank')}
+      >
         <ExternalLink class="h-4 w-4" />
         Get API Key
       </Button>
