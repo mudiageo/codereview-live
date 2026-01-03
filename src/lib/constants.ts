@@ -26,6 +26,12 @@ export const VIDEO = {
   DEFAULT_SIZE_MB: 100,
 } as const;
 
+// File size conversion
+export const FILE_SIZE = {
+  BYTES_PER_MB: 1024 * 1024,
+  BYTES_PER_GB: 1024 * 1024 * 1024,
+} as const;
+
 // API endpoints (for future use)
 export const API = {
   GOOGLE_AI_STUDIO: 'https://aistudio.google.com/app/apikey',
