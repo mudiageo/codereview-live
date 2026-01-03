@@ -7,6 +7,7 @@
 
 import { getContext, setContext } from 'svelte';
 import { snapdom } from '@zumer/snapdom';
+import { settingsStore } from '$lib/stores/index.svelte';
 
 // Constants
 const CAPTURE_FPS = 10; // Reduced from 30 - DOM capture is expensive, 10fps is sufficient for screen recording
@@ -50,18 +51,22 @@ export interface RecordingSettings {
 	countdownDuration: number;
 }
 
-const DEFAULT_SETTINGS: RecordingSettings = {
-	selectedSource: 'workspace',
-	includeWebcam: false,
-	includeSystemAudio: true,
-	includeMicAudio: true,
-	webcamPosition: 'bottom-right',
-	webcamSize: 'medium',
-	webcamShape: 'circle',
-	maxDuration: 600,
-	quality: 'high',
-	countdownDuration: 3
-};
+// Get default settings from settingsStore
+function getDefaultSettings(): RecordingSettings {
+	const globalSettings = settingsStore.settings;
+	return {
+		selectedSource: 'workspace',
+		includeWebcam: false,
+		includeSystemAudio: globalSettings.includeAudio,
+		includeMicAudio: globalSettings.includeAudio,
+		webcamPosition: 'bottom-right',
+		webcamSize: 'medium',
+		webcamShape: 'circle',
+		maxDuration: 600,
+		quality: globalSettings.videoQuality,
+		countdownDuration: globalSettings.countdown
+	};
+}
 
 export class RecordingContext {
 	// ============= Recording State (reactive) =============
@@ -77,8 +82,8 @@ export class RecordingContext {
 	videoDuration = $state(0);
 	showPreviewModal = $state(false);
 
-	// Settings (reactive)
-	settings = $state<RecordingSettings>({ ...DEFAULT_SETTINGS });
+	// Settings (reactive) - initialize from global settings
+	settings = $state<RecordingSettings>(getDefaultSettings());
 
 	// Annotation UI State (reactive)
 	currentTool = $state<AnnotationTool>({ type: 'pen', color: '#ff0000', strokeWidth: 3 });

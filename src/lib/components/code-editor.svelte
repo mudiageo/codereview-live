@@ -81,12 +81,13 @@
 			onscroll={readonly ? onscroll : undefined}
 		>
 			{#if readonly}
-				<pre class="p-4 font-mono text-sm leading-6"><code>{value}</code></pre>
+				<pre class="p-4 font-mono leading-6" style="font-size: var(--editor-font-size);"><code>{value}</code></pre>
 			{:else}
 				<Textarea
 					bind:ref={textareaRef}
 					bind:value
-					class="min-h-[400px] resize-none border-0 bg-transparent font-mono text-sm focus-visible:ring-0"
+					class="min-h-[400px] resize-none border-0 bg-transparent font-mono focus-visible:ring-0"
+					style="font-size: var(--editor-font-size); line-height: 1.5;"
 					placeholder="Paste your code here..."
 					{onscroll}
 				/>

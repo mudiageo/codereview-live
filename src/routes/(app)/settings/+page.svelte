@@ -10,12 +10,14 @@
   import Github from '@lucide/svelte/icons/github';
   import Chrome from '@lucide/svelte/icons/chrome';
   import { toast } from 'svelte-sonner';
+  import { MAX_AVATAR_SIZE_BYTES, ALLOWED_IMAGE_TYPES } from '$lib/constants';
   
   let name = $state('John Doe');
   let email = $state('john@example.com');
   let bio = $state('');
   let avatar = $state('');
   let saving = $state(false);
+  let fileInput: HTMLInputElement;
   
   async function handleSave() {
     saving = true;
@@ -24,6 +26,52 @@
       toast.success('Profile updated successfully');
     } finally {
       saving = false;
+    }
+  }
+  
+  function handlePhotoClick() {
+    fileInput?.click();
+  }
+  
+  function handleFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    
+    // Validate file size (5MB)
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      avatar = e.target?.result as string;
+      toast.success('Photo updated. Click "Save Changes" to persist.');
+    };
+    reader.readAsDataURL(file);
+  }
+  
+  async function handleDisconnect(provider: string) {
+    try {
+      // TODO: Implement OAuth account disconnection
+      // This should:
+      // 1. Call DELETE /api/oauth/disconnect with account ID
+      // 2. Revoke OAuth tokens with the provider
+      // 3. Remove account from database
+      // 4. Update UI to reflect disconnection
+      await new Promise(resolve => setTimeout(resolve, 500));
+      toast.success(`${provider} account disconnected`);
+    } catch (error) {
+      toast.error(`Failed to disconnect ${provider}`);
     }
   }
   
@@ -51,7 +99,14 @@
           <AvatarFallback class="text-2xl">{getInitials(name)}</AvatarFallback>
         </Avatar>
         <div class="space-y-2">
-          <Button variant="outline" size="sm" class="gap-2">
+          <input
+            type="file"
+            accept="image/*"
+            bind:this={fileInput}
+            onchange={handleFileChange}
+            class="hidden"
+          />
+          <Button variant="outline" size="sm" class="gap-2" onclick={handlePhotoClick}>
             <Camera class="h-4 w-4" />
             Change Photo
           </Button>
@@ -102,7 +157,7 @@
             <p class="text-sm text-muted-foreground">@johndoe</p>
           </div>
         </div>
-        <Button variant="outline" size="sm">Disconnect</Button>
+        <Button variant="outline" size="sm" onclick={() => handleDisconnect('GitHub')}>Disconnect</Button>
       </div>
       
       <div class="flex items-center justify-between p-3 border rounded-lg">
@@ -113,7 +168,7 @@
             <p class="text-sm text-muted-foreground">john@example.com</p>
           </div>
         </div>
-        <Button variant="outline" size="sm">Disconnect</Button>
+        <Button variant="outline" size="sm" onclick={() => handleDisconnect('Google')}>Disconnect</Button>
       </div>
     </CardContent>
   </Card>

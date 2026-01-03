@@ -106,17 +106,20 @@
 
 				<div class="space-y-2">
 					<Label for="role">Role</Label>
-					<Select bind:value={newMemberRole} class="w-full rounded-md border p-2">
-					<SelectTrigger>
-            {newMemberRole || ""}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="member">Member</SelectItem>
-						<SelectItem value="admin">Admin</SelectItem>
-						<SelectItem value="viewer">Viewer</SelectItem>
-          </SelectContent>
+					<Select 
+						type="single" 
+						value={newMemberRole} 
+						onValueChange={(value) => newMemberRole = value || 'member'}
+					>
+						<SelectTrigger>
+							{newMemberRole || ""}
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="member">Member</SelectItem>
+							<SelectItem value="admin">Admin</SelectItem>
+							<SelectItem value="viewer">Viewer</SelectItem>
+						</SelectContent>
 					</Select>
- 
 				</div>
 			</div>
 

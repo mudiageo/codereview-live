@@ -5,6 +5,8 @@
 	import { toast } from 'svelte-sonner';
 	import Upload from '@lucide/svelte/icons/upload';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
+	import { settingsStore } from '$lib/stores/index.svelte';
+	import { FILE_SIZE } from '$lib/constants';
 
 	interface Props {
 		reviewId: string;
@@ -19,6 +21,23 @@
 	let uploadComplete = $state(false);
 	const uploadVideo = uploadVideoForm.for('uploader');
 	let uploadButton: HTMLButtonElement | null = $state(null);
+	
+	// Get max video size from settings
+	const maxVideoSizeMB = $derived(settingsStore.settings.maxVideoSize);
+	const maxVideoSizeBytes = $derived(maxVideoSizeMB * FILE_SIZE.BYTES_PER_MB);
+	
+	/**
+	 * Validates if a file size is within the allowed maximum
+	 */
+	function validateFileSize(file: File, maxBytes: number, maxMB: number): { valid: boolean; error?: string } {
+		if (file.size > maxBytes) {
+			return {
+				valid: false,
+				error: `File size exceeds maximum of ${maxMB}MB`
+			};
+		}
+		return { valid: true };
+	}
 
 	async function handleUpload() {
 		if (!videoFile) return;
@@ -56,7 +75,17 @@
 	function handleFileSelect(e: Event) {
 		const input = e.target as HTMLInputElement;
 		if (input.files?.length) {
-			videoFile = input.files[0];
+			const file = input.files[0];
+			
+			// Validate file size against settings
+			const validation = validateFileSize(file, maxVideoSizeBytes, maxVideoSizeMB);
+			if (!validation.valid) {
+				toast.error(validation.error!);
+				input.value = ''; // Clear the input
+				return;
+			}
+			
+			videoFile = file;
 			uploadComplete = false;
 			progress = 0;
 		}
@@ -74,7 +103,7 @@
 				<p class="mb-2 text-sm text-muted-foreground">
 					<span class="font-semibold">Click to upload</span> or drag and drop
 				</p>
-				<p class="text-xs text-muted-foreground">MP4, WebM or MOV (MAX. 500MB)</p>
+				<p class="text-xs text-muted-foreground">MP4, WebM or MOV (MAX. {maxVideoSizeMB}MB)</p>
 			</div>
 			<input
 				id="video-upload"

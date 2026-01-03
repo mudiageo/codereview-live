@@ -11,6 +11,7 @@
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import { settingsStore, aiUsageStore, subscriptionsStore } from '$lib/stores/index.svelte';
   import { getLimit } from '$lib/config';
+  import { API } from '$lib/constants';
   
   // Load stores
   $effect(() => {
@@ -135,7 +136,12 @@
         </div>
       </div>
       
-      <Button variant="outline" size="sm" class="gap-2">
+      <Button 
+        variant="outline" 
+        size="sm" 
+        class="gap-2"
+        onclick={() => window.open(API.GOOGLE_AI_STUDIO, '_blank', 'noopener,noreferrer')}
+      >
         <ExternalLink class="h-4 w-4" />
         Get API Key
       </Button>

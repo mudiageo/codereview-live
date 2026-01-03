@@ -39,6 +39,8 @@
     { id: '1', date: 'Dec 1, 2024', amount: '$20.00', status: 'paid' },
     { id: '2', date: 'Nov 1, 2024', amount: '$20.00', status: 'paid' },
   ];
+  
+  const PAYMENT_PROVIDER_MESSAGE = 'Payment method setup will redirect to Stripe';
 </script>
 
 <div class="space-y-6">
@@ -162,7 +164,12 @@
             <p class="text-sm text-muted-foreground">Add a payment method to upgrade</p>
           </div>
         </div>
-        <Button variant="outline">Add Payment Method</Button>
+        <Button 
+          variant="outline"
+          onclick={() => toast.info(PAYMENT_PROVIDER_MESSAGE)}
+        >
+          Add Payment Method
+        </Button>
       </div>
     </CardContent>
   </Card>
@@ -183,7 +190,11 @@
               </div>
               <div class="flex items-center gap-4">
                 <span class="font-medium">{invoice.amount}</span>
-                <Button variant="ghost" size="icon">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onclick={() => toast.info(`Downloading invoice for ${invoice.date}`)}
+                >
                   <Download class="h-4 w-4" />
                 </Button>
               </div>

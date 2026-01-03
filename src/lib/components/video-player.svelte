@@ -7,14 +7,17 @@
   import VolumeX from '@lucide/svelte/icons/volume-x';
   import Maximize from '@lucide/svelte/icons/maximize';
   import Settings from '@lucide/svelte/icons/settings';
+  import { settingsStore } from '$lib/stores/index.svelte';
+  import { onMount } from 'svelte';
   
   interface Props {
     src: string;
     onTimeUpdate?: (time: number) => void;
     markers?: Array<{ time: number; label?: string }>;
+    autoplay?: boolean;
   }
   
-  let { src, onTimeUpdate, markers = [] }: Props = $props();
+  let { src, onTimeUpdate, markers = [], autoplay }: Props = $props();
   
   let videoElement = $state<HTMLVideoElement>();
   let isPlaying = $state(false);
@@ -25,6 +28,22 @@
   let playbackRate = $state(1);
   let showControls = $state(true);
   let controlsTimeout: number;
+  
+  // Apply default playback speed from settings on mount
+  onMount(() => {
+    if (videoElement) {
+      playbackRate = settingsStore.settings.defaultSpeed;
+      videoElement.playbackRate = playbackRate;
+      
+      // Handle autoplay from settings
+      const shouldAutoplay = autoplay ?? settingsStore.settings.autoplay;
+      if (shouldAutoplay) {
+        videoElement.play().catch(() => {
+          // Autoplay was prevented, user interaction required
+        });
+      }
+    }
+  });
   
   function togglePlay() {
     if (!videoElement) return;
