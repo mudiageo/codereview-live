@@ -11,6 +11,7 @@
   import Monitor from '@lucide/svelte/icons/monitor';
   import { resetMode, setMode } from "mode-watcher";
   import { settingsStore } from '$lib/stores/index.svelte';
+  import { EDITOR } from '$lib/constants';
 
   const settings = $derived(settingsStore.settings);
   let saving = $state(false);
@@ -98,8 +99,8 @@
           <Slider 
             value={[settings.fontSize]} 
             onValueChange={(value) => updateSetting('fontSize', value[0])}
-            max={20} 
-            min={10} 
+            max={EDITOR.MAX_FONT_SIZE} 
+            min={EDITOR.MIN_FONT_SIZE} 
             step={1} 
             class="flex-1" 
           />

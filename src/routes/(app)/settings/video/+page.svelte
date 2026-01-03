@@ -14,6 +14,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { toast } from 'svelte-sonner';
 	import { settingsStore } from '$lib/stores/index.svelte';
+	import { VIDEO } from '$lib/constants';
 	import {
 		detectAvailableBackends,
 		createClientVideoStorage,
@@ -314,8 +315,8 @@
 					<Slider
 						value={[settings.maxVideoSize]}
 						onValueChange={(value) => updateSetting('maxVideoSize', value[0])}
-						max={500}
-						min={50}
+						max={VIDEO.MAX_SIZE_MB}
+						min={VIDEO.MIN_SIZE_MB}
 						step={10}
 						class="flex-1"
 					/>

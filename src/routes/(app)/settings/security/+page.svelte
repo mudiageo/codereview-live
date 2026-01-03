@@ -37,7 +37,13 @@
 
 		isChangingPassword = true;
 		try {
-			// TODO: Call API to change password
+			// TODO: Implement password change API call
+			// This should:
+			// 1. Call POST /api/auth/change-password with current and new password
+			// 2. Verify current password is correct
+			// 3. Hash and store new password securely
+			// 4. Invalidate existing sessions (optional)
+			// 5. Send confirmation email to user
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 			toast.success('Password changed successfully');
 			currentPassword = '';
@@ -53,7 +59,16 @@
 	async function handleSetup2FA() {
 		isSettingUp2FA = true;
 		try {
-			// TODO: Call API to setup 2FA
+			// TODO: Implement 2FA setup/disable API call
+			// For enabling 2FA:
+			// 1. Call POST /api/auth/2fa/setup to generate secret
+			// 2. Display QR code for user to scan with authenticator app
+			// 3. Prompt user to enter verification code
+			// 4. Call POST /api/auth/2fa/verify to confirm setup
+			// 5. Store backup codes for account recovery
+			// For disabling 2FA:
+			// 1. Call DELETE /api/auth/2fa with verification code
+			// 2. Remove 2FA secret from user account
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 			twoFactorEnabled = !twoFactorEnabled;
 			toast.success(twoFactorEnabled ? '2FA enabled' : '2FA disabled');
@@ -71,7 +86,15 @@
 		}
 
 		try {
-			// TODO: Call API to delete account
+			// TODO: Implement account deletion API call
+			// This should:
+			// 1. Call DELETE /api/auth/account with confirmation
+			// 2. Delete all user data (reviews, projects, comments)
+			// 3. Cancel active subscriptions
+			// 4. Revoke all OAuth tokens
+			// 5. Send confirmation email
+			// 6. Log out user and redirect to homepage
+			// 7. Consider soft delete with grace period for recovery
 			toast.success('Account deletion initiated. You will receive a confirmation email.');
 			showDeleteConfirm = false;
 		} catch (error) {
