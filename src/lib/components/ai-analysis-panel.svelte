@@ -16,6 +16,7 @@
 	import Check from '@lucide/svelte/icons/check';
 	import { toast } from 'svelte-sonner';
 	import { settingsStore } from '$lib/stores/index.svelte';
+	import { goto } from '$app/navigation';
 	import type {
 		CodeAnalysis,
 		BugReport,
@@ -109,7 +110,7 @@
 			<p class="text-sm text-muted-foreground mb-4">
 				Enable AI features in settings to use code analysis
 			</p>
-			<Button variant="outline" onclick={() => window.location.href = '/settings/ai'}>
+			<Button variant="outline" onclick={() => goto('/settings/ai')}>
 				Go to AI Settings
 			</Button>
 		</CardContent>

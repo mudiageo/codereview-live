@@ -10,6 +10,7 @@
   import Github from '@lucide/svelte/icons/github';
   import Chrome from '@lucide/svelte/icons/chrome';
   import { toast } from 'svelte-sonner';
+  import { MAX_AVATAR_SIZE_BYTES, ALLOWED_IMAGE_TYPES } from '$lib/constants';
   
   let name = $state('John Doe');
   let email = $state('john@example.com');
@@ -17,8 +18,6 @@
   let avatar = $state('');
   let saving = $state(false);
   let fileInput: HTMLInputElement;
-  
-  const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
   
   async function handleSave() {
     saving = true;
