@@ -74,7 +74,7 @@
 
 	let currentTime = $state(0);
 	let newComment = $state('');
-	let activeTab = $state('diff');
+	let activeTab = $state('video');
 	let showP2PShare = $state(false);
 	let videoSrc = $state('');
 	let isEditing = $state(false);
