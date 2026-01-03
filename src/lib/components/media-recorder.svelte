@@ -134,9 +134,9 @@
 	function handleSaveVideo(metadata: any) {
 		ctx.showPreviewModal = false;
 		onUploadComplete?.({
-			videoUrl: ctx.recordedVideoUrl,
-			thumbnailUrl: ctx.thumbnail,
-			metadata
+			videoUrl: metadata.videoUrl, // Use videoUrl from metadata, not ctx.recordedVideoUrl
+			thumbnailUrl: metadata.thumbnailUrl || ctx.thumbnail,
+			metadata: metadata.metadata || metadata // Pass through the metadata object
 		});
 	}
 </script>
