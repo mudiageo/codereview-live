@@ -29,12 +29,11 @@
 	/**
 	 * Validates if a file size is within the allowed maximum
 	 */
-	function validateFileSize(file: File, maxSizeMB: number): { valid: boolean; error?: string } {
-		const maxBytes = maxSizeMB * FILE_SIZE.BYTES_PER_MB;
+	function validateFileSize(file: File, maxBytes: number, maxMB: number): { valid: boolean; error?: string } {
 		if (file.size > maxBytes) {
 			return {
 				valid: false,
-				error: `File size exceeds maximum of ${maxSizeMB}MB`
+				error: `File size exceeds maximum of ${maxMB}MB`
 			};
 		}
 		return { valid: true };
@@ -79,7 +78,7 @@
 			const file = input.files[0];
 			
 			// Validate file size against settings
-			const validation = validateFileSize(file, maxVideoSizeMB);
+			const validation = validateFileSize(file, maxVideoSizeBytes, maxVideoSizeMB);
 			if (!validation.valid) {
 				toast.error(validation.error!);
 				input.value = ''; // Clear the input
