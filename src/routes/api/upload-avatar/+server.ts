@@ -8,7 +8,9 @@ export const POST: RequestHandler = async ({ request }) => {
   try {
     // Verify user is authenticated
     const user = await getUser();
-    
+    if (!user) {
+      return json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const formData = await request.formData();
     const avatarEntry = formData.get('avatar');
     if (!(avatarEntry instanceof File)) {
