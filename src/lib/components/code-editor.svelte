@@ -87,7 +87,7 @@
 			onscroll={readonly ? onscroll : undefined}
 		>
 			{#if readonly}
-				<pre class="p-4 font-mono leading-6" style="font-size: var(--editor-font-size); white-space: {wordWrap === 'off' ? 'pre' : 'pre-wrap'}; tab-size: {tabSize};"><code>{value}</code></pre>
+				<pre class="p-4 font-mono leading-6" style="font-size: var(--editor-font-size); white-space: {wordWrap === 'off' ? 'pre' : 'pre-wrap'}; tab-size: {Number(tabSize) || 4};"><code>{value}</code></pre>
 			{:else}
 				<Textarea
 					bind:ref={textareaRef}
