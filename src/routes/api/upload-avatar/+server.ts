@@ -28,7 +28,16 @@ export const POST: RequestHandler = async ({ request }) => {
     }
     
     // Generate unique filename
-    const ext = avatar.name.split('.').pop();
+    const extensionMap: { [key: string]: string } = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+    };
+    const ext = extensionMap[avatar.type];
+    if (!ext) {
+      return json({ error: 'Unsupported image type' }, { status: 400 });
+    }
     const filename = `${user.id}-${crypto.randomUUID()}.${ext}`;
     
     // Ensure upload directory exists
