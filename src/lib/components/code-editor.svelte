@@ -4,6 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import Copy from '@lucide/svelte/icons/copy';
 	import Check from '@lucide/svelte/icons/check';
+	import { settingsStore } from '$lib/stores/index.svelte';
 
 	interface Props {
 		value?: string;
@@ -18,10 +19,15 @@
 		value = $bindable(''),
 		language = 'javascript',
 		readonly = false,
-		showLineNumbers = true,
+		showLineNumbers,
 		class: className = '',
 		onscroll
 	}: Props = $props();
+	
+	// Use settings for line numbers if not explicitly provided
+	const shouldShowLineNumbers = $derived(showLineNumbers ?? settingsStore.settings.lineNumbers);
+	const wordWrap = $derived(settingsStore.settings.wordWrap);
+	const tabSize = $derived(settingsStore.settings.tabSize);
 
 	let copied = $state(false);
 	let containerRef = $state<HTMLDivElement>();
@@ -65,7 +71,7 @@
 
 	<!-- Editor -->
 	<div class="flex">
-		{#if showLineNumbers}
+		{#if shouldShowLineNumbers}
 			<div
 				class="select-none border-r bg-muted/20 px-4 py-4 text-right font-mono text-sm text-muted-foreground"
 			>
@@ -81,13 +87,13 @@
 			onscroll={readonly ? onscroll : undefined}
 		>
 			{#if readonly}
-				<pre class="p-4 font-mono leading-6" style="font-size: var(--editor-font-size);"><code>{value}</code></pre>
+				<pre class="p-4 font-mono leading-6" style="font-size: var(--editor-font-size); white-space: {wordWrap === 'off' ? 'pre' : 'pre-wrap'}; tab-size: {tabSize};"><code>{value}</code></pre>
 			{:else}
 				<Textarea
 					bind:ref={textareaRef}
 					bind:value
 					class="min-h-[400px] resize-none border-0 bg-transparent font-mono focus-visible:ring-0"
-					style="font-size: var(--editor-font-size); line-height: 1.5;"
+					style="font-size: var(--editor-font-size); line-height: 1.5; white-space: {wordWrap === 'off' ? 'pre' : 'pre-wrap'}; tab-size: {tabSize};"
 					placeholder="Paste your code here..."
 					{onscroll}
 				/>
