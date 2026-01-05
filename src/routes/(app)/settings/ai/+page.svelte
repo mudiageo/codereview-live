@@ -22,7 +22,7 @@
   let saving = $state(false);
   const settings = $derived(settingsStore.settings);
   const creditsUsed = $derived(aiUsageStore.totalTokens);
-  const creditsLimit = $derived(getLimit(subscriptionsStore.current?.plan || 'free', 'aiCredits'));
+  const creditsLimit = $derived(getLimit(subscriptionsStore.current?.plan || 'free', 'aiCreditsPerMonth'));
   
   async function handleSave() {
     saving = true;
