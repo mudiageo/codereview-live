@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import { getUser } from '$lib/server/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { nanoid } from 'nanoid';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
@@ -30,7 +29,7 @@ export const POST: RequestHandler = async ({ request }) => {
     
     // Generate unique filename
     const ext = avatar.name.split('.').pop();
-    const filename = `${user.id}-${nanoid()}.${ext}`;
+    const filename = `${user.id}-${crypto.randomUUID()}.${ext}`;
     
     // Ensure upload directory exists
     const uploadDir = join(process.cwd(), 'static', 'uploads', 'avatars');
