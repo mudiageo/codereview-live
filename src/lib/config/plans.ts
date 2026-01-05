@@ -7,7 +7,7 @@ export const plans = {
 			localReviews: 10,
 			cloudSync: false,
 			storage: '1GB',
-			aiCredits: 50,
+			aiCredits: 1000,
 			teamMembers: 1
 		},
 		features: ['10 local reviews', 'Basic features', 'Community support']
@@ -20,7 +20,7 @@ export const plans = {
 			localReviews: -1, // unlimited
 			cloudSync: true,
 			storage: '50GB',
-			aiCredits: 1000,
+			aiCredits: 5000,
 			teamMembers: 1
 		},
 		features: [
@@ -40,7 +40,7 @@ export const plans = {
 			localReviews: -1,
 			cloudSync: true,
 			storage: '200GB',
-			aiCredits: 5000,
+			aiCredits: 50000,
 			teamMembers: 10
 		},
 		features: [

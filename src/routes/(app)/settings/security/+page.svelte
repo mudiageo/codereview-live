@@ -7,6 +7,10 @@
 	import Key from '@lucide/svelte/icons/key';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+	import { authClient } from '$lib/auth-client';
+	import { auth } from '$lib/stores/auth.svelte';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 
 	let currentPassword = $state('');
 	let newPassword = $state('');
@@ -15,9 +19,26 @@
 
 	let twoFactorEnabled = $state(false);
 	let isSettingUp2FA = $state(false);
+	let qrCode = $state('');
+	let totpUri = $state('');
+	let verificationCode = $state('');
+	let showQRCode = $state(false);
 
 	let showDeleteConfirm = $state(false);
 	let deleteConfirmText = $state('');
+	
+	// Check 2FA status on mount
+	onMount(async () => {
+		try {
+			const session = await authClient.getSession();
+			if (session.data?.user) {
+				// Check if user has 2FA enabled
+				twoFactorEnabled = session.data.user.twoFactorEnabled || false;
+			}
+		} catch (error) {
+			console.error('Failed to check 2FA status:', error);
+		}
+	});
 
 	async function handleChangePassword() {
 		if (!currentPassword || !newPassword || !confirmPassword) {
@@ -37,28 +58,94 @@
 
 		isChangingPassword = true;
 		try {
-			// TODO: Call API to change password
-			await new Promise((resolve) => setTimeout(resolve, 1000));
-			toast.success('Password changed successfully');
-			currentPassword = '';
-			newPassword = '';
-			confirmPassword = '';
-		} catch (error) {
-			toast.error('Failed to change password');
+			const result = await authClient.changePassword({
+				currentPassword,
+				newPassword,
+				revokeOtherSessions: true,
+			});
+			
+			if (result.error) {
+				toast.error(result.error.message || 'Failed to change password');
+			} else {
+				toast.success('Password changed successfully');
+				currentPassword = '';
+				newPassword = '';
+				confirmPassword = '';
+			}
+		} catch (error: any) {
+			toast.error(error.message || 'Failed to change password');
 		} finally {
 			isChangingPassword = false;
 		}
 	}
 
-	async function handleSetup2FA() {
+	async function handleEnable2FA() {
 		isSettingUp2FA = true;
 		try {
-			// TODO: Call API to setup 2FA
-			await new Promise((resolve) => setTimeout(resolve, 1000));
-			twoFactorEnabled = !twoFactorEnabled;
-			toast.success(twoFactorEnabled ? '2FA enabled' : '2FA disabled');
-		} catch (error) {
-			toast.error('Failed to update 2FA settings');
+			const result = await authClient.twoFactor.enable({
+				password: currentPassword,
+			});
+			
+			if (result.error) {
+				toast.error(result.error.message || 'Failed to enable 2FA');
+				return;
+			}
+			
+			if (result.data) {
+				qrCode = result.data.qrCode;
+				totpUri = result.data.totpUri;
+				showQRCode = true;
+				toast.info('Scan the QR code with your authenticator app');
+			}
+		} catch (error: any) {
+			toast.error(error.message || 'Failed to enable 2FA');
+		} finally {
+			isSettingUp2FA = false;
+		}
+	}
+	
+	async function handleVerify2FA() {
+		if (!verificationCode || verificationCode.length !== 6) {
+			toast.error('Please enter a valid 6-digit code');
+			return;
+		}
+		
+		try {
+			const result = await authClient.twoFactor.verify({
+				code: verificationCode,
+			});
+			
+			if (result.error) {
+				toast.error(result.error.message || 'Invalid code');
+				return;
+			}
+			
+			twoFactorEnabled = true;
+			showQRCode = false;
+			verificationCode = '';
+			currentPassword = '';
+			toast.success('2FA enabled successfully');
+		} catch (error: any) {
+			toast.error(error.message || 'Failed to verify code');
+		}
+	}
+
+	async function handleDisable2FA() {
+		isSettingUp2FA = true;
+		try {
+			const result = await authClient.twoFactor.disable({
+				password: currentPassword,
+			});
+			
+			if (result.error) {
+				toast.error(result.error.message || 'Failed to disable 2FA');
+			} else {
+				twoFactorEnabled = false;
+				currentPassword = '';
+				toast.success('2FA disabled');
+			}
+		} catch (error: any) {
+			toast.error(error.message || 'Failed to disable 2FA');
 		} finally {
 			isSettingUp2FA = false;
 		}
@@ -71,11 +158,21 @@
 		}
 
 		try {
-			// TODO: Call API to delete account
+			const result = await authClient.deleteUser();
+			
+			if (result.error) {
+				toast.error(result.error.message || 'Failed to delete account');
+				return;
+			}
+			
 			toast.success('Account deletion initiated. You will receive a confirmation email.');
 			showDeleteConfirm = false;
-		} catch (error) {
-			toast.error('Failed to delete account');
+			
+			// Sign out and redirect
+			await auth.signOut();
+			goto('/');
+		} catch (error: any) {
+			toast.error(error.message || 'Failed to delete account');
 		}
 	}
 </script>
@@ -142,22 +239,87 @@
 			to your password.
 		</p>
 
-		<div class="flex items-center justify-between">
-			<div>
-				<p class="font-medium">
-					Status: <span class={twoFactorEnabled ? 'text-green-600' : 'text-muted-foreground'}>
-						{twoFactorEnabled ? 'Enabled' : 'Disabled'}
-					</span>
-				</p>
+		{#if showQRCode}
+			<div class="space-y-4 p-4 border rounded-lg bg-muted/20">
+				<div class="text-center">
+					<p class="font-medium mb-2">Scan this QR code with your authenticator app:</p>
+					{#if qrCode}
+						<div class="flex justify-center">
+							<img src={qrCode} alt="2FA QR Code" class="max-w-xs" />
+						</div>
+					{/if}
+					<p class="text-xs text-muted-foreground mt-2">Or enter this key manually:</p>
+					<code class="text-sm bg-muted px-2 py-1 rounded">{totpUri}</code>
+				</div>
+				
+				<div class="space-y-2">
+					<Label for="verification-code">Enter Verification Code</Label>
+					<Input
+						id="verification-code"
+						bind:value={verificationCode}
+						placeholder="000000"
+						maxlength="6"
+					/>
+				</div>
+				
+				<div class="flex gap-2">
+					<Button onclick={handleVerify2FA}>Verify and Enable</Button>
+					<Button variant="outline" onclick={() => { showQRCode = false; verificationCode = ''; }}>
+						Cancel
+					</Button>
+				</div>
 			</div>
-			<Button onclick={handleSetup2FA} disabled={isSettingUp2FA} variant="outline">
-				{isSettingUp2FA
-					? 'Processing...'
-					: twoFactorEnabled
-						? 'Disable 2FA'
-						: 'Enable 2FA'}
-			</Button>
-		</div>
+		{:else}
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="font-medium">
+						Status: <span class={twoFactorEnabled ? 'text-green-600' : 'text-muted-foreground'}>
+							{twoFactorEnabled ? 'Enabled' : 'Disabled'}
+						</span>
+					</p>
+				</div>
+				
+				{#if twoFactorEnabled}
+					<div class="space-y-2">
+						{#if !currentPassword}
+							<p class="text-sm text-muted-foreground">Enter your password to disable 2FA</p>
+							<Input
+								type="password"
+								bind:value={currentPassword}
+								placeholder="Current password"
+								autocomplete="current-password"
+							/>
+						{/if}
+						<Button 
+							onclick={handleDisable2FA} 
+							disabled={isSettingUp2FA || !currentPassword} 
+							variant="outline"
+						>
+							{isSettingUp2FA ? 'Processing...' : 'Disable 2FA'}
+						</Button>
+					</div>
+				{:else}
+					<div class="space-y-2">
+						{#if !currentPassword}
+							<p class="text-sm text-muted-foreground">Enter your password to enable 2FA</p>
+							<Input
+								type="password"
+								bind:value={currentPassword}
+								placeholder="Current password"
+								autocomplete="current-password"
+							/>
+						{/if}
+						<Button 
+							onclick={handleEnable2FA} 
+							disabled={isSettingUp2FA || !currentPassword} 
+							variant="outline"
+						>
+							{isSettingUp2FA ? 'Processing...' : 'Enable 2FA'}
+						</Button>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 
 	<!-- Danger Zone -->

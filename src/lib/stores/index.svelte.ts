@@ -663,6 +663,15 @@ export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   editorTheme: string;
   fontSize: number;
+  // Editor-specific settings
+  lineNumbers: boolean;
+  minimap: boolean;
+  wordWrap: 'off' | 'on' | 'wordWrapColumn' | 'bounded';
+  tabSize: number;
+  insertSpaces: boolean;
+  renderWhitespace: 'none' | 'boundary' | 'selection' | 'all';
+  cursorBlinking: 'blink' | 'smooth' | 'phase' | 'expand' | 'solid';
+  // Video settings
   videoQuality: 'low' | 'medium' | 'high';
   autoCompress: boolean;
   maxVideoSize: number;
@@ -670,11 +679,13 @@ export interface AppSettings {
   countdown: number;
   defaultSpeed: number;
   autoplay: boolean;
+  // AI settings
   aiEnabled: boolean;
   autoSummarize: boolean;
   detectSmells: boolean;
   suggestImprovements: boolean;
   geminiApiKey: string;
+  // Storage settings
   storageProvider: 'client' | 'cloud' | 'hybrid';
   clientStorageBackend: 'auto' | 'indexeddb' | 'opfs' | 'filesystem';
   hybridSyncEnabled: boolean;
@@ -684,6 +695,13 @@ const defaultSettings: AppSettings = {
   theme: 'dark',
   editorTheme: 'vscode-dark',
   fontSize: 14,
+  lineNumbers: true,
+  minimap: true,
+  wordWrap: 'off',
+  tabSize: 2,
+  insertSpaces: true,
+  renderWhitespace: 'selection',
+  cursorBlinking: 'blink',
   videoQuality: 'high',
   autoCompress: true,
   maxVideoSize: 100,
