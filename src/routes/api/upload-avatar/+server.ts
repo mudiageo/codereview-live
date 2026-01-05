@@ -11,11 +11,11 @@ export const POST: RequestHandler = async ({ request }) => {
     const user = await getUser();
     
     const formData = await request.formData();
-    const avatar = formData.get('avatar') as File;
-    
-    if (!avatar) {
-      return json({ error: 'No file provided' }, { status: 400 });
+    const avatarEntry = formData.get('avatar');
+    if (!(avatarEntry instanceof File)) {
+      return json({ error: 'No file provided or invalid file' }, { status: 400 });
     }
+    const avatar = avatarEntry;
     
     // Validate file type
     if (!avatar.type.startsWith('image/')) {
