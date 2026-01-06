@@ -164,6 +164,18 @@
         annotations.push({ type: 'suggestion', impact: suggestion.impact, description: suggestion.description, item: suggestion });
       }
     });
+    
+    // Check performance notes
+    aiAnalysis.performanceNotes?.forEach((note) => {
+      if (note.line === lineNumber) {
+        annotations.push({
+          type: 'performance',
+          impact: note.impact,
+          description: note.description,
+          item: note
+        });
+      }
+    });
 
     // Check code smells
     aiAnalysis.codeSmells?.forEach((smell) => {
