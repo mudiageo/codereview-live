@@ -441,16 +441,18 @@
 
 	// --- Video Resolution ---
 	$effect(() => {
-		videoLoading = true;
-		videoError = null;
-		
-		if (review.videoUrl?.startsWith('client://')) {
-			const id = review.videoUrl.replace('client://', '');
-			createClientVideoStorage()
-				.then((storage) => {
-					return storage.get(id);
-				})
-				.then((result) => {
+	  let isCancelled = false;
+	
+		const loadVideo = async () => {
+			videoLoading = true;
+			videoError = null;
+		alert(review.videoUrl)
+			if (review.videoUrl?.startsWith('client://')) {
+				const id = review.videoUrl.replace('client://', '');
+				try {
+					const storage = await createClientVideoStorage();
+					const result = await storage.get(id);
+					if (isCancelled) return;
 					if (result) {
 						videoSrc = URL.createObjectURL(result.blob);
 					} else {
@@ -458,24 +460,26 @@
 						videoError = 'Video not found in local storage. It may have been deleted or not properly saved.';
 						videoSrc = '';
 					}
-				})
-				.catch((error) => {
+				} catch (error) {
+					if (isCancelled) return;
 					console.error('Failed to load video from client storage:', error);
 					videoError = 'Failed to load video from local storage.';
 					videoSrc = '';
-				})
-				.finally(() => {
-					videoLoading = false;
-				});
-		} else if (review.videoUrl) {
-			videoSrc = review.videoUrl;
-			videoLoading = false;
-		} else {
-			videoSrc = '';
-			videoLoading = false;
-		}
+				} finally {
+					if (!isCancelled) videoLoading = false;
+				}
+			} else if (review.videoUrl) {
+				videoSrc = review.videoUrl;
+				videoLoading = false;
+			} else {
+				videoSrc = '';
+				videoLoading = false;
+			}
+		};
 
+		loadVideo();
 		return () => {
+			isCancelled = true;
 			if (videoSrc && videoSrc.startsWith('blob:')) {
 				URL.revokeObjectURL(videoSrc);
 			}
