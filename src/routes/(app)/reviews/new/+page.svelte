@@ -583,6 +583,14 @@
 					description,
 					codeContent: code,
 					codeLanguage: language,
+					codeContent: code,
+					videoUrl: uploadedVideoUrl || undefined,
+					videoSize: uploadedMetadata?.size || undefined,
+					videoDuration:
+						uploadedMetadata?.duration && Number.isFinite(uploadedMetadata.duration)
+							? Math.round(uploadedMetadata.duration)
+							: null,
+					thumbnailUrl: uploadedThumbnailUrl || undefined,
 					aiSummary,
 					metadata: {
 						recordingEvents: $state.snapshot(recordingEvents),
@@ -1282,7 +1290,7 @@
 												bind:this={mediaRecorderRef}
 												{reviewId}
 												onUploadComplete={(result) => {
-													uploadedVideoUrl = result.videoUrl;
+										      uploadedVideoUrl = result.videoUrl;
 													uploadedThumbnailUrl = result.thumbnailUrl;
 													uploadedMetadata = result.metadata;
 													isRecording = false;

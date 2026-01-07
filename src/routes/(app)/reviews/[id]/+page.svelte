@@ -446,7 +446,6 @@
 		const loadVideo = async () => {
 			videoLoading = true;
 			videoError = null;
-		alert(review.videoUrl)
 			if (review.videoUrl?.startsWith('client://')) {
 				const id = review.videoUrl.replace('client://', '');
 				try {

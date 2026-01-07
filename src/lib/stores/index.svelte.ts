@@ -63,7 +63,7 @@ class ReviewsStore {
       };
 
       await this.collection.create(newReview);
-      this.data = [...this.data, newReview as Review];
+      this.data.push(newReview);
 
       return newReview;
     } catch (err) {
@@ -120,7 +120,7 @@ class ReviewsStore {
   }
 
   sortByDate(order: 'asc' | 'desc' = 'desc') {
-    return [...this.data].sort((a, b) => {
+    return this.data.sort((a, b) => {
       const timeA = new Date(a.createdAt).getTime();
       const timeB = new Date(b.createdAt).getTime();
       return order === 'desc' ? timeB - timeA : timeA - timeB;
@@ -185,7 +185,7 @@ class ProjectsStore {
       };
 
       await this.collection.create(newProject);
-      this.data = [...this.data, newProject as Project];
+      this.data.push(newProject);
 
       return newProject;
     } catch (err) {
@@ -295,7 +295,7 @@ class CommentsStore {
       };
 
       await this.collection.create(newComment);
-      this.data = [...this.data, newComment as Comment];
+      this.data.push(newComment);
 
       return newComment;
     } catch (err) {
@@ -465,7 +465,7 @@ class TeamsStore {
       };
 
       await this.collection.create(newTeam);
-      this.data = [...this.data, newTeam as import('$lib/server/db/schema').Team];
+      this.data.push(newTeam);
 
       return newTeam;
     } catch (err) {
@@ -555,7 +555,7 @@ class TeamInvitationsStore {
       };
 
       await this.collection.create(newInvitation);
-      this.data = [...this.data, newInvitation as import('$lib/server/db/schema').TeamInvitation];
+      this.data.push(newInvitation);
 
       return newInvitation;
     } catch (err) {
@@ -632,7 +632,7 @@ class AIUsageStore {
       };
 
       await this.collection.create(newUsage);
-      this.data = [...this.data, newUsage];
+      this.data.push(newUsage);
 
       return newUsage;
     } catch (err) {
