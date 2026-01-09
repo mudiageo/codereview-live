@@ -97,7 +97,28 @@
 
 	function handleLoadedMetadata() {
 		if (!videoElement) return;
-		duration = videoElement.duration;
+		const d = videoElement.duration;
+
+		// WebM videos recorded with MediaRecorder often have Infinity duration
+		// because the browser doesn't write duration metadata correctly.
+		// Workaround: seek to the end to force the browser to calculate the real duration
+		if (!Number.isFinite(d)) {
+			// Save current time
+			const currentPos = videoElement.currentTime;
+
+			// Seek to a very large time - browser will clamp to actual duration
+			videoElement.currentTime = Number.MAX_SAFE_INTEGER;
+
+			// Wait for the seek to complete, then get the real duration
+			videoElement.onseeked = () => {
+				duration = videoElement!.duration;
+				// Seek back to original position
+				videoElement!.currentTime = currentPos;
+				videoElement!.onseeked = null;
+			};
+		} else {
+			duration = d;
+		}
 	}
 
 	function seekTo(time: number) {
@@ -113,6 +134,7 @@
 	}
 
 	function formatTime(seconds: number) {
+		if (!Number.isFinite(seconds) || seconds < 0) return '--:--';
 		const mins = Math.floor(seconds / 60);
 		const secs = Math.floor(seconds % 60);
 		return `${mins}:${secs.toString().padStart(2, '0')}`;
