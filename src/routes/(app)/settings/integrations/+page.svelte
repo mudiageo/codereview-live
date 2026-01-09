@@ -20,7 +20,7 @@
 
 	interface ConnectedAccount {
 		id: string;
-		provider: 'github' | 'gitlab' | 'google';
+		providerId: 'github' | 'gitlab' | 'google';
 		username: string;
 		email: string;
 		avatar_url?: string;
@@ -128,7 +128,6 @@
 
 	<div class="grid gap-4">
 		{#each providers as provider}
-			{@const connected = isConnected(provider.id)}
 			{@const account = getConnectedAccount(provider.id)}
 
 			<Card>
@@ -144,7 +143,7 @@
 							</div>
 						</div>
 
-						{#if connected}
+						{#if isConnected(provider.id)}
 							<Badge variant="outline" class="flex items-center gap-1">
 								<CheckCircle class="h-3 w-3 text-green-600" />
 								Connected
@@ -159,7 +158,7 @@
 				</CardHeader>
 
 				<CardContent>
-					{#if connected && account}
+					{#if isConnected(provider.id) && account}
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								{#if account.avatar_url}
@@ -173,7 +172,7 @@
 									<p class="font-medium">{account.username}</p>
 									<p class="text-sm text-muted-foreground">{account.email}</p>
 									<p class="text-xs text-muted-foreground">
-										Connectedf {new Date(account.connected_at).toLocaleDateString()}
+										Connected on {new Date(account.updatedAt).toLocaleDateString()}
 									</p>
 								</div>
 							</div>

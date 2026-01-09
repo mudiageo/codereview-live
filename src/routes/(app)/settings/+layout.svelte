@@ -10,6 +10,7 @@
   import Users from '@lucide/svelte/icons/users';
   import Bell from '@lucide/svelte/icons/bell';
   import Shield from '@lucide/svelte/icons/shield';
+  import Plug from '@lucide/svelte/icons/plug';
   
   let { children } = $props();
   
@@ -19,7 +20,7 @@
     { name: 'Video', href: '/settings/video', icon: Video },
     { name: 'AI Features', href: '/settings/ai', icon: Sparkles },
     { name: 'Notifications', href: '/settings/notifications', icon: Bell },
-    { name: 'Integrations', href: '/settings/integrations', icon: Bell },
+    { name: 'Integrations', href: '/settings/integrations', icon: Plug },
     { name: 'Billing', href: '/settings/billing', icon: CreditCard },
     { name: 'Team', href: '/settings/team', icon: Users },
     { name: 'Security', href: '/settings/security', icon: Shield },

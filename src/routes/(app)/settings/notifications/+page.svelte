@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
+	import { Switch } from '$lib/components/ui/switch';
 	import { toast } from 'svelte-sonner';
 	import Bell from '@lucide/svelte/icons/bell';
 	import Mail from '@lucide/svelte/icons/mail';
@@ -56,41 +57,37 @@
 		<div class="space-y-3 pl-7">
 			<div class="flex items-center justify-between">
 				<Label for="email-comments" class="cursor-pointer">Review Comments</Label>
-				<input
-					type="checkbox"
+				<Switch
 					id="email-comments"
-					bind:checked={emailNotifications.reviewComments}
-					class="rounded"
+					checked={emailNotifications.reviewComments}
+					onCheckedChange={(checked) => emailNotifications.reviewComments = checked}
 				/>
 			</div>
 
 			<div class="flex items-center justify-between">
 				<Label for="email-mentions" class="cursor-pointer">Mentions</Label>
-				<input
-					type="checkbox"
+				<Switch
 					id="email-mentions"
-					bind:checked={emailNotifications.mentions}
-					class="rounded"
+					checked={emailNotifications.mentions}
+					onCheckedChange={(checked) => emailNotifications.mentions = checked}
 				/>
 			</div>
 
 			<div class="flex items-center justify-between">
 				<Label for="email-digest" class="cursor-pointer">Weekly Digest</Label>
-				<input
-					type="checkbox"
+				<Switch
 					id="email-digest"
-					bind:checked={emailNotifications.weeklyDigest}
-					class="rounded"
+					checked={emailNotifications.weeklyDigest}
+					onCheckedChange={(checked) => emailNotifications.weeklyDigest = checked}
 				/>
 			</div>
 
 			<div class="flex items-center justify-between">
 				<Label for="email-new" class="cursor-pointer">New Review Assigned</Label>
-				<input
-					type="checkbox"
+				<Switch
 					id="email-new"
-					bind:checked={emailNotifications.newReview}
-					class="rounded"
+					checked={emailNotifications.newReview}
+					onCheckedChange={(checked) => emailNotifications.newReview = checked}
 				/>
 			</div>
 		</div>
@@ -106,32 +103,29 @@
 		<div class="space-y-3 pl-7">
 			<div class="flex items-center justify-between">
 				<Label for="push-enabled" class="cursor-pointer">Enable Push Notifications</Label>
-				<input
-					type="checkbox"
+				<Switch
 					id="push-enabled"
-					bind:checked={pushNotifications.enabled}
-					class="rounded"
+					checked={pushNotifications.enabled}
+					onCheckedChange={(checked) => pushNotifications.enabled = checked}
 				/>
 			</div>
 
 			{#if pushNotifications.enabled}
 				<div class="flex items-center justify-between">
 					<Label for="push-comments" class="cursor-pointer">Review Comments</Label>
-					<input
-						type="checkbox"
+					<Switch
 						id="push-comments"
-						bind:checked={pushNotifications.reviewComments}
-						class="rounded"
+						checked={pushNotifications.reviewComments}
+						onCheckedChange={(checked) => pushNotifications.reviewComments = checked}
 					/>
 				</div>
 
 				<div class="flex items-center justify-between">
 					<Label for="push-mentions" class="cursor-pointer">Mentions</Label>
-					<input
-						type="checkbox"
+					<Switch
 						id="push-mentions"
-						bind:checked={pushNotifications.mentions}
-						class="rounded"
+						checked={pushNotifications.mentions}
+						onCheckedChange={(checked) => pushNotifications.mentions = checked}
 					/>
 				</div>
 			{/if}
@@ -148,22 +142,20 @@
 		<div class="space-y-3 pl-7">
 			<div class="flex items-center justify-between">
 				<Label for="inapp-enabled" class="cursor-pointer">Enable In-App Notifications</Label>
-				<input
-					type="checkbox"
+				<Switch
 					id="inapp-enabled"
-					bind:checked={inAppNotifications.enabled}
-					class="rounded"
+					checked={inAppNotifications.enabled}
+					onCheckedChange={(checked) => inAppNotifications.enabled = checked}
 				/>
 			</div>
 
 			{#if inAppNotifications.enabled}
 				<div class="flex items-center justify-between">
 					<Label for="inapp-sound" class="cursor-pointer">Sound Alerts</Label>
-					<input
-						type="checkbox"
+					<Switch
 						id="inapp-sound"
-						bind:checked={inAppNotifications.sound}
-						class="rounded"
+						checked={inAppNotifications.sound}
+						onCheckedChange={(checked) => inAppNotifications.sound = checked}
 					/>
 				</div>
 			{/if}

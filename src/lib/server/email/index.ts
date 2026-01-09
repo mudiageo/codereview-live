@@ -12,7 +12,8 @@ const nodemailerTransporter = nodemailer.createTransport({
   },
 });
 
-const resendClient = new Resend(config.email.resend.apiKey);
+// Only create Resend client if API key is provided
+const resendClient = config.email.resend.apiKey ? new Resend(config.email.resend.apiKey) : null;
 
 export interface EmailOptions {
   to: string;
@@ -23,6 +24,9 @@ export interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions) {
   if (config.email.provider === 'resend') {
+    if (!resendClient) {
+      throw new Error('Resend API key not configured');
+    }
     return await resendClient.emails.send({
       from: config.email.smtp.from,
       to: options.to,
