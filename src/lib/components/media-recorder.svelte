@@ -1,685 +1,482 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Card, CardContent } from '$lib/components/ui/card';
-  import { Label } from '$lib/components/ui/label';
-  import { Switch } from '$lib/components/ui/switch';
-  import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-  import { toast } from 'svelte-sonner';
-  import Circle from '@lucide/svelte/icons/circle';
-  import Square from '@lucide/svelte/icons/square';
-  import Pause from '@lucide/svelte/icons/pause';
-  import Play from '@lucide/svelte/icons/play';
-  import Settings from '@lucide/svelte/icons/settings';
-  import Monitor from '@lucide/svelte/icons/monitor';
-  import { FFmpeg } from '@ffmpeg/ffmpeg';
-  import { fetchFile } from '@ffmpeg/util';
-  
-  import AnnotationToolbar from './annotation-toolbar.svelte';
-  import VideoPreviewModal from './video-preview-modal.svelte';
+	import { onMount, onDestroy } from 'svelte';
+	import { Button } from '$lib/components/ui/button';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Card, CardContent } from '$lib/components/ui/card';
+	import { Label } from '$lib/components/ui/label';
+	import { Switch } from '$lib/components/ui/switch';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
+	import { toast } from 'svelte-sonner';
+	import Circle from '@lucide/svelte/icons/circle';
+	import Square from '@lucide/svelte/icons/square';
+	import Pause from '@lucide/svelte/icons/pause';
+	import Play from '@lucide/svelte/icons/play';
+	import Keyboard from '@lucide/svelte/icons/keyboard';
+	import Monitor from '@lucide/svelte/icons/monitor';
+	import {
+		getRecordingContext,
+		type WebcamPosition,
+		type WebcamSize,
+		type WebcamShape
+	} from '$lib/contexts/recording-context.svelte';
 
-  interface Props {
-    reviewId: string;
-    onUploadComplete?: (result: { videoUrl: string; thumbnailUrl: string; metadata: any }) => void;
-    onStart?: () => void;
-    maxDuration?: number;
-    quality?: 'low' | 'medium' | 'high';
-  }
-  
-  let {
-    reviewId,
-    onUploadComplete,
-    onStart,
-    maxDuration = 600,
-    quality = 'high'
-  }: Props = $props();
+	import AnnotationToolbar from './annotation-toolbar.svelte';
+	import VideoPreviewModal from './video-preview-modal.svelte';
 
-  let isRecording = $state(false);
-  let isPaused = $state(false);
-  let recordingTime = $state(0);
-  let countdown = $state(0);
-  let mediaRecorder = $state<MediaRecorder | null>(null);
-  let recordedChunks = $state<Blob[]>([]);
-  let videoBlob = $state<Blob | null>(null);
-  let thumbnail = $state<string>('');
-  let stream = $state<MediaStream | null>(null);
-  let webcamStream = $state<MediaStream | null>(null);
-  let recordingInterval: number;
-  let countdownInterval: number;
-  let videoPreview = $state<HTMLVideoElement>();
-  let webcamPreview = $state<HTMLVideoElement>();
-  
-  // Settings
-  let selectedSource = $state<'screen' | 'window' | 'camera'>('screen');
-  let audioSource = $state<string>('default');
-  let includeWebcam = $state(false);
-  let includeSystemAudio = $state(true);
-  let includeMicAudio = $state(true);
-  let countdownDuration = $state(3);
-  let showSettings = $state(false);
-  let isCompressing = $state(false);
-  let compressionProgress = $state(0);
-  let availableAudioInputs = $state<MediaDeviceInfo[]>([]);
+	interface Props {
+		reviewId: string;
+		onUploadComplete?: (result: { videoUrl: string; thumbnailUrl: string; metadata: any }) => void;
+	}
 
-  // Annotations State
-  let canvasRef: HTMLCanvasElement;
-  let ctx: CanvasRenderingContext2D | null = null;
-  let isDrawing = $state(false);
-  let currentTool = $state({ type: 'pen', color: '#ff0000', strokeWidth: 3 });
-  let annotationHistory = $state<ImageData[]>([]);
-  let historyIndex = $state(0);
-  let isToolbarVisible = $state(true);
+	let { reviewId, onUploadComplete }: Props = $props();
 
-  // Preview Modal State
-  let showPreviewModal = $state(false);
-  let recordedVideoUrl = $state('');
-  let videoDuration = $state(0);
+	// Get recording context - ALL state and logic comes from here
+	const ctx = getRecordingContext();
+	if (!ctx) {
+		throw new Error('MediaRecorder must be used within a component that provides RecordingContext');
+	}
 
-  const supportsScreenCapture = $derived(
-    typeof navigator !== 'undefined' && 'mediaDevices' in navigator && 'getDisplayMedia' in navigator.mediaDevices
-  );
+	// Element refs - passed to context
+	let canvasRef = $state<HTMLCanvasElement>();
+	let videoPreviewRef = $state<HTMLVideoElement>();
+	let webcamPreviewRef = $state<HTMLVideoElement>();
 
-  $effect(() => {
-    if (typeof navigator !== 'undefined') {
-      navigator.mediaDevices.enumerateDevices().then(devices => {
-        availableAudioInputs = devices.filter(d => d.kind === 'audioinput');
-      });
-      
-      // Auto-switch to camera if screen capture isn't supported
-      if (!supportsScreenCapture) {
-        selectedSource = 'camera';
-      }
-    }
-  });
+	// Annotation UI state now managed by RecordingContext
 
-  // Initialize canvas for annotations when recording starts
-  $effect(() => {
-    if (isRecording && canvasRef && videoPreview) {
-      ctx = canvasRef.getContext('2d');
-      if (ctx) {
-         // Match canvas size to video preview
-         const resizeObserver = new ResizeObserver(() => {
-             if (canvasRef && videoPreview) {
-                 canvasRef.width = videoPreview.clientWidth;
-                 canvasRef.height = videoPreview.clientHeight;
-             }
-         });
-         resizeObserver.observe(videoPreview);
-         return () => resizeObserver.disconnect();
-      }
-    }
-  });
+	// Screen capture support check
+	const supportsScreenCapture =
+		typeof navigator !== 'undefined' &&
+		'mediaDevices' in navigator &&
+		'getDisplayMedia' in navigator.mediaDevices;
 
-  async function startRecording() {
-    if (countdownDuration > 0) {
-      countdown = countdownDuration;
-      countdownInterval = window.setInterval(() => {
-        countdown--;
-        if (countdown === 0) {
-          clearInterval(countdownInterval);
-          beginRecording();
-        }
-      }, 1000);
-    } else {
-      await beginRecording();
-    }
-  }
-  
-  async function beginRecording() {
-    try {
-      const videoConstraints: any = {
-        video: {
-          cursor: 'always',
-          displaySurface: selectedSource === 'window' ? 'window' : 'monitor',
-        }
-      };
+	// Reset to workspace if screen/window selected but not supported
+	$effect(() => {
+		if (!supportsScreenCapture &&
+		    (ctx.settings.selectedSource === 'screen' || ctx.settings.selectedSource === 'window')) {
+			ctx.updateSettings({ selectedSource: 'workspace' });
+		}
+	});
 
-      if (selectedSource === 'camera') {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 1280, height: 720 },
-          audio: includeMicAudio ? {
-            deviceId: audioSource !== 'default' ? { exact: audioSource } : undefined,
-            echoCancellation: true,
-            noiseSuppression: true,
-          } : false
-        });
-      } else {
-        if (!supportsScreenCapture) throw new Error('Screen capture not supported on this device');
-        stream = await navigator.mediaDevices.getDisplayMedia({
-          video: videoConstraints.video,
-          audio: includeSystemAudio
-        });
-        
-        // Add microphone audio if requested
-        if (includeMicAudio) {
+	// Helper to get display label for selected source
+	function getSourceLabel(source: string): string {
+		switch (source) {
+			case 'workspace':
+				return 'Code Workspace';
+			case 'screen':
+				return 'Screen';
+			case 'window':
+				return 'Window';
+			case 'camera':
+				return 'Camera';
+			default:
+				return 'Unknown';
+		}
+	}
 
-           const micStream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                deviceId: audioSource !== 'default' ? { exact: audioSource } : undefined,
-                echoCancellation: true,
-                noiseSuppression: true,
-              }
-           });
+	// Pass refs to context when they're available
+	$effect(() => {
+		if (canvasRef) ctx.setCanvasRef(canvasRef);
+	});
 
-           // Mix audio tracks
-           const audioContext = new AudioContext();
-           const destination = audioContext.createMediaStreamDestination();
+	$effect(() => {
+		if (videoPreviewRef) ctx.setVideoPreviewRef(videoPreviewRef);
+	});
 
-           stream.getAudioTracks().forEach(track => {
-            const source = audioContext.createMediaStreamSource(new MediaStream([track]));
-              source.connect(destination);
-            });
-            
-           micStream.getAudioTracks().forEach(t => audioContext.createMediaStreamSource(new MediaStream([t])).connect(destination));
-           
-            // Replace audio track
-           stream.getAudioTracks().forEach(track => track.stop());
-           destination.stream.getAudioTracks().forEach(track => stream!.addTrack(track));
-        }
-      }
-      
-      // Webcam PIP
-      if (includeWebcam && selectedSource !== 'camera') {
-        webcamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
-        if (webcamPreview) {
-          webcamPreview.srcObject = webcamStream;
-          webcamPreview.play();
-        }
-      }
-      
-      if (videoPreview) {
-        videoPreview.srcObject = stream;
-        videoPreview.play();
-      }
-      
-      const qualitySettings = {
-        low: { videoBitsPerSecond: 1000000 },
-        medium: { videoBitsPerSecond: 2500000 },
-        high: { videoBitsPerSecond: 5000000 },
-      };
+	$effect(() => {
+		if (webcamPreviewRef) ctx.setWebcamPreviewRef(webcamPreviewRef);
+	});
 
-      mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9,opus',
-        ...qualitySettings[quality]
-      });
-      
-      recordedChunks = [];
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-      
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+	// ============= Keyboard Shortcuts =============
+	// Keyboard handling delegated to context
+	function bgHandleKeyDown(e: KeyboardEvent) {
+		ctx.handleKeyDown(e);
+	}
 
-        // Generate thumbnail
-         thumbnail = await generateThumbnail(blob);
+	onMount(() => {
+		if (typeof window !== 'undefined') {
+			window.addEventListener('keydown', bgHandleKeyDown);
+		}
+	});
 
-        // Compress if needed
-        if (quality !== 'high' && blob.size > 10 * 1024 * 1024) { // > 10MB
-          toast.promise(
-            compressVideo(blob),
-            {
-              loading: 'Compressing video...',
-              success: (compressed) => {
-                videoBlob = compressed;
-                return `Compressed from ${(blob.size / 1024 / 1024).toFixed(1)}MB to ${(compressed.size / 1024 / 1024).toFixed(1)}MB`;
-              },
-              error: 'Compression failed, using original'
-            }
-          ).then(compressed => {
-            videoBlob = compressed;
-          }).catch(() => {
-            videoBlob = blob;
-          });
-        } else {
-          videoBlob = blob;
-        }
+	onDestroy(() => {
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('keydown', bgHandleKeyDown);
+		}
+	});
 
-         recordedVideoUrl = URL.createObjectURL(blob);
+	// ============= Annotation Mouse Handlers =============
+	// Annotation handlers delegated to context
+	function onMouseDown(e: MouseEvent) {
+		ctx.handleMouseDown(e);
+	}
 
-         // Get duration for preview
-         const tempVideo = document.createElement('video');
-         tempVideo.src = recordedVideoUrl;
-         await new Promise(r => { tempVideo.onloadedmetadata = () => { videoDuration = tempVideo.duration; r(null); }});
+	function onMouseMove(e: MouseEvent) {
+		ctx.handleMouseMove(e);
+	}
 
-         // Show Preview Modal
-         showPreviewModal = true;
-         
-         // Stop all tracks
-         stream?.getTracks().forEach(t => t.stop());
-         webcamStream?.getTracks().forEach(t => t.stop());
-      };
-      
-      mediaRecorder.start(1000);
-      isRecording = true;
-      recordingTime = 0;
-      onStart?.();
-      
-      recordingInterval = window.setInterval(() => {
-        recordingTime++;
-        if (recordingTime >= maxDuration) {
-          stopRecording();          
-          toast.warning('Maximum recording duration reached');
-          }
-      }, 1000);
-      
-    } catch (error: any) {
-      console.error('Error starting recording:', error);
+	function onMouseUp() {
+		ctx.handleMouseUp();
+	}
 
-      if (error.name === 'NotAllowedError') {
-        toast.error('Camera/screen permission denied. Please allow access and try again.');
-      } else if (error.name === 'NotFoundError') {
-        toast.error('No camera or screen capture device found.');
-      } else {
-        toast.error('Failed to start recording: ' + error.message);
-      }
-    }
-  }
-  
-  function pauseRecording() {
-    if (mediaRecorder?.state === 'recording') {
-      mediaRecorder.pause();
-      isPaused = true;
-      clearInterval(recordingInterval);
-    }
-  }
+	function handleUndo() {
+		ctx.undoAnnotation();
+	}
 
-  function resumeRecording() {
-    if (mediaRecorder?.state === 'paused') {
-      mediaRecorder.resume();
-      isPaused = false;
+	function handleRedo() {
+		ctx.redoAnnotation();
+	}
 
-      recordingInterval = window.setInterval(() => {
-        recordingTime++;
-        if (recordingTime >= maxDuration) {
-          stopRecording();
-        }
-      }, 1000);
-    }
-  }
+	function handleClear() {
+		ctx.clearAnnotations();
+	}
 
-  function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-      isRecording = false;
-      isPaused = false;
-      clearInterval(recordingInterval);
-    }
-  }
-  function resetRecording() {
-    videoBlob = null;
-    thumbnail = '';
-    recordedChunks = [];
-    recordingTime = 0;
-  }
-  
-  // Annotation Handlers
-  function handleMouseDown(e: MouseEvent) {
-    if (!ctx || !isRecording) return;
-    isDrawing = true;
-    const rect = canvasRef.getBoundingClientRect();
-    ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.strokeStyle = currentTool.color;
-    ctx.lineWidth = currentTool.strokeWidth;
-  }
-  
-  async function compressVideo(blob: Blob): Promise<Blob> {
-    isCompressing = true;
-    compressionProgress = 0;
-
-    try {
-      const ffmpeg = new FFmpeg();
-
-      ffmpeg.on('progress', ({ progress }) => {
-        compressionProgress = Math.round(progress * 100);
-      });
-
-      await ffmpeg.load();
-
-      const inputName = 'input.webm';
-      const outputName = 'output.mp4';
-
-      await ffmpeg.writeFile(inputName, await fetchFile(blob));
-
-      // Compress with h264 codec
-      await ffmpeg.exec([
-        '-i', inputName,
-        '-c:v', 'libx264',
-        '-crf', '28',
-        '-preset', 'fast',
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        outputName
-      ]);
-
-      const data = await ffmpeg.readFile(outputName);
-      return new Blob([data], { type: 'video/mp4' });
-    } finally {
-      isCompressing = false;
-      compressionProgress = 0;
-    }
-    
-  }
-  
-  function handleMouseMove(e: MouseEvent) {
-    if (!isDrawing || !ctx) return;
-    const rect = canvasRef.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.stroke();
-  }
-  function handleMouseUp() {
-    if (!isDrawing) return;
-    isDrawing = false;
-    if (ctx) {
-        const data = ctx.getImageData(0, 0, canvasRef.width, canvasRef.height);
-        annotationHistory = [...annotationHistory.slice(0, historyIndex + 1), data];
-        historyIndex++;
-    }
-  }
-
-  function handleSaveVideo(metadata: any) {
-     if (metadata.videoUrl) {
-         onUploadComplete?.({
-           videoUrl: metadata.videoUrl,
-           thumbnailUrl: metadata.thumbnailUrl,
-           metadata: {
-             ...metadata.metadata,
-             title: metadata.title,
-             description: metadata.description
-           }
-         });
-         showPreviewModal = false;
-     }
-  }
-  function handleDiscard() {
-     showPreviewModal = false;
-     videoBlob = null;
-     recordedChunks = [];
-  }
-
-  // Utilities
-  async function generateThumbnail(blob: Blob): Promise<string> {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.src = URL.createObjectURL(blob);
-
-      video.addEventListener('loadeddata', () => {
-        video.currentTime = Math.min(2, video.duration / 2);
-      });
-
-      video.addEventListener('seeked', () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 360;
-
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-        URL.revokeObjectURL(video.src);
-      });
-    });
-  }
-  
-  function formatTime(seconds: number) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-   }
-
-  function handleUseRecording() {
-    if (videoBlob && thumbnail) {
-      // Just open preview modal for upload
-      showPreviewModal = true;
-     }
-  }
-  
-  $effect(() => {
-    return () => {
-      clearInterval(recordingInterval);
-      clearInterval(countdownInterval);
-      stream?.getTracks().forEach(t => t.stop());
-      webcamStream?.getTracks().forEach(t => t.stop());
-    };
-  });
+	function handleSaveVideo(metadata: any) {
+		ctx.showPreviewModal = false;
+		onUploadComplete?.({
+			videoUrl: metadata.videoUrl, // Use videoUrl from metadata, not ctx.recordedVideoUrl
+			thumbnailUrl: metadata.thumbnailUrl || ctx.thumbnail,
+			metadata: metadata.metadata || metadata // Pass through the metadata object
+		});
+	}
 </script>
 
 <Card>
-  <CardContent class="p-6 space-y-4">
-    <div class="relative aspect-video bg-muted rounded-lg overflow-hidden group">
-      {#if countdown > 0}
-        <div class="absolute inset-0 flex items-center justify-center bg-black/80 z-50">
-           <div class="text-center text-white">
-             <div class="text-8xl font-bold mb-4">{countdown}</div>
-             <p class="text-lg">Get ready...</p>
-           </div>
-        </div>
-      {:else if !isRecording && !videoBlob}
-        <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <Monitor class="h-16 w-16 text-muted-foreground mb-4" />
-          <p class="text-sm text-muted-foreground">Select recording source and click start</p>
-          {#if !supportsScreenCapture}
-             <Badge variant="secondary" class="mt-2">Screen recording unavailable on this device</Badge>
-          {/if}
-        </div>
-      {:else if isRecording || isPaused}
-        <video bind:this={videoPreview} class="w-full h-full object-contain" muted><track kind="captions"></video>
-        {#if includeWebcam && webcamStream}
-           <div class="absolute bottom-4 right-4 w-48 h-36 rounded-lg overflow-hidden border-2 border-white shadow-lg">
-             <video bind:this={webcamPreview} class="w-full h-full object-cover" muted><track kind="captions"></video>
-           </div>
-        {/if}
-        
-        <canvas 
-           bind:this={canvasRef}
-           class="absolute inset-0 cursor-crosshair z-10"
-           onmousedown={handleMouseDown}
-           onmousemove={handleMouseMove}
-           onmouseup={handleMouseUp}
-           onmouseleave={handleMouseUp}
-        />
-        
-        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-           <AnnotationToolbar
-              bind:currentTool={currentTool}
-              visible={isToolbarVisible}
-              canUndo={historyIndex > 0}
-              canRedo={historyIndex < annotationHistory.length - 1}
-              onUndo={() => { /* Undo logic */ }}
-              onRedo={() => { /* Redo logic */ }}
-              onClear={() => ctx?.clearRect(0, 0, canvasRef.width, canvasRef.height)}
-              onToolChange={(tool) => currentTool = tool}
-              onToggleVisibility={() => isToolbarVisible = !isToolbarVisible}
-           />
-        </div>
+	<CardContent class="space-y-4 p-6">
+		<!-- Recording Preview -->
+		<div class="relative aspect-video bg-muted rounded-lg overflow-hidden group">
+			{#if ctx.countdown > 0}
+				<div class="absolute inset-0 flex items-center justify-center bg-black/80">
+					<span class="text-8xl font-bold text-white animate-pulse">{ctx.countdown}</span>
+				</div>
+			{:else if ctx.isRecording || ctx.isPaused}
+				<!-- Main canvas -->
+				<canvas
+					bind:this={canvasRef}
+					class="absolute inset-0 w-full h-full cursor-crosshair z-10"
+					onmousedown={onMouseDown}
+					onmousemove={onMouseMove}
+					onmouseup={onMouseUp}
+					onmouseleave={onMouseUp}
+				></canvas>
 
-        <div class="absolute top-4 left-4 flex items-center gap-2 bg-black/80 px-3 py-2 rounded-lg z-20">
-          <div class="h-3 w-3 rounded-full {isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}"></div>
-          <span class="text-white font-mono text-sm">{formatTime(recordingTime)}</span>
-          <span class="text-white/60 text-xs">/ {formatTime(maxDuration)}</span>
-        </div>
-        
-        {#if isPaused}
-          <div class="absolute inset-0 flex items-center justify-center bg-black/40">
-            <Badge variant="secondary" class="text-lg px-4 py-2">Paused</Badge>
-          </div>
-        {/if}
-      {:else if videoBlob}
-        <!-- Video Preview -->
-        <video
-          src={URL.createObjectURL(videoBlob)}
-          class="w-full h-full object-contain"
-          controls
-        ><track kind="captions"></video>
-      {/if}
-    </div>
-    
-    {#if !isRecording && !videoBlob}
-      <div class="space-y-4">
-        <div class="flex items-center justify-between">
-          <Label>Recording Settings</Label>
-          <Button variant="ghost" size="sm" onclick={() => showSettings = !showSettings}>
-            <Settings class="h-4 w-4 mr-2" /> {showSettings ? 'Hide' : 'Show'} Advanced
-          </Button>
-        </div>
-        
-        <div class="grid gap-4 md:grid-cols-2">
-          <div class="space-y-2">
-            <Label>Source</Label>
-            <Select type="single" bind:value={selectedSource}>
-              <SelectTrigger>{selectedSource}</SelectTrigger>
-              <SelectContent>
-                <SelectItem value="screen" disabled={!supportsScreenCapture}>
-                   Entire Screen {!supportsScreenCapture ? '(Not Supported)' : ''}
-                </SelectItem>
-                <SelectItem value="window" disabled={!supportsScreenCapture}>
-                   Window {!supportsScreenCapture ? '(Not Supported)' : ''}
-                </SelectItem>
-                <SelectItem value="camera">Camera</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {#if availableAudioInputs.length > 0}
-            <div class="space-y-2">
-              <Label>Microphone</Label>
-              <Select type="single" bind:value={audioSource}>
-                 <SelectTrigger class="w-full truncate">{audioSource}</SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="default">Default</SelectItem>
-                   {#each availableAudioInputs as device}
-                     <SelectItem value={device.deviceId}>{device.label}</SelectItem>
-                   {/each}
-                 </SelectContent>
-              </Select>
-            </div>
-          {/if}
-        </div>
+				<!-- Annotation Toolbar -->
+				<div
+					class="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+				>
+					<AnnotationToolbar
+						currentTool={ctx.currentTool}
+						visible={true}
+						canUndo={ctx.historyIndex > 0 ||
+							(ctx.historyIndex === 0 && ctx.annotationHistory.length > 0)}
+						canRedo={ctx.historyIndex < ctx.annotationHistory.length - 1}
+						onUndo={handleUndo}
+						onRedo={handleRedo}
+						onClear={handleClear}
+						onToolChange={(tool) => ctx.setTool(tool)}
+						onToggleVisibility={() => {}}
+					/>
+				</div>
 
-        {#if showSettings}
-          <div class="space-y-4 pt-4 border-t">
-            {#if selectedSource !== 'camera'}
-              <div class="flex items-center justify-between">
-                <div class="space-y-0.5">
-                  <Label>Include Webcam (Picture-in-Picture)</Label>
-                  <p class="text-sm text-muted-foreground">Show your webcam in corner</p>
-                </div>
-                <Switch bind:checked={includeWebcam} />
-              </div>
-            {/if}
+				<!-- Recording Timer -->
+				<div
+					class="absolute top-4 left-4 flex items-center gap-2 bg-black/80 px-3 py-2 rounded-lg z-20"
+				>
+					<div
+						class="h-3 w-3 rounded-full {ctx.isPaused
+							? 'bg-yellow-500'
+							: 'bg-red-500 animate-pulse'}"
+					></div>
+					<span class="text-white font-mono text-sm">{ctx.formatTime(ctx.recordingTime)}</span>
+					<span class="text-white/60 text-xs">/ {ctx.formatTime(ctx.settings.maxDuration)}</span>
+				</div>
 
-            <div class="flex items-center justify-between">
-              <div class="space-y-0.5">
-                <Label>System Audio</Label>
-                <p class="text-sm text-muted-foreground">Record computer audio</p>
-              </div>
-              <Switch bind:checked={includeSystemAudio} />
-            </div>
-            <div class="flex items-center justify-between">
-              <div class="space-y-0.5">
-                <Label>Microphone Audio</Label>
-                <p class="text-sm text-muted-foreground">Record your voice</p>
-              </div>
-              <Switch bind:checked={includeMicAudio} />
-            </div>
-            <div class="space-y-2">
-              <Label>Countdown Duration</Label>
-              <Select type="single" bind:value={countdownDuration}>
-                <SelectTrigger>
-                  {countdownDuration || ""}
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={0}>No countdown</SelectItem>
-                  <SelectItem value={3}>3 seconds</SelectItem>
-                  <SelectItem value={5}>5 seconds</SelectItem>
-                  <SelectItem value={10}>10 seconds</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        {/if}
-      </div>
-    {/if}
-    
-    <!-- Compression Progress -->
-    {#if isCompressing}
-      <div class="space-y-2">
-        <div class="flex items-center justify-between text-sm">
-          <span>Compressing video...</span>
-          <span>{compressionProgress}%</span>
-        </div>
-        <div class="h-2 bg-muted rounded-full overflow-hidden">
-          <div
-            class="h-full bg-primary transition-all duration-300"
-            style="width: {compressionProgress}%"
-          ></div>
-        </div>
-      </div>
-    {/if}
+				<!-- Webcam Controls Overlay -->
+				{#if ctx.settings.includeWebcam}
+					<div class="absolute top-4 right-4 flex flex-col gap-2 z-20">
+						<div class="bg-black/70 backdrop-blur-sm rounded-lg p-2 space-y-1">
+							<span class="text-white/60 text-xs block text-center">Position</span>
+							<div class="grid grid-cols-3 gap-0.5">
+								{#each ['top-left', 'center', 'top-right', 'bottom-left', '', 'bottom-right'] as pos, i}
+									{#if pos}
+										<button
+											class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-xs {ctx.settings
+												.webcamPosition === pos
+												? 'bg-primary text-white'
+												: ''}"
+											onclick={() => ctx.setWebcamPosition(pos as WebcamPosition)}
+										>
+											{['↖', '○', '↗', '↙', '', '↘'][i]}
+										</button>
+									{:else}
+										<div class="w-6 h-6"></div>
+									{/if}
+								{/each}
+							</div>
+						</div>
+						<div class="bg-black/70 backdrop-blur-sm rounded-lg p-2 flex items-center gap-1">
+							{#each ['small', 'medium', 'large'] as size}
+								<button
+									class="w-6 h-6 rounded text-white/60 hover:bg-white/20 text-sm {ctx.settings
+										.webcamSize === size
+										? 'bg-primary/50'
+										: ''}"
+									onclick={() => ctx.setWebcamSize(size as WebcamSize)}
+									>{size[0].toUpperCase()}</button
+								>
+							{/each}
+						</div>
+						<button
+							class="bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1 text-white/80 text-xs hover:bg-black/80 flex items-center justify-center gap-1"
+							onclick={() => ctx.toggleWebcamShape()}
+						>
+							{#if ctx.settings.webcamShape === 'rectangle'}
+								<span class="w-3 h-2 border border-current rounded-sm"></span>
+							{:else}
+								<span class="w-3 h-3 border border-current rounded-full"></span>
+							{/if}
+							<span>{ctx.settings.webcamShape}</span>
+						</button>
+					</div>
+				{/if}
 
-    <!-- Controls -->
-    <div class="flex items-center justify-center gap-2">
-      {#if !isRecording && !videoBlob && countdown === 0}
-        <Button onclick={startRecording} size="lg" class="gap-2">
-          <Circle class="h-5 w-5" />
-          Start Recording
-        </Button>
-      {:else if countdown > 0}
-        <Button
-          onclick={() => {
-            clearInterval(countdownInterval);
-            countdown = 0;
-          }}
-          size="lg"
-          variant="outline"
-        >
-          Cancel
-        </Button>
-      {:else if isRecording}
-        <Button
-          onclick={isPaused ? resumeRecording : pauseRecording}
-          size="lg"
-          variant="secondary"
-          class="gap-2"
-        >
-          {#if isPaused}
-            <Play class="h-5 w-5" />
-            Resume
-          {:else}
-            <Pause class="h-5 w-5" />
-            Pause
-          {/if}
-        </Button>
-        <Button onclick={stopRecording} size="lg" variant="destructive" class="gap-2">                                         
-        <Square class="h-5 w-5" />
-          Stop
-        </Button>                                              
-      {:else if videoBlob}
-        <Button variant="outline" onclick={resetRecording}>    
-          Record Again
-        </Button>
-        <Button onclick={handleUseRecording}>
-          Use This Recording
-        </Button>
-        <Button onclick={stopRecording} size="lg" variant="destructive">
-           <Square class="h-5 w-5" /> Stop
-        </Button>
-      {/if}
-    </div>
-    {#if videoBlob}
-      <div class="text-sm text-center text-muted-foreground">
-        Duration: {formatTime(recordingTime)} • Size: {(videoBlob.size / 1024 / 1024).toFixed(2)} MB
-      </div>
-    {/if}
-  </CardContent>
+				{#if ctx.isPaused}
+					<div class="absolute inset-0 flex items-center justify-center bg-black/40">
+						<Badge variant="secondary" class="text-lg px-4 py-2">Paused</Badge>
+					</div>
+				{/if}
+			{:else if ctx.videoBlob}
+				<video src={ctx.recordedVideoUrl} class="w-full h-full object-contain" controls>
+					<track kind="captions" />
+				</video>
+			{:else}
+				<div class="absolute inset-0 flex flex-col items-center justify-center">
+					<Monitor class="h-16 w-16 text-muted-foreground mb-4" />
+					<p class="text-sm text-muted-foreground">Select recording source and click start</p>
+					{#if !supportsScreenCapture}
+						<Badge variant="secondary" class="mt-2">Screen recording unavailable</Badge>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Hidden video elements for streams -->
+			<video bind:this={videoPreviewRef} class="hidden" muted playsinline
+				><track kind="captions" /></video
+			>
+			<video bind:this={webcamPreviewRef} class="hidden" muted playsinline
+				><track kind="captions" /></video
+			>
+		</div>
+
+		<!-- Settings Panel (only when not recording) -->
+		{#if !ctx.isRecording && !ctx.videoBlob}
+			<div class="space-y-4">
+				<!-- Recording Source Selector -->
+				<div class="space-y-2">
+					<Label>Recording Source</Label>
+					<Select
+						type="single"
+						value={ctx.settings.selectedSource}
+						onValueChange={(v) => {
+							if (v === 'workspace' || v === 'screen' || v === 'window' || v === 'camera') {
+								ctx.updateSettings({ selectedSource: v });
+							}
+						}}
+					>
+						<SelectTrigger>{getSourceLabel(ctx.settings.selectedSource)}</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="workspace">Code Workspace (Default)</SelectItem>
+							{#if supportsScreenCapture}
+								<SelectItem value="screen">Screen</SelectItem>
+								<SelectItem value="window">Window</SelectItem>
+							{/if}
+						</SelectContent>
+					</Select>
+					<p class="text-xs text-muted-foreground">
+						{#if ctx.settings.selectedSource === 'workspace'}
+							Captures the code editor workspace
+						{:else if ctx.settings.selectedSource === 'screen'}
+							Captures your entire screen
+						{:else}
+							Captures a specific window
+						{/if}
+					</p>
+				</div>
+
+				<div class="flex items-center justify-between">
+					<div class="space-y-0.5">
+						<Label>Include Webcam</Label>
+						<p class="text-sm text-muted-foreground">Show picture-in-picture</p>
+					</div>
+					<Switch
+						checked={ctx.settings.includeWebcam}
+						onCheckedChange={(v) => ctx.updateSettings({ includeWebcam: v })}
+					/>
+				</div>
+
+				{#if ctx.settings.includeWebcam}
+					<div class="ml-4 space-y-3 pt-2 border-l-2 border-muted pl-4">
+						<div class="space-y-2">
+							<Label class="text-sm">Position</Label>
+							<Select
+								type="single"
+								value={ctx.settings.webcamPosition}
+								onValueChange={(v) => ctx.setWebcamPosition(v as WebcamPosition)}
+							>
+								<SelectTrigger class="h-8">{ctx.settings.webcamPosition}</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="top-left">Top Left</SelectItem>
+									<SelectItem value="top-right">Top Right</SelectItem>
+									<SelectItem value="bottom-left">Bottom Left</SelectItem>
+									<SelectItem value="bottom-right">Bottom Right</SelectItem>
+									<SelectItem value="center">Center</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div class="space-y-2">
+							<Label class="text-sm">Size</Label>
+							<Select
+								type="single"
+								value={ctx.settings.webcamSize}
+								onValueChange={(v) => ctx.setWebcamSize(v as WebcamSize)}
+							>
+								<SelectTrigger class="h-8">{ctx.settings.webcamSize}</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="small">Small (15%)</SelectItem>
+									<SelectItem value="medium">Medium (20%)</SelectItem>
+									<SelectItem value="large">Large (30%)</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div class="space-y-2">
+							<Label class="text-sm">Shape</Label>
+							<Select
+								type="single"
+								value={ctx.settings.webcamShape}
+								onValueChange={(v) => ctx.updateSettings({ webcamShape: v as WebcamShape })}
+							>
+								<SelectTrigger class="h-8">{ctx.settings.webcamShape}</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="rectangle">Rectangle</SelectItem>
+									<SelectItem value="circle">Circle</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Only show audio options for screen/window capture -->
+				{#if ctx.settings.selectedSource === 'screen' || ctx.settings.selectedSource === 'window'}
+					<div class="flex items-center justify-between">
+						<div class="space-y-0.5">
+							<Label>System Audio</Label>
+							<p class="text-sm text-muted-foreground">Record computer audio</p>
+						</div>
+						<Switch
+							checked={ctx.settings.includeSystemAudio}
+							onCheckedChange={(v) => ctx.updateSettings({ includeSystemAudio: v })}
+						/>
+					</div>
+				{/if}
+
+				<div class="flex items-center justify-between">
+					<div class="space-y-0.5">
+						<Label>Microphone</Label>
+						<p class="text-sm text-muted-foreground">Record voice</p>
+					</div>
+					<Switch
+						checked={ctx.settings.includeMicAudio}
+						onCheckedChange={(v) => ctx.updateSettings({ includeMicAudio: v })}
+					/>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Controls -->
+		<div class="flex items-center justify-center gap-2">
+			{#if !ctx.isRecording && !ctx.videoBlob && ctx.countdown === 0}
+				<Button onclick={() => ctx.startRecording()} size="lg" class="gap-2">
+					<Circle class="h-5 w-5" />
+					Start Recording
+				</Button>
+				<Popover>
+					<PopoverTrigger>
+						{#snippet child(props)}
+							<Button {...props} variant="ghost" size="icon" title="Keyboard Shortcuts">
+								<Keyboard class="h-4 w-4" />
+							</Button>
+						{/snippet}
+					</PopoverTrigger>
+					<PopoverContent class="w-72">
+						<div class="space-y-3">
+							<h4 class="font-semibold text-sm">Keyboard Shortcuts</h4>
+							<div class="grid grid-cols-2 gap-y-1 text-xs">
+								<span class="text-muted-foreground">Start Recording</span>
+								<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">R</kbd>
+								<span class="text-muted-foreground">Stop Recording</span>
+								<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">S</kbd>
+								<span class="text-muted-foreground">Pause/Resume</span>
+								<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">Space</kbd>
+								<span class="text-muted-foreground">Cancel</span>
+								<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">Esc</kbd>
+							</div>
+							{#if ctx.settings.includeWebcam}
+								<div class="border-t pt-2">
+									<h5 class="font-medium text-xs mb-1">Webcam Controls</h5>
+									<div class="grid grid-cols-2 gap-y-1 text-xs">
+										<span class="text-muted-foreground">Cycle Position</span>
+										<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">↑↓←→</kbd>
+										<span class="text-muted-foreground">Cycle Size</span>
+										<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">+</kbd>
+										<span class="text-muted-foreground">Toggle Shape</span>
+										<kbd class="bg-muted px-1.5 py-0.5 rounded text-right">C</kbd>
+									</div>
+								</div>
+							{/if}
+						</div>
+					</PopoverContent>
+				</Popover>
+			{:else if ctx.countdown > 0}
+				<Button onclick={() => ctx.cancelRecording()} size="lg" variant="outline">Cancel</Button>
+			{:else if ctx.isRecording}
+				<Button onclick={() => ctx.togglePause()} size="lg" variant="secondary" class="gap-2">
+					{#if ctx.isPaused}
+						<Play class="h-5 w-5" /> Resume
+					{:else}
+						<Pause class="h-5 w-5" /> Pause
+					{/if}
+				</Button>
+				<Button onclick={() => ctx.stopRecording()} size="lg" variant="destructive" class="gap-2">
+					<Square class="h-5 w-5" /> Stop
+				</Button>
+			{:else if ctx.videoBlob}
+				<Button variant="outline" onclick={() => ctx.reset()}>Record Again</Button>
+				<Button onclick={() => (ctx.showPreviewModal = true)}>Use This Recording</Button>
+			{/if}
+		</div>
+
+		{#if ctx.videoBlob}
+			<div class="text-sm text-center text-muted-foreground">
+				Duration: {ctx.formatTime(ctx.recordingTime)} • Size: {(
+					ctx.videoBlob.size /
+					1024 /
+					1024
+				).toFixed(2)} MB
+			</div>
+		{/if}
+	</CardContent>
 </Card>
 
-{#if showPreviewModal}
-  <VideoPreviewModal
-     bind:open={showPreviewModal}
-     videoUrl={recordedVideoUrl}
-     reviewId={reviewId}
-     onSave={handleSaveVideo}
-     onReRecord={() => { handleDiscard(); startRecording(); }}
-     onDiscard={handleDiscard}
-  />
+{#if ctx.showPreviewModal}
+	<VideoPreviewModal
+		bind:open={ctx.showPreviewModal}
+		videoUrl={ctx.recordedVideoUrl}
+		{reviewId}
+		onSave={handleSaveVideo}
+		onReRecord={() => {
+			ctx.reset();
+			ctx.startRecording();
+		}}
+		onDiscard={() => ctx.reset()}
+	/>
 {/if}

@@ -80,7 +80,7 @@
         
         <div class="space-y-2">
           <Label for="role">Your Role</Label>
-          <Select bind:value={role}>
+          <Select type="single" bind:value={role}>
             <SelectTrigger>
               {role || "Select your role"}
             </SelectTrigger>
