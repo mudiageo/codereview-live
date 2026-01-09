@@ -22,9 +22,19 @@
     onLineClick?: (lineNumber: number) => void;
     aiAnalysis?: CodeAnalysis;
     onExplainCode?: (lineNumber: number, code: string) => void;
+    onscroll?: (e: Event) => void;
   }
 
-  let { diff, filename = 'changes.diff', viewMode = $bindable('unified'), onLineClick, aiAnalysis, onExplainCode }: Props = $props();
+  let { diff, filename = 'changes.diff', viewMode = $bindable('unified'), onLineClick, aiAnalysis, onExplainCode, onscroll }: Props = $props();
+
+  let viewport = $state<HTMLElement | null>(null);
+
+  $effect(() => {
+    if (viewport && onscroll) {
+      viewport.addEventListener('scroll', onscroll);
+      return () => viewport.removeEventListener('scroll', onscroll);
+    }
+  });
 
   interface DiffLine {
     type: 'add' | 'remove' | 'context' | 'header';
@@ -250,7 +260,7 @@
 
   <!-- Diff Content -->
   <div class="rounded-lg border overflow-hidden">
-    <ScrollArea class="h-[600px]">
+    <ScrollArea class="h-[600px]" bind:viewportRef={viewport}>
       {#if viewMode === 'unified'}
         <!-- Unified View -->
         <div class="font-mono text-xs">

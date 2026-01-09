@@ -6,6 +6,7 @@
   import Volume2 from '@lucide/svelte/icons/volume-2';
   import VolumeX from '@lucide/svelte/icons/volume-x';
   import Maximize from '@lucide/svelte/icons/maximize';
+  import PictureInPicture from '@lucide/svelte/icons/picture-in-picture';
   import Settings from '@lucide/svelte/icons/settings';
   import { settingsStore } from '$lib/stores/index.svelte';
   import { onMount } from 'svelte';
@@ -28,6 +29,7 @@
   let playbackRate = $state(1);
   let showControls = $state(true);
   let controlsTimeout: number;
+  let isPiP = $state(false);
   
   // Apply default playback speed from settings on mount
   onMount(() => {
@@ -42,6 +44,9 @@
           // Autoplay was prevented, user interaction required
         });
       }
+
+      videoElement.addEventListener('enterpictureinpicture', () => isPiP = true);
+      videoElement.addEventListener('leavepictureinpicture', () => isPiP = false);
     }
   });
   
@@ -68,6 +73,19 @@
       document.exitFullscreen();
     } else {
       videoElement.requestFullscreen();
+    }
+  }
+
+  async function togglePiP() {
+    if (!videoElement) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await videoElement.requestPictureInPicture();
+      }
+    } catch (err) {
+      console.error('Failed to toggle PiP:', err);
     }
   }
   
@@ -214,6 +232,18 @@
         >
           <Settings class="h-4 w-4" />
         </Button>
+
+        {#if 'pictureInPictureEnabled' in document}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-8 w-8 text-white hover:bg-white/20"
+            onclick={togglePiP}
+            title="Picture in Picture"
+          >
+            <PictureInPicture class="h-4 w-4" />
+          </Button>
+        {/if}
         
         <Button
           variant="ghost"

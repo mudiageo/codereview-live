@@ -26,6 +26,7 @@
 	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import { LanguageDetector } from '$lib/utils/language-detector';
 	import { toast } from 'svelte-sonner';
+	import { getRecordingContext } from '$lib/contexts/recording-context.svelte';
 
 	export interface FileNode {
 		name: string;
@@ -57,6 +58,7 @@
 		onRunAI?: () => void;
 		onAutoCheck?: () => void;
 		children?: import('svelte').Snippet;
+		onscroll?: (e: Event) => void;
 	}
 
 	let {
@@ -72,8 +74,11 @@
 		onRunAI,
 		onAutoCheck,
 		children,
-		activeFilePath
+		activeFilePath,
+		onscroll
 	}: Props = $props();
+
+	const ctx = getRecordingContext();
 
 	// State
 	let sidebarOpen = $state(true);
@@ -99,6 +104,10 @@
 		if (file) {
 			openFile(file);
 			onLineClick?.(lineNumber);
+
+			if (ctx?.isRecording) {
+				ctx.addEvent('line-click', { line: lineNumber });
+			}
 		}
 	}
 
@@ -239,6 +248,10 @@
 			expandedDirs.add(path);
 		}
 		expandedDirs = new Set(expandedDirs);
+
+		if (ctx?.isRecording) {
+			ctx.addEvent('toggle-directory', { path });
+		}
 	}
 
 	function openFile(file: FileNode) {
@@ -252,6 +265,10 @@
 		activeTab = file;
 		onFileChange?.(file);
 		mobileDrawerOpen = false;
+
+		if (ctx?.isRecording) {
+			ctx.addEvent('file-change', { path: file.path });
+		}
 	}
 
 	function closeTab(file: FileNode, e?: Event) {
@@ -369,7 +386,10 @@
 						size="sm"
 						class="h-7 w-7 px-0"
 						title="Files"
-						onclick={() => (activeSidebarTab = 'files')}
+						onclick={() => {
+							activeSidebarTab = 'files';
+							if (ctx?.isRecording) ctx.addEvent('tab-change', { tab: 'files' });
+						}}
 					>
 						<Folder class="h-4 w-4" />
 					</Button>
@@ -378,7 +398,10 @@
 						size="sm"
 						class="h-7 w-7 px-0"
 						title="AI Analysis"
-						onclick={() => (activeSidebarTab = 'ai')}
+						onclick={() => {
+							activeSidebarTab = 'ai';
+							if (ctx?.isRecording) ctx.addEvent('tab-change', { tab: 'ai' });
+						}}
 					>
 						<Bot class="h-4 w-4" />
 					</Button>
@@ -387,7 +410,10 @@
 						size="sm"
 						class="h-7 w-7 px-0"
 						title="Checklist"
-						onclick={() => (activeSidebarTab = 'checklist')}
+						onclick={() => {
+							activeSidebarTab = 'checklist';
+							if (ctx?.isRecording) ctx.addEvent('tab-change', { tab: 'checklist' });
+						}}
 					>
 						<CheckSquare class="h-4 w-4" />
 					</Button>
@@ -805,7 +831,20 @@
 					<div class="h-full">
 						{#if mode === 'diff' && activeTab.diff}
 							<div class="p-4">
-								<DiffViewer diff={activeTab.diff} filename={activeTab.path} {onLineClick} {aiAnalysis} onExplainCode={handleExplainCode} />
+								<DiffViewer
+									diff={activeTab.diff}
+									filename={activeTab.path}
+									{onLineClick}
+									{aiAnalysis}
+									onExplainCode={handleExplainCode}
+									onscroll={(e) => {
+										onscroll?.(e);
+										if (ctx?.isRecording) {
+											const target = e.target as HTMLElement;
+											ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+										}
+									}}
+								/>
 							</div>
 						{:else if activeTab.content}
 							<CodeEditor
@@ -814,6 +853,13 @@
 								readonly
 								showLineNumbers
 								class="h-full"
+								onscroll={(e) => {
+									onscroll?.(e);
+									if (ctx?.isRecording) {
+										const target = e.target as HTMLElement;
+										ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+									}
+								}}
 							/>
 						{:else}
 							<div class="flex h-full items-center justify-center text-muted-foreground">
