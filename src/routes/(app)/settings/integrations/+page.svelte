@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import Github from '@lucide/svelte/icons/github';
 	import GitlabIcon from '@lucide/svelte/icons/gitlab';
@@ -11,9 +17,10 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
 	import { authClient } from '$lib/auth-client';
+
 	interface ConnectedAccount {
 		id: string;
-		provider: 'github' | 'gitlab' | 'google';
+		providerId: 'github' | 'gitlab' | 'google';
 		username: string;
 		email: string;
 		avatar_url?: string;
@@ -43,10 +50,9 @@
 
 		try {
 			// Start OAuth flow
-		await authClient.linkSocial({
-			provider,
-		});
-		
+			await authClient.linkSocial({
+				provider
+			});
 		} catch (error) {
 			toast.error(`Error connecting to ${provider}`);
 			console.error(error);
@@ -122,7 +128,6 @@
 
 	<div class="grid gap-4">
 		{#each providers as provider}
-			{@const connected = isConnected(provider.id)}
 			{@const account = getConnectedAccount(provider.id)}
 
 			<Card>
@@ -130,7 +135,7 @@
 					<div class="flex items-start justify-between">
 						<div class="flex items-center gap-3">
 							<div class="p-2 rounded-lg {provider.color} text-white">
-								<svelte:component this={provider.icon} class="h-5 w-5" />
+								<provider.icon class="h-5 w-5" />
 							</div>
 							<div>
 								<CardTitle>{provider.name}</CardTitle>
@@ -138,7 +143,7 @@
 							</div>
 						</div>
 
-						{#if connected}
+						{#if isConnected(provider.id)}
 							<Badge variant="outline" class="flex items-center gap-1">
 								<CheckCircle class="h-3 w-3 text-green-600" />
 								Connected
@@ -153,7 +158,7 @@
 				</CardHeader>
 
 				<CardContent>
-					{#if connected && account}
+					{#if isConnected(provider.id) && account}
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								{#if account.avatar_url}
@@ -167,7 +172,7 @@
 									<p class="font-medium">{account.username}</p>
 									<p class="text-sm text-muted-foreground">{account.email}</p>
 									<p class="text-xs text-muted-foreground">
-										Connected {new Date(account.connected_at).toLocaleDateString()}
+										Connected on {new Date(account.updatedAt).toLocaleDateString()}
 									</p>
 								</div>
 							</div>
@@ -193,7 +198,7 @@
 							{#if connectingProvider === provider.id}
 								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 							{:else}
-								<svelte:component this={provider.icon} class="mr-2 h-4 w-4" />
+								<provider.icon class="mr-2 h-4 w-4" />
 							{/if}
 							Connect {provider.name}
 						</Button>
@@ -211,8 +216,8 @@
 			<div>
 				<h4 class="font-medium mb-2">GitHub</h4>
 				<p class="text-sm text-muted-foreground">
-					Connect GitHub to import pull requests directly into CodeReview.live. All private repositories
-					are supported with proper authentication.
+					Connect GitHub to import pull requests directly into CodeReview.live. All private
+					repositories are supported with proper authentication.
 				</p>
 			</div>
 			<div>

@@ -25,7 +25,7 @@ export const users = pgTable("users", {
   phone: text("phone"),
   isActive: boolean("is_active").default(true),
   githubId: text('github_id').unique(),
-  googleId: text('google_id').unique(), 
+  googleId: text('google_id').unique(),
   apiKey: text('api_key'), // Encrypted Gemini API key
   plan: text('plan').default('free').notNull(), // free, pro, team
   stripeCustomerId: text('stripe_customer_id'),
@@ -100,10 +100,10 @@ export const projects = pgTable('projects', {
   color: text('color').default('#8B5CF6'), // Project color for UI
   isTeam: boolean('is_team').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")     .defaultNow()     
-    .$onUpdate(() => /* @__PURE__ */ new Date())     
+  updatedAt: timestamp("updated_at").defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-    ...syncMetadata
+  ...syncMetadata
 });
 
 // Reviews table
@@ -127,13 +127,22 @@ export const reviews = pgTable('reviews', {
     codeLineCount?: number;
     filesChanged?: string[];
     tags?: string[];
+    files?: any[];
+    importSource?: string;
+    aiAnalysis?: any;
+    recordingEvents?: { type: string; time: number; data: any }[];
+    checklist?: {
+      items: Record<string, boolean>;
+      notes: Record<string, string>;
+      template: string;
+    };
   }>(),
   viewCount: integer('view_count').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")     .defaultNow()     
-    .$onUpdate(() => /* @__PURE__ */ new Date())     
+  updatedAt: timestamp("updated_at").defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-    ...syncMetadata
+  ...syncMetadata
 });
 
 // Comments table
@@ -149,9 +158,9 @@ export const comments = pgTable('comments', {
   codeLineEnd: integer('code_line_end'),
   isResolved: boolean('is_resolved').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")     .defaultNow()     
-  .$onUpdate(() => /* @__PURE__ */ new Date())     
-  .notNull(),
+  updatedAt: timestamp("updated_at").defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
   ...syncMetadata
 });
 
@@ -178,10 +187,10 @@ export const subscriptions = pgTable('subscriptions', {
   currentPeriodEnd: timestamp('current_period_end'),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")     .defaultNow()     
-    .$onUpdate(() => /* @__PURE__ */ new Date())     
-    .notNull(), 
-    ...syncMetadata
+  updatedAt: timestamp("updated_at").defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  ...syncMetadata
 });
 
 // AI usage tracking

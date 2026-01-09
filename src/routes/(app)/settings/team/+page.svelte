@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { toast } from 'svelte-sonner';
 	import { teamsStore, teamInvitationsStore } from '$lib/stores/index.svelte';
 	import { auth } from '$lib/stores/auth.svelte';
@@ -17,13 +18,7 @@
 	let newMemberEmail = $state('');
 	let newMemberRole = $state('member');
 	let isInviting = $state(false);
-
-	onMount(async () => {
-		if (hasTeamAccess) {
-			await teamsStore.load();
-			await teamInvitationsStore.load();
-		}
-	});
+;
 
 	async function handleInvite() {
 		if (!newMemberEmail) {
@@ -111,11 +106,20 @@
 
 				<div class="space-y-2">
 					<Label for="role">Role</Label>
-					<select id="role" bind:value={newMemberRole} class="w-full rounded-md border p-2">
-						<option value="member">Member</option>
-						<option value="admin">Admin</option>
-						<option value="viewer">Viewer</option>
-					</select>
+					<Select
+						type="single"
+						value={newMemberRole}
+						onValueChange={(value) => newMemberRole = value || 'member'}
+					>
+						<SelectTrigger>
+							{newMemberRole || ""}
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="member">Member</SelectItem>
+							<SelectItem value="admin">Admin</SelectItem>
+							<SelectItem value="viewer">Viewer</SelectItem>
+						</SelectContent>
+					</Select>
 				</div>
 			</div>
 

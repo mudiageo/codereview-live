@@ -14,6 +14,8 @@ import {
 import { db } from '$lib/server/db';
 import { aiUsage, users } from '$lib/server/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { env } from '$env/dynamic/private'
+import { planLimits } from '$lib/config/features'
 
 // Check AI credits and user limits
 async function checkAICredits(userId: string): Promise<boolean> {
@@ -29,14 +31,8 @@ async function checkAICredits(userId: string): Promise<boolean> {
     where: eq(users.id, userId),
   });
 
-  const limits = {
-    free: 50,
-    pro: 1000,
-    team: 5000,
-  };
-
   const used = result[0]?.totalUsed || 0;
-  const limit = limits[user?.plan as keyof typeof limits] || 50;
+  const limit = planLimits[user?.plan as keyof typeof planLimits].aiCreditsPerMonth || 50;
 
   return used < limit;
 }
@@ -47,7 +43,7 @@ async function getApiKey(userId: string): Promise<string> {
     where: eq(users.id, userId),
   });
 
-  const apiKey = userRecord?.apiKey || process.env.GEMINI_API_KEY;
+  const apiKey = userRecord?.apiKey || env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('Gemini API key not configured. Add your key in Settings > AI.');
   }
@@ -244,15 +240,10 @@ export const getAIUsage = query(
       where: eq(users.id, user.id),
     });
 
-    const limits = {
-      free: 50,
-      pro: 1000,
-      team: 5000,
-    };
 
     return {
       used: result[0]?.totalTokens || 0,
-      limit: limits[userRecord?.plan as keyof typeof limits] || 50,
+      limit: planLimits[userRecord?.plan as keyof typeof planLimits].aiCreditsPerMonth || 50,
       calls: result[0]?.totalCalls || 0,
     };
   }

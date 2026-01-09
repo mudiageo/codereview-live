@@ -11,22 +11,43 @@
   import { auth } from '$lib/stores/auth.svelte';
   import { plans } from '$lib/config';
   import { onMount } from 'svelte';
+  import { formatStorageSize, parseStorageString, calculateStoragePercentage } from '$lib/utils/storage';
+  import { toast } from 'svelte-sonner';
   
   let showUpgradeDialog = $state(false);
+  let subscriptionHistory = $state<any[]>([]);
+  let loading = $state(true);
   
   onMount(async () => {
     await subscriptionsStore.load();
     await aiUsageStore.load();
+
+    // Load subscription history
+    subscriptionHistory = subscriptionsStore.data || [];
+    loading = false;
   });
   
   const currentPlan = $derived(auth.currentUser?.plan || 'free');
   const currentPlanDetails = $derived(plans[currentPlan as keyof typeof plans]);
   const subscription = $derived(subscriptionsStore.current);
   
+  // Parse storage limit from string to bytes
+  const storageLimitBytes = $derived(parseStorageString(currentPlanDetails.limits.storage));
+
+  // Usage data with proper types
   const usage = $derived({
-    cloudReviews: { used: 4, limit: currentPlanDetails.limits.localReviews },
-    storage: { used: 234, limit: parseInt(currentPlanDetails.limits.storage) || 1024 }, // MB
-    aiCredits: { used: aiUsageStore.totalTokens, limit: currentPlanDetails.limits.aiCredits }
+    cloudReviews: {
+      used: 4,
+      limit: currentPlanDetails.limits.localReviews
+    },
+    storage: {
+      used: 234 * 1024 * 1024, // Convert MB to bytes for calculation
+      limit: storageLimitBytes
+    },
+    aiCredits: {
+      used: aiUsageStore.totalTokens,
+      limit: currentPlanDetails.limits.aiCredits
+    }
   });
   
   const availablePlans = [
@@ -35,10 +56,20 @@
     { ...plans.team, id: 'team' }
   ];
   
-  const invoices = [
-    { id: '1', date: 'Dec 1, 2024', amount: '$20.00', status: 'paid' },
-    { id: '2', date: 'Nov 1, 2024', amount: '$20.00', status: 'paid' },
-  ];
+  const PAYMENT_PROVIDER_MESSAGE = 'Payment method setup will redirect to Stripe';
+
+  function formatDate(date: Date | string) {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  function downloadInvoice(invoiceId: string) {
+    // TODO: Implement actual invoice download
+    toast.info('Downloading invoice...');
+  }
 </script>
 
 <div class="space-y-6">
@@ -59,6 +90,11 @@
             <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'} class="mt-2">
               {subscription.status}
             </Badge>
+          {/if}
+          {#if subscription?.currentPeriodEnd}
+            <p class="text-xs text-muted-foreground mt-2">
+              Renews on {formatDate(subscription.currentPeriodEnd)}
+            </p>
           {/if}
         </div>
         {#if currentPlan === 'free'}
@@ -89,18 +125,67 @@
       <div class="space-y-2">
         <div class="flex justify-between text-sm">
           <span>Storage</span>
-          <span>{usage.storage.used} MB / {currentPlanDetails.limits.storage}</span>
+          <span>{formatStorageSize(usage.storage.used)} / {currentPlanDetails.limits.storage}</span>
         </div>
-        <Progress value={(usage.storage.used / usage.storage.limit) * 100} />
+        {#if usage.storage.limit !== -1}
+          {@const storagePercent = calculateStoragePercentage(usage.storage.used, usage.storage.limit)}
+          <Progress value={storagePercent} />
+        {/if}
       </div>
       
       <div class="space-y-2">
         <div class="flex justify-between text-sm">
           <span>AI Credits</span>
-          <span>{usage.aiCredits.used} / {usage.aiCredits.limit}</span>
+          <span>{usage.aiCredits.used} / {usage.aiCredits.limit === -1 ? 'Unlimited' : usage.aiCredits.limit.toLocaleString()}</span>
         </div>
-        <Progress value={(usage.aiCredits.used / usage.aiCredits.limit) * 100} />
+        {#if usage.aiCredits.limit !== -1}
+          <Progress value={(usage.aiCredits.used / usage.aiCredits.limit) * 100} />
+        {/if}
       </div>
+    </CardContent>
+  </Card>
+
+  <!-- Subscription History -->
+  <Card>
+    <CardHeader>
+      <CardTitle>Subscription History</CardTitle>
+      <CardDescription>Your past subscriptions and invoices</CardDescription>
+    </CardHeader>
+    <CardContent>
+      {#if loading}
+        <p class="text-sm text-muted-foreground">Loading...</p>
+      {:else if subscriptionHistory.length === 0}
+        <p class="text-sm text-muted-foreground">No subscription history yet.</p>
+      {:else}
+        <div class="space-y-2">
+          {#each subscriptionHistory as sub}
+            <div class="flex items-center justify-between p-3 border rounded-lg">
+              <div class="flex-1">
+                <p class="font-medium">{plans[sub.plan as keyof typeof plans]?.name || sub.plan} Plan</p>
+                <p class="text-sm text-muted-foreground">
+                  {formatDate(sub.createdAt)} - {sub.canceledAt ? formatDate(sub.canceledAt) : 'Active'}
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <Badge variant={sub.status === 'active' ? 'default' : 'secondary'}>
+                  {sub.status}
+                </Badge>
+                {#if sub.invoiceUrl}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="gap-2"
+                    onclick={() => window.open(sub.invoiceUrl, '_blank', 'noopener,noreferrer')}
+                  >
+                    <Download class="h-4 w-4" />
+                    Invoice
+                  </Button>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </CardContent>
   </Card>
 
@@ -162,37 +247,15 @@
             <p class="text-sm text-muted-foreground">Add a payment method to upgrade</p>
           </div>
         </div>
-        <Button variant="outline">Add Payment Method</Button>
+        <Button
+          variant="outline"
+          onclick={() => toast.info(PAYMENT_PROVIDER_MESSAGE)}
+        >
+          Add Payment Method
+        </Button>
       </div>
     </CardContent>
   </Card>
-
-  <!-- Billing History -->
-  {#if invoices.length > 0}
-    <Card>
-      <CardHeader>
-        <CardTitle>Billing History</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div class="space-y-2">
-          {#each invoices as invoice}
-            <div class="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <p class="font-medium">{invoice.date}</p>
-                <Badge variant="outline" class="badge-published">Paid</Badge>
-              </div>
-              <div class="flex items-center gap-4">
-                <span class="font-medium">{invoice.amount}</span>
-                <Button variant="ghost" size="icon">
-                  <Download class="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </CardContent>
-    </Card>
-  {/if}
 </div>
 
 <UpgradeDialog bind:open={showUpgradeDialog} currentPlan={currentPlan as any} />

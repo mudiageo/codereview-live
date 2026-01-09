@@ -44,7 +44,7 @@
     
     try {
       // Call Better-Auth social login
-       await auth.signInWithProvider({ provider });
+       await auth.signInWithProvider(provider);
       console.log(`Logging in with ${provider}`);
     } catch (err) {
       error = `Failed to login with ${provider}. Please try again.`;

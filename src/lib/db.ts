@@ -52,6 +52,7 @@ export async function initDb() {
         reviewsStore.load(),
         commentsStore.load(),
         teamsStore.load(),
+        teamInvitationsStore.load(),
         aiUsageStore.load(),
         subscriptionsStore.load()
       ]);

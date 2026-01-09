@@ -10,9 +10,10 @@ import { writeFile, unlink } from 'fs/promises';
 
 const MAX_SIZE = config.video.maxSizeMB * 1024 * 1024;
 
-export const uploadVideo = command(
+// Use form() for file uploads as it supports FormData/Files
+export const uploadVideo = form(
   v.object({
-    video: v.custom<File>((val) => val instanceof File, 'Video file is required'),
+    video: v.file('Video file is required'),
     reviewId: v.string(),
     storageProvider: v.optional(v.union([v.literal('local'), v.literal('cloud')])),
   }),

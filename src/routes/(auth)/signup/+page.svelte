@@ -122,7 +122,7 @@
     
     try {
       // Call Better-Auth social signup
-      await auth.signInWithProvider({ provider });
+      await auth.signInWithProvider(provider);
       console.log(`Signing up with ${provider}`);
     } catch (err) {
       error = `Failed to sign up with ${provider}. Please try again.`;

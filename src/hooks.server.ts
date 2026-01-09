@@ -3,6 +3,8 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { building } from '$app/environment';
 import { redirect } from '@sveltejs/kit'
 import { rateLimit } from '$lib/server/rate-limit';
+import { sequence } from '@sveltejs/kit/hooks';
+import { handle as syncHandle } from '$lib/server/sync';
 
 const protectedRoutes = [
   '/dashboard',
@@ -15,7 +17,7 @@ const protectedRoutes = [
 
 const authRoutes = ['/login', '/signup'];
 
-export const handle: Handle = async ({ event, resolve }) => {
+const authHandle: Handle = async ({ event, resolve }) => {
   // Rate limiting
   const ip = building ? '' : event.getClientAddress();
   if (await rateLimit(ip)) {
@@ -68,3 +70,5 @@ export const handle: Handle = async ({ event, resolve }) => {
   
   return svelteKitHandler({ event, resolve, auth, building });
 };
+
+export const handle = sequence(authHandle, syncHandle,);

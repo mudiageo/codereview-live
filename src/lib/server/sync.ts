@@ -1,12 +1,12 @@
 import { db } from '$lib/server/db'
 import * as schema from '$lib/server/db/schema'
-import { ServerSyncEngine } from 'sveltekit-sync/server';
+import { getUser } from '$lib/server/auth'
+import { createServerSync } from 'sveltekit-sync/server';
+import type { SyncConfig } from 'sveltekit-sync/server'
 import { DrizzleAdapter } from 'sveltekit-sync/adapters/drizzle';
 
-
-const adapter = new DrizzleAdapter({ db, schema })
-
-export const syncEngine = new ServerSyncEngine(adapter, {
+// Define your sync schema - what gets synced and who can access it
+export const config: SyncConfig = {
   tables: {
     projects: {
       table: 'projects',
@@ -38,5 +38,14 @@ export const syncEngine = new ServerSyncEngine(adapter, {
     },
   },
   batchSize: 100,
-  enableRealtime: true
-});
+  realtime: {
+    authenticate: async (request) => {
+      const user = await getUser()
+      return { userId: user.id, ...user};
+    }
+  }
+};
+
+const adapter = new DrizzleAdapter({ db, schema })
+
+export const { syncEngine, handle } = createServerSync({ adapter, config });

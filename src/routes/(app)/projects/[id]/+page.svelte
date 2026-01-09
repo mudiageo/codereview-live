@@ -17,13 +17,6 @@
   
   const projectId = $derived(page.params.id);
   
-  // Load stores
-  $effect(() => {
-    projectsStore.load();
-    reviewsStore.load();
-    commentsStore.load();
-    teamsStore.load();
-  });
   
   // Get project from store
   const project = $derived(projectsStore.findById(projectId) || {

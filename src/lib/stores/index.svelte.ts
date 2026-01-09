@@ -5,42 +5,42 @@ import type { Review, Project, Comment, Team, TeamInvitation, Subscription } fro
 
 
 class ReviewsStore {
-  private collection = {id: null};
-  
+  private collection = { id: null };
+
   data = $state<Review[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
-  
+
   get count() {
     return this.data.length;
   }
-  
+
   get isEmpty() {
     return this.data.length === 0;
   }
-  
+
   get published() {
     return this.data.filter(r => r.status === 'published');
   }
-  
+
   get drafts() {
     return this.data.filter(r => r.status === 'draft');
   }
-  
+
   get archived() {
     return this.data.filter(r => r.status === 'archived');
   }
-  
+
   async load() {
     if (!this.collection) return;
-    
+
     this.isLoading = true;
     this.error = null;
-    
+
     try {
-      this.collection = syncEngine.collection('reviews'); 
+      this.collection = syncEngine.collection('reviews');
       await this.collection.load();
-      
+
       this.data = this.collection.data as Review[];
     } catch (err) {
       this.error = err as Error;
@@ -49,10 +49,10 @@ class ReviewsStore {
       this.isLoading = false;
     }
   }
-  
+
   async create(review: Omit<Review, 'id' | 'createdAt' | 'updatedAt'>) {
     if (!this.collection) return null;
-    
+
     try {
       const newReview = {
         ...review,
@@ -61,26 +61,26 @@ class ReviewsStore {
         updatedAt: new Date(),
         viewCount: 0,
       };
-      
+
       await this.collection.create(newReview);
-      this.data = [...this.data, newReview as Review];
-      
+      this.data.push(newReview);
+
       return newReview;
     } catch (err) {
       this.error = err as Error;
       throw err;
     }
   }
-  
+
   async update(id: string, updates: Partial<Review>) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.update(id, {
         ...updates,
         updatedAt: new Date(),
       });
-      
+
       this.data = this.data.map(review =>
         review.id === id ? { ...review, ...updates, updatedAt: new Date() } : review
       );
@@ -89,10 +89,10 @@ class ReviewsStore {
       throw err;
     }
   }
-  
+
   async delete(id: string) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.delete(id);
       this.data = this.data.filter(review => review.id !== id);
@@ -101,15 +101,15 @@ class ReviewsStore {
       throw err;
     }
   }
-  
+
   findById(id: string) {
     return this.data.find(review => review.id === id);
   }
-  
+
   findByProject(projectId: string) {
     return this.data.filter(review => review.projectId === projectId);
   }
-  
+
   search(query: string) {
     const q = query.toLowerCase();
     return this.data.filter(
@@ -118,9 +118,9 @@ class ReviewsStore {
         review.description?.toLowerCase().includes(q)
     );
   }
-  
+
   sortByDate(order: 'asc' | 'desc' = 'desc') {
-    return [...this.data].sort((a, b) => {
+    return this.data.sort((a, b) => {
       const timeA = new Date(a.createdAt).getTime();
       const timeB = new Date(b.createdAt).getTime();
       return order === 'desc' ? timeB - timeA : timeA - timeB;
@@ -131,39 +131,39 @@ class ReviewsStore {
 export const reviewsStore = new ReviewsStore();
 
 class ProjectsStore {
-  private collection = {id: null};
-  
+  private collection = { id: null };
+
   data = $derived<Project[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
   activeProject = $state<Project | null>(null);
-  
+
   get count() {
     return this.data.length;
   }
-  
+
   get isEmpty() {
     return this.data.length === 0;
   }
-  
+
   get teamProjects() {
     return this.data.filter(p => p.isTeam);
   }
-  
+
   get personalProjects() {
     return this.data.filter(p => !p.isTeam);
   }
-  
+
   async load() {
     if (!this.collection) return;
-    
+
     this.isLoading = true;
     this.error = null;
-    
+
     try {
-      this.collection = syncEngine.collection('projects'); 
+      this.collection = syncEngine.collection('projects');
       await this.collection.load();
-      
+
       this.data = this.collection.data as Project[];
     } catch (err) {
       this.error = err as Error;
@@ -172,10 +172,10 @@ class ProjectsStore {
       this.isLoading = false;
     }
   }
-  
+
   async create(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) {
     if (!this.collection) return null;
-    
+
     try {
       const newProject = {
         ...project,
@@ -183,26 +183,26 @@ class ProjectsStore {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      
+
       await this.collection.create(newProject);
-      this.data = [...this.data, newProject as Project];
-      
+      this.data.push(newProject);
+
       return newProject;
     } catch (err) {
       this.error = err as Error;
       throw err;
     }
   }
-  
+
   async update(id: string, updates: Partial<Project>) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.update(id, {
         ...updates,
         updatedAt: new Date(),
       });
-      
+
       this.data = this.data.map(project =>
         project.id === id ? { ...project, ...updates, updatedAt: new Date() } : project
       );
@@ -211,14 +211,14 @@ class ProjectsStore {
       throw err;
     }
   }
-  
+
   async delete(id: string) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.delete(id);
       this.data = this.data.filter(project => project.id !== id);
-      
+
       if (this.activeProject?.id === id) {
         this.activeProject = null;
       }
@@ -227,15 +227,15 @@ class ProjectsStore {
       throw err;
     }
   }
-  
+
   findById(id: string) {
     return this.data.find(project => project.id === id);
   }
-  
+
   setActive(project: Project | null) {
     this.activeProject = project;
   }
-  
+
   search(query: string) {
     const q = query.toLowerCase();
     return this.data.filter(
@@ -249,30 +249,30 @@ class ProjectsStore {
 export const projectsStore = new ProjectsStore();
 
 class CommentsStore {
-  private collection = {id: null};
-  
+  private collection = { id: null };
+
   data = $state<Comment[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
-  
+
   get count() {
     return this.data.length;
   }
-  
+
   get isEmpty() {
     return this.data.length === 0;
   }
-  
+
   async load() {
     if (!this.collection) return;
-    
+
     this.isLoading = true;
     this.error = null;
-    
+
     try {
-      this.collection = syncEngine.collection('comments'); 
+      this.collection = syncEngine.collection('comments');
       await this.collection.load();
-       
+
       this.data = this.collection.data as Comment[];
     } catch (err) {
       this.error = err as Error;
@@ -281,10 +281,10 @@ class CommentsStore {
       this.isLoading = false;
     }
   }
-  
+
   async create(comment: Omit<Comment, 'id' | 'createdAt' | 'updatedAt'>) {
     if (!this.collection) return null;
-    
+
     try {
       const newComment = {
         ...comment,
@@ -293,26 +293,26 @@ class CommentsStore {
         updatedAt: new Date(),
         isResolved: false,
       };
-      
+
       await this.collection.create(newComment);
-      this.data = [...this.data, newComment as Comment];
-      
+      this.data.push(newComment);
+
       return newComment;
     } catch (err) {
       this.error = err as Error;
       throw err;
     }
   }
-  
+
   async update(id: string, updates: Partial<Comment>) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.update(id, {
         ...updates,
         updatedAt: new Date(),
       });
-      
+
       this.data = this.data.map(comment =>
         comment.id === id ? { ...comment, ...updates, updatedAt: new Date() } : comment
       );
@@ -321,10 +321,10 @@ class CommentsStore {
       throw err;
     }
   }
-  
+
   async delete(id: string) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.delete(id);
       this.data = this.data.filter(comment => comment.id !== id);
@@ -333,25 +333,25 @@ class CommentsStore {
       throw err;
     }
   }
-  
+
   findByReview(reviewId: string) {
     return this.data.filter(comment => comment.reviewId === reviewId);
   }
-  
+
   findReplies(parentId: string) {
     return this.data.filter(comment => comment.parentId === parentId);
   }
-  
+
   getThreaded(reviewId: string) {
     const comments = this.findByReview(reviewId);
     const topLevel = comments.filter(c => !c.parentId);
-    
+
     return topLevel.map(comment => ({
       ...comment,
       replies: this.findReplies(comment.id),
     }));
   }
-  
+
   async toggleResolved(id: string) {
     const comment = this.data.find(c => c.id === id);
     if (comment) {
@@ -364,30 +364,30 @@ export const commentsStore = new CommentsStore();
 
 // Subscription Store with sveltekit-sync collection
 class SubscriptionsStore {
-  private collection = {id: null};
-  
+  private collection = { id: null };
+
   data = $state<Subscription[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
-  
+
   get current() {
     return this.data[0] || null;
   }
-  
+
   get isActive() {
     return this.current?.status === 'active';
   }
-  
+
   async load() {
     if (!this.collection) return;
-    
+
     this.isLoading = true;
     this.error = null;
-    
+
     try {
-      this.collection = syncEngine.collection('subscriptions'); 
+      this.collection = syncEngine.collection('subscriptions');
       await this.collection.load();
-      
+
       this.data = this.collection.data as Subscription[];
     } catch (err) {
       this.error = err as Error;
@@ -396,16 +396,16 @@ class SubscriptionsStore {
       this.isLoading = false;
     }
   }
-  
+
   async update(id: string, updates: Partial<import('$lib/server/db/schema').Subscription>) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.update(id, {
         ...updates,
         updatedAt: new Date(),
       });
-      
+
       this.data = this.data.map(sub =>
         sub.id === id ? { ...sub, ...updates, updatedAt: new Date() } : sub
       );
@@ -420,30 +420,30 @@ export const subscriptionsStore = new SubscriptionsStore();
 
 // Teams Store with sveltekit-sync collection
 class TeamsStore {
-  private collection = {id: null};
-  
+  private collection = { id: null };
+
   data = $state<import('$lib/server/db/schema').Team[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
-  
+
   get current() {
     return this.data[0] || null;
   }
-  
+
   get count() {
     return this.data.length;
   }
-  
+
   async load() {
     if (!this.collection) return;
-    
+
     this.isLoading = true;
     this.error = null;
-    
+
     try {
-      this.collection = syncEngine.collection('teams'); 
+      this.collection = syncEngine.collection('teams');
       await this.collection.load();
-      
+
       this.data = this.collection.data as Team[];
     } catch (err) {
       this.error = err as Error;
@@ -452,10 +452,10 @@ class TeamsStore {
       this.isLoading = false;
     }
   }
-  
+
   async create(team: Omit<import('$lib/server/db/schema').Team, 'id' | 'createdAt' | 'updatedAt'>) {
     if (!this.collection) return null;
-    
+
     try {
       const newTeam = {
         ...team,
@@ -463,26 +463,26 @@ class TeamsStore {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      
+
       await this.collection.create(newTeam);
-      this.data = [...this.data, newTeam as import('$lib/server/db/schema').Team];
-      
+      this.data.push(newTeam);
+
       return newTeam;
     } catch (err) {
       this.error = err as Error;
       throw err;
     }
   }
-  
+
   async update(id: string, updates: Partial<import('$lib/server/db/schema').Team>) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.update(id, {
         ...updates,
         updatedAt: new Date(),
       });
-      
+
       this.data = this.data.map(team =>
         team.id === id ? { ...team, ...updates, updatedAt: new Date() } : team
       );
@@ -491,10 +491,10 @@ class TeamsStore {
       throw err;
     }
   }
-  
+
   async delete(id: string) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.delete(id);
       this.data = this.data.filter(team => team.id !== id);
@@ -503,7 +503,7 @@ class TeamsStore {
       throw err;
     }
   }
-  
+
   findById(id: string) {
     return this.data.find(team => team.id === id);
   }
@@ -513,26 +513,26 @@ export const teamsStore = new TeamsStore();
 
 // Team Invitations Store with sveltekit-sync collection
 class TeamInvitationsStore {
-  private collection = {id: null};
-  
+  private collection = { id: null };
+
   data = $state<import('$lib/server/db/schema').TeamInvitation[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
-  
+
   get pending() {
     return this.data.filter(inv => new Date(inv.expiresAt) > new Date());
   }
-  
+
   get expired() {
     return this.data.filter(inv => new Date(inv.expiresAt) <= new Date());
   }
-  
+
   async load() {
     if (!this.collection) return;
-    
+
     this.isLoading = true;
     this.error = null;
-    
+
     try {
       this.collection = syncEngine.collection('teamInvitations')
       this.data = this.collection.data as import('$lib/server/db/schema').TeamInvitation[];
@@ -543,30 +543,30 @@ class TeamInvitationsStore {
       this.isLoading = false;
     }
   }
-  
+
   async create(invitation: Omit<import('$lib/server/db/schema').TeamInvitation, 'id' | 'createdAt'>) {
     if (!this.collection) return null;
-    
+
     try {
       const newInvitation = {
         ...invitation,
         id: crypto.randomUUID(),
         createdAt: new Date(),
       };
-      
+
       await this.collection.create(newInvitation);
-      this.data = [...this.data, newInvitation as import('$lib/server/db/schema').TeamInvitation];
-      
+      this.data.push(newInvitation);
+
       return newInvitation;
     } catch (err) {
       this.error = err as Error;
       throw err;
     }
   }
-  
+
   async delete(id: string) {
     if (!this.collection) return;
-    
+
     try {
       await this.collection.delete(id);
       this.data = this.data.filter(inv => inv.id !== id);
@@ -575,11 +575,11 @@ class TeamInvitationsStore {
       throw err;
     }
   }
-  
+
   findByTeam(teamId: string) {
     return this.data.filter(inv => inv.teamId === teamId);
   }
-  
+
   findByEmail(email: string) {
     return this.data.filter(inv => inv.email === email);
   }
@@ -589,29 +589,29 @@ export const teamInvitationsStore = new TeamInvitationsStore();
 
 // AI Usage Store with sveltekit-sync collection
 class AIUsageStore {
-  private collection = {id: null};
+  private collection = { id: null };
   data = $state<any[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
-  
+
   get totalTokens() {
     return this.data.reduce((sum, usage) => sum + (usage.tokensUsed || 0), 0);
   }
-  
+
   get successfulRequests() {
     return this.data.filter(usage => usage.success);
   }
-  
+
   async load() {
     if (!this.collection) return;
-    
+
     this.isLoading = true;
     this.error = null;
-    
+
     try {
-      this.collection = syncEngine.collection('aiUsage'); 
+      this.collection = syncEngine.collection('aiUsage');
       await this.collection.load();
-  
+
       this.data = this.collection.data;
     } catch (err) {
       this.error = err as Error;
@@ -620,35 +620,35 @@ class AIUsageStore {
       this.isLoading = false;
     }
   }
-  
+
   async create(usage: any) {
     if (!this.collection) return null;
-    
+
     try {
       const newUsage = {
         ...usage,
         id: crypto.randomUUID(),
         createdAt: new Date(),
       };
-      
+
       await this.collection.create(newUsage);
-      this.data = [...this.data, newUsage];
-      
+      this.data.push(newUsage);
+
       return newUsage;
     } catch (err) {
       this.error = err as Error;
       throw err;
     }
   }
-  
+
   findByReview(reviewId: string) {
     return this.data.filter(usage => usage.reviewId === reviewId);
   }
-  
+
   findByFeature(feature: string) {
     return this.data.filter(usage => usage.feature === feature);
   }
-  
+
   getUsageByMonth(year: number, month: number) {
     return this.data.filter(usage => {
       const date = new Date(usage.createdAt);
@@ -663,6 +663,15 @@ export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   editorTheme: string;
   fontSize: number;
+  // Editor-specific settings
+  lineNumbers: boolean;
+  minimap: boolean;
+  wordWrap: 'off' | 'on' | 'wordWrapColumn' | 'bounded';
+  tabSize: number;
+  insertSpaces: boolean;
+  renderWhitespace: 'none' | 'boundary' | 'selection' | 'all';
+  cursorBlinking: 'blink' | 'smooth' | 'phase' | 'expand' | 'solid';
+  // Video settings
   videoQuality: 'low' | 'medium' | 'high';
   autoCompress: boolean;
   maxVideoSize: number;
@@ -670,18 +679,29 @@ export interface AppSettings {
   countdown: number;
   defaultSpeed: number;
   autoplay: boolean;
+  // AI settings
   aiEnabled: boolean;
   autoSummarize: boolean;
   detectSmells: boolean;
   suggestImprovements: boolean;
   geminiApiKey: string;
-  storageProvider: 'local' | 'cloud';
+  // Storage settings
+  storageProvider: 'client' | 'cloud' | 'hybrid';
+  clientStorageBackend: 'auto' | 'indexeddb' | 'opfs' | 'filesystem';
+  hybridSyncEnabled: boolean;
 }
 
 const defaultSettings: AppSettings = {
   theme: 'dark',
   editorTheme: 'vscode-dark',
   fontSize: 14,
+  lineNumbers: true,
+  minimap: true,
+  wordWrap: 'off',
+  tabSize: 2,
+  insertSpaces: true,
+  renderWhitespace: 'selection',
+  cursorBlinking: 'blink',
   videoQuality: 'high',
   autoCompress: true,
   maxVideoSize: 100,
@@ -694,15 +714,17 @@ const defaultSettings: AppSettings = {
   detectSmells: true,
   suggestImprovements: true,
   geminiApiKey: '',
-  storageProvider: 'local',
+  storageProvider: 'client',
+  clientStorageBackend: 'auto',
+  hybridSyncEnabled: true,
 };
 
 class SettingsStore {
   settings = $state<AppSettings>(this.loadFromStorage());
-  
+
   private loadFromStorage(): AppSettings {
     if (!browser) return defaultSettings;
-    
+
     const stored = localStorage.getItem('codereview-settings');
     if (stored) {
       try {
@@ -713,23 +735,23 @@ class SettingsStore {
     }
     return defaultSettings;
   }
-  
+
   private saveToStorage() {
     if (browser) {
       localStorage.setItem('codereview-settings', JSON.stringify(this.settings));
     }
   }
-  
+
   update(updates: Partial<AppSettings>) {
     this.settings = { ...this.settings, ...updates };
     this.saveToStorage();
   }
-  
+
   reset() {
     this.settings = { ...defaultSettings };
     this.saveToStorage();
   }
-  
+
   get(key: keyof AppSettings) {
     return this.settings[key];
   }
