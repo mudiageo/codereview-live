@@ -41,11 +41,10 @@
 	import LocalGitBrowser from '$lib/components/git-repo-browser.svelte';
 	import AIAnalysisPanel from '$lib/components/ai-analysis-panel.svelte';
 	import ReviewChecklist from '$lib/components/review-checklist.svelte';
-	import RecordingToolbar from '$lib/components/recording-toolbar.svelte';
 	import GlobalAnnotationLayer from '$lib/components/global-annotation-layer.svelte';
 	import CodeReviewWorkspace, { type FileNode } from '$lib/components/code-review-workspace.svelte';
 	import {
-		createRecordingContext,
+		getRecordingContext,
 		type RecordingContext
 	} from '$lib/contexts/recording-context.svelte';
 	import {
@@ -109,8 +108,7 @@
 	let showLocalGitBrowser = $state(false);
 	let analysis = $state<CodeAnalysis | null>(null);
 	let analysisLoading = $state(false);
-	let recordingEvents = $state<{ type: string; time: number; data: any }[]>([]);
-	let recordingStartTime = $state(0);
+	// Recording events now handled by global context
 	let checklistTemplate = $state('general');
 	let checklistItems = $state<Record<string, boolean>>({});
 	let checklistNotes = $state<Record<string, string>>({});
@@ -126,19 +124,35 @@
 	let mediaRecorderRef = $state<ReturnType<typeof MediaRecorder>>();
 	let workspaceContainerRef: HTMLElement = $state();
 
-	// Create recording context for state persistence across component mounts
-	const recordingCtx = createRecordingContext();
+	// Get global recording context
+	const recordingCtx = getRecordingContext();
+	if (!recordingCtx) {
+		console.error('Recording context not found');
+	}
 
 	// Set workspace element when container is available
 	$effect(() => {
-		if (workspaceContainerRef) {
+		if (workspaceContainerRef && recordingCtx) {
 			recordingCtx.setWorkspaceElement(workspaceContainerRef);
 		}
 	});
 
 	// Bind local state to context for reactivity
-	let isPaused = $derived(recordingCtx.isPaused);
-	let recordingTime = $derived(recordingCtx.recordingTime || 0);
+	let isPaused = $derived(recordingCtx?.isPaused);
+	let recordingTime = $derived(recordingCtx?.recordingTime || 0);
+
+	// React to recording state changes
+	$effect(() => {
+		if (recordingCtx?.isRecording) {
+			if (!isRecording) {
+				handleRecordingStart();
+			}
+		} else {
+			if (isRecording) {
+				handleRecordingEnd();
+			}
+		}
+	});
 
 	const userPlan = $derived(auth.currentUser?.plan || 'free');
 	const reviewCount = $derived(reviewsStore.count);
@@ -358,8 +372,7 @@
 
 	function handleRecordingStart() {
 		isRecording = true;
-		recordingStartTime = Date.now();
-		recordingEvents = [];
+		// recordingEvents reset handled by context
 		showRecordingIndicator = true;
 		// Auto-navigate to step 2 (code workspace) when recording starts
 		step = 2;
@@ -368,31 +381,30 @@
 	function handleRecordingEnd() {
 		isRecording = false;
 		showRecordingIndicator = false;
-		isPaused = false;
 
 		// Navigate back to video step so user can save
 		step = 3;
 	}
 
 	function handleRecordingPause() {
-		recordingCtx.pauseRecording();
+		recordingCtx?.pauseRecording();
 	}
 
 	function handleRecordingResume() {
-		recordingCtx.resumeRecording();
+		recordingCtx?.resumeRecording();
 	}
 
 	function handlePauseRecording() {
 		// Toggle pause/resume via context (which controls the actual MediaRecorder)
-		if (recordingCtx.isPaused) {
-			recordingCtx.resumeRecording();
+		if (recordingCtx?.isPaused) {
+			recordingCtx?.resumeRecording();
 		} else {
-			recordingCtx.pauseRecording();
+			recordingCtx?.pauseRecording();
 		}
 	}
 
 	function handleStopRecording() {
-		recordingCtx.stopRecording();
+		recordingCtx?.stopRecording();
 	}
 
 	function formatRecordingTime(seconds: number) {
@@ -401,24 +413,9 @@
 		return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 	}
 
-	function handleEditorScroll(e: Event) {
-		if (isRecording) {
-			const target = e.target as HTMLElement;
-			recordingEvents.push({
-				type: 'scroll',
-				time: Date.now() - recordingStartTime,
-				data: { scrollTop: target.scrollTop }
-			});
-		}
-	}
-
 	function handleWorkspaceFileChange(file: FileNode) {
-		if (isRecording) {
-			recordingEvents.push({
-				type: 'file-change',
-				time: Date.now() - recordingStartTime,
-				data: { path: file.path }
-			});
+		if (isRecording && recordingCtx) {
+			recordingCtx.addEvent('file-change', { path: file.path });
 		}
 	}
 
@@ -522,7 +519,7 @@
 					isPublic: false,
 					status: 'draft',
 					aiSummary,
-					recordingEvents: $state.snapshot(recordingEvents),
+					recordingEvents: recordingCtx?.getRecordingEvents() || [],
 					files: $state.snapshot(importedFiles),
 					importSource,
 					aiAnalysis: $state.snapshot(analysis),
@@ -549,7 +546,7 @@
 					thumbnailUrl: uploadedThumbnailUrl || undefined,
 					aiSummary,
 					metadata: {
-						recordingEvents: $state.snapshot(recordingEvents),
+						recordingEvents: recordingCtx?.getRecordingEvents() || [],
 						files: $state.snapshot(importedFiles),
 						importSource,
 						aiAnalysis: $state.snapshot(analysis),
@@ -593,7 +590,7 @@
 					thumbnailUrl: uploadedThumbnailUrl || undefined,
 					aiSummary,
 					metadata: {
-						recordingEvents: $state.snapshot(recordingEvents),
+						recordingEvents: recordingCtx?.getRecordingEvents() || [],
 						files: $state.snapshot(importedFiles),
 						importSource,
 						aiAnalysis: $state.snapshot(analysis),
@@ -625,7 +622,7 @@
 					status: 'published',
 					aiSummary,
 					metadata: {
-						recordingEvents: $state.snapshot(recordingEvents),
+						recordingEvents: recordingCtx?.getRecordingEvents() || [],
 						files: $state.snapshot(importedFiles),
 						importSource,
 						aiAnalysis: $state.snapshot(analysis),
@@ -645,27 +642,6 @@
 		}
 	}
 </script>
-
-<!-- Floating Recording Toolbar (only shows when not on step 3 and recording) -->
-{#if showRecordingIndicator && step !== 3}
-	<RecordingToolbar
-		{isRecording}
-		{isPaused}
-		{recordingTime}
-		position="bottom-right"
-		showPreview={false}
-		onPause={handlePauseRecording}
-		onResume={() => handlePauseRecording()}
-		onStop={handleStopRecording}
-		onGoToRecorder={() => (step = 3)}
-		isAnnotationMode={recordingCtx.isAnnotationMode}
-		onToggleAnnotation={() => (recordingCtx.isAnnotationMode = !recordingCtx.isAnnotationMode)}
-		webcamPosition={recordingCtx.settings.webcamPosition}
-		onCyclePosition={() => recordingCtx.cycleWebcamPosition()}
-		onCycleSize={() => recordingCtx.cycleWebcamSize()}
-		onToggleShape={() => recordingCtx.toggleWebcamShape()}
-	/>
-{/if}
 
 <AuthGuard requireAuth requirePlan="free">
 	{#if !canCreateReview}
@@ -914,7 +890,6 @@
 										{language}
 										readonly={false}
 										showLineNumbers={true}
-										onscroll={handleEditorScroll}
 									/>
 								{/if}
 							</TabsContent>
@@ -1293,16 +1268,9 @@
 										      uploadedVideoUrl = result.videoUrl;
 													uploadedThumbnailUrl = result.thumbnailUrl;
 													uploadedMetadata = result.metadata;
-													isRecording = false;
-													showRecordingIndicator = false;
+													// State cleanup handled by effect
 													toast.success('Video recorded! Remember to publish review to save.');
 												}}
-												onStart={handleRecordingStart}
-												onEnd={handleRecordingEnd}
-												onPause={handleRecordingPause}
-												onResume={handleRecordingResume}
-												maxDuration={600}
-												quality="high"
 											/>
 										{/if}
 									</TabsContent>

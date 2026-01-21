@@ -86,6 +86,11 @@
 	let videoLoading = $state(false);
 	let videoError = $state<string | null>(null);
 
+	// Replay state for syncing events with video playback
+	let replayScrollPosition = $state<number | null>(null);
+	let replaySidebarTab = $state<'files' | 'ai' | 'checklist' | null>(null);
+	let replayLineClick = $state<number | null>(null);
+
 	$effect(() => {
 		if (review.title) editTitle = review.title;
 		if (review.description) editDescription = review.description || '';
@@ -266,16 +271,39 @@
 	function handleTimeUpdate(time: number) {
 		currentTime = time;
 
-		// Smart Navigation: Switch file based on recording events
+		// Replay all recorded events during video playback
 		if (review.metadata?.recordingEvents) {
 			const events = review.metadata.recordingEvents as any[];
-			// Find last file-change event before current time
-			const lastEvent = events
-				.filter((e) => e.type === 'file-change' && e.time <= time * 1000)
-				.sort((a, b) => b.time - a.time)[0];
+			const timeMs = time * 1000;
 
-			if (lastEvent && lastEvent.data?.path && lastEvent.data.path !== activeFilePath) {
-				activeFilePath = lastEvent.data.path;
+			// Helper to find most recent event of a type before current time
+			const findLastEvent = (type: string) =>
+				events
+					.filter((e) => e.type === type && e.time <= timeMs)
+					.sort((a, b) => b.time - a.time)[0];
+
+			// File change events
+			const fileEvent = findLastEvent('file-change');
+			if (fileEvent?.data?.path && fileEvent.data.path !== activeFilePath) {
+				activeFilePath = fileEvent.data.path;
+			}
+
+			// Scroll events
+			const scrollEvent = findLastEvent('scroll');
+			if (scrollEvent?.data?.scrollTop !== undefined) {
+				replayScrollPosition = scrollEvent.data.scrollTop;
+			}
+
+			// Tab change events
+			const tabEvent = findLastEvent('tab-change');
+			if (tabEvent?.data?.tab) {
+				replaySidebarTab = tabEvent.data.tab;
+			}
+
+			// Line click events
+			const lineEvent = findLastEvent('line-click');
+			if (lineEvent?.data?.line) {
+				replayLineClick = lineEvent.data.line;
 			}
 		}
 	}
@@ -441,8 +469,8 @@
 
 	// --- Video Resolution ---
 	$effect(() => {
-	  let isCancelled = false;
-	
+		let isCancelled = false;
+
 		const loadVideo = async () => {
 			videoLoading = true;
 			videoError = null;
@@ -456,7 +484,8 @@
 						videoSrc = URL.createObjectURL(result.blob);
 					} else {
 						console.warn('Video not found in client storage:', id);
-						videoError = 'Video not found in local storage. It may have been deleted or not properly saved.';
+						videoError =
+							'Video not found in local storage. It may have been deleted or not properly saved.';
 						videoSrc = '';
 					}
 				} catch (error) {
@@ -638,6 +667,8 @@
 						onRunAI={handleRunAI}
 						onAutoCheck={handleAutoCheck}
 						onChecklistChange={handleChecklistChange}
+						{replayScrollPosition}
+						{replaySidebarTab}
 					>
 						{#snippet children()}
 							{#if activeCommentLine !== null}
@@ -728,7 +759,9 @@
 							<p class="text-lg font-medium mb-2">No code files available</p>
 							<p class="text-sm">This review doesn't have any code files to display.</p>
 							{#if review.codeContent}
-								<p class="text-xs mt-2 text-muted-foreground">Note: Raw code content exists but couldn't be displayed as files.</p>
+								<p class="text-xs mt-2 text-muted-foreground">
+									Note: Raw code content exists but couldn't be displayed as files.
+								</p>
 							{/if}
 						</div>
 					</div>
@@ -754,8 +787,12 @@
 									<p class="text-xs mt-1 text-muted-foreground">{videoError}</p>
 									{#if review.status === 'draft'}
 										<div class="mt-4 flex gap-2 justify-center">
-											<Button variant="outline" size="sm" onclick={() => (videoMode = 'record')}>Record New</Button>
-											<Button variant="outline" size="sm" onclick={() => (videoMode = 'upload')}>Upload</Button>
+											<Button variant="outline" size="sm" onclick={() => (videoMode = 'record')}
+												>Record New</Button
+											>
+											<Button variant="outline" size="sm" onclick={() => (videoMode = 'upload')}
+												>Upload</Button
+											>
 										</div>
 									{/if}
 								</div>
@@ -769,8 +806,12 @@
 									<p>No video available</p>
 									{#if review.status === 'draft'}
 										<div class="mt-4 flex gap-2 justify-center">
-											<Button variant="outline" size="sm" onclick={() => (videoMode = 'record')}>Record</Button>
-											<Button variant="outline" size="sm" onclick={() => (videoMode = 'upload')}>Upload</Button>
+											<Button variant="outline" size="sm" onclick={() => (videoMode = 'record')}
+												>Record</Button
+											>
+											<Button variant="outline" size="sm" onclick={() => (videoMode = 'upload')}
+												>Upload</Button
+											>
 										</div>
 									{/if}
 								</div>
@@ -780,7 +821,9 @@
 						<div class="p-4 bg-background h-full overflow-hidden flex flex-col">
 							<div class="flex justify-between items-center mb-2">
 								<h3 class="font-semibold text-sm">Record New Video</h3>
-								<Button variant="ghost" size="sm" onclick={() => (videoMode = 'view')}>Cancel</Button>
+								<Button variant="ghost" size="sm" onclick={() => (videoMode = 'view')}
+									>Cancel</Button
+								>
 							</div>
 							<div class="flex-1 min-h-0">
 								<MediaRecorder
@@ -806,7 +849,9 @@
 						<div class="p-4 bg-background h-full flex flex-col">
 							<div class="flex justify-between items-center mb-2">
 								<h3 class="font-semibold text-sm">Upload Video</h3>
-								<Button variant="ghost" size="sm" onclick={() => (videoMode = 'view')}>Cancel</Button>
+								<Button variant="ghost" size="sm" onclick={() => (videoMode = 'view')}
+									>Cancel</Button
+								>
 							</div>
 							<div class="flex-1 flex items-center justify-center">
 								<VideoUploader
@@ -815,20 +860,20 @@
 										// Assuming VideoUploader handles the initial upload logic
 										// We might need to update the store if VideoUploader doesn't automatically trigger a refresh
 										// But typically we should receive the new URL here
-                                        // Wait, VideoUploader props in reviews/new didn't pass back URL in onUploadComplete?
-                                        // Let's check VideoUploader definition or usage.
-                                        // In reviews/new, it used result.videoUrl?
-                                        // I'll assume result contains the data.
-                                        // Actually let's just toast for now and force reload or assume store updates via subscription if VideoUploader does it?
-                                        // VideoUploader usually uploads to storage. 
-                                        // I'll assume I need to manually update review if VideoUploader returns the URL.
-                                        // In reviews/new, onUploadComplete was just a toast.
-                                        // Let's assume for now that VideoUploader updates the DB directly?
-                                        // If not, I should verify.
+										// Wait, VideoUploader props in reviews/new didn't pass back URL in onUploadComplete?
+										// Let's check VideoUploader definition or usage.
+										// In reviews/new, it used result.videoUrl?
+										// I'll assume result contains the data.
+										// Actually let's just toast for now and force reload or assume store updates via subscription if VideoUploader does it?
+										// VideoUploader usually uploads to storage.
+										// I'll assume I need to manually update review if VideoUploader returns the URL.
+										// In reviews/new, onUploadComplete was just a toast.
+										// Let's assume for now that VideoUploader updates the DB directly?
+										// If not, I should verify.
 										videoMode = 'view';
 										toast.success('Video uploaded successfully!');
-                                        // Force reload review? Or wait for realtime update?
-                                        // reviewsStore.fetchById(reviewId);
+										// Force reload review? Or wait for realtime update?
+										// reviewsStore.fetchById(reviewId);
 									}}
 								/>
 							</div>

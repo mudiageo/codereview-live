@@ -170,7 +170,32 @@ export class RecordingContext {
 		v.muted = true;
 		v.playsInline = true;
 		v.autoplay = true;
-		await v.play();
+
+		// Wait for video data to be loaded to ensure dimensions are available
+		// Add a timeout to prevent hanging forever
+		await new Promise<void>((resolve) => {
+			if (v.readyState >= 2) {
+				resolve();
+				return;
+			}
+
+			const timeout = setTimeout(() => {
+				console.warn('Video setup timed out');
+				resolve();
+			}, 3000);
+
+			v.onloadeddata = () => {
+				clearTimeout(timeout);
+				resolve();
+			};
+			v.onerror = () => {
+				clearTimeout(timeout);
+				console.warn('Video stream error');
+				resolve();
+			};
+		});
+
+		await v.play().catch((e) => console.error('Video play failed:', e));
 
 		if (type === 'screen') {
 			this.screenVideo = v;
@@ -442,14 +467,26 @@ export class RecordingContext {
 			}
 
 			// 1. Draw video frame to MASTER canvas
+			// Fill black background first
+			this.masterCtx.fillStyle = '#000000';
+			this.masterCtx.fillRect(0, 0, this.masterCanvas!.width, this.masterCanvas!.height);
+
 			try {
-				this.masterCtx.drawImage(
-					this.screenVideo,
-					0,
-					0,
-					this.masterCanvas!.width,
-					this.masterCanvas!.height
-				);
+				if (this.screenVideo && this.screenVideo.readyState >= 2 && this.screenVideo.videoWidth > 0) {
+					this.masterCtx.drawImage(
+						this.screenVideo,
+						0,
+						0,
+						this.masterCanvas!.width,
+						this.masterCanvas!.height
+					);
+				} else {
+					// Draw waiting message
+					this.masterCtx.fillStyle = '#ffffff';
+					this.masterCtx.font = '24px sans-serif';
+					this.masterCtx.textAlign = 'center';
+					this.masterCtx.fillText('Waiting for video...', this.masterCanvas!.width / 2, this.masterCanvas!.height / 2);
+				}
 			} catch (e) {
 				// Video might not be ready yet
 				this.animationFrameId = requestAnimationFrame(drawFrame);
@@ -639,17 +676,28 @@ export class RecordingContext {
 
 		this.isCapturing = true;
 
+		// Pre-fill with background color to ensure we record something even if snapdom fails
+		this.masterCtx.fillStyle = '#ffffff';
+		this.masterCtx.fillRect(0, 0, this.masterCanvas.width, this.masterCanvas.height);
+
 		try {
-			// Capture the DOM element to a canvas
-			const result = await snapdom(this.workspaceElement, {
+			// Capture the DOM element to a canvas with a timeout to prevent hanging
+			const capturePromise = snapdom(this.workspaceElement, {
 				backgroundColor: '#ffffff',
 				scale: 1
 			});
 
+			const timeoutPromise = new Promise<never>((_, reject) =>
+				setTimeout(() => reject(new Error('DOM capture timeout')), 500)
+			);
+
+			const result = await Promise.race([capturePromise, timeoutPromise]);
+
 			// Get canvas from result
 			const capturedCanvas = await result.toCanvas();
 
-			// Clear master canvas
+			// Clear master canvas (already filled with white, but clear to draw image properly if transparent)
+			// Actually, just draw image on top.
 			this.masterCtx.clearRect(0, 0, this.masterCanvas.width, this.masterCanvas.height);
 
 			// Calculate scaling to fit while maintaining aspect ratio
@@ -681,6 +729,15 @@ export class RecordingContext {
 			);
 		} catch (error) {
 			console.error('Failed to capture DOM:', error);
+			// Draw error message on canvas so user sees something is wrong in the recording
+			if (this.masterCtx && this.masterCanvas) {
+				this.masterCtx.fillStyle = '#f0f0f0';
+				this.masterCtx.fillRect(0, 0, this.masterCanvas.width, this.masterCanvas.height);
+				this.masterCtx.fillStyle = '#ff0000';
+				this.masterCtx.font = '24px sans-serif';
+				this.masterCtx.textAlign = 'center';
+				this.masterCtx.fillText('Recording Error: DOM Capture Failed', this.masterCanvas.width / 2, this.masterCanvas.height / 2);
+			}
 		} finally {
 			this.isCapturing = false;
 		}

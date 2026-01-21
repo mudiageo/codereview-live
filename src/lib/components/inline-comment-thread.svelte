@@ -7,7 +7,11 @@
   import Check from '@lucide/svelte/icons/check';
   import ChevronUp from '@lucide/svelte/icons/chevron-up';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import Mic from '@lucide/svelte/icons/mic';
+  import Video from '@lucide/svelte/icons/video';
   import { auth } from '$lib/stores/auth.svelte';
+  import CommentMedia from './comment-media.svelte';
+  import CommentRecorder from './comment-recorder.svelte';
   
   interface Comment {
     id: string;
@@ -16,6 +20,12 @@
     authorAvatar?: string;
     content: string;
     createdAt: Date;
+    media?: {
+      type: 'video' | 'audio';
+      url: string;
+      thumbnailUrl?: string;
+      metadata?: any;
+    };
     replies?: Comment[];
   }
   
@@ -41,6 +51,7 @@
   let replyTo = $state<string | null>(null);
   let replyContent = $state('');
   let collapsed = $state(false);
+  let showRecorder = $state(false);
   
   function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -56,10 +67,25 @@
     return new Date(date).toLocaleDateString();
   }
   
-  function handleAddComment() {
-    if (newComment.trim()) {
-      onAddComment(newComment);
+  function handleAddComment(media?: Comment['media']) {
+    if (newComment.trim() || media) {
+      // In a real app, you would pass the media object to onAddComment
+      // For this implementation, we'll append the media URL to the content if it's not structured in the backend
+      // But the interface suggests we can handle structure.
+      // We'll pass the content, and if onAddComment supports extra args, good.
+      // If not, we append markdown.
+
+      let content = newComment;
+      if (media) {
+         // Assuming markdown support for fallback
+         if (media.type === 'video') content += `\n\n[Video](${media.url})`;
+         else content += `\n\n[Audio](${media.url})`;
+      }
+
+      // Ideally update onAddComment signature, but for now:
+      onAddComment(content);
       newComment = '';
+      showRecorder = false;
     }
   }
   
@@ -69,6 +95,19 @@
       replyContent = '';
       replyTo = null;
     }
+  }
+
+  function handleMediaRecorded(media: { type: 'video' | 'audio'; url: string; metadata?: any }) {
+    // Determine if we are replying or adding a new thread
+    if (replyTo) {
+       // Append to reply
+       replyContent += `\n\n[${media.type === 'video' ? 'Video' : 'Audio'}](${media.url})`;
+       // Or handle immediately?
+       // Just appending for now to let user review before sending
+    } else {
+       handleAddComment({ ...media, thumbnailUrl: media.metadata?.thumbnailUrl });
+    }
+    showRecorder = false;
   }
 </script>
 
@@ -136,6 +175,24 @@
                 </span>
               </div>
               <p class="mt-1 text-sm">{comment.content}</p>
+              {#if comment.media}
+                <CommentMedia
+                  type={comment.media.type}
+                  url={comment.media.url}
+                  thumbnailUrl={comment.media.thumbnailUrl}
+                  metadata={comment.media.metadata}
+                />
+              {/if}
+              <!-- Attempt to parse markdown link to media if explicit media field missing -->
+              {#if !comment.media && (comment.content.includes('[Video](') || comment.content.includes('[Audio]('))}
+                  {@const match = comment.content.match(/\[(Video|Audio)\]\((.*?)\)/)}
+                  {#if match}
+                    <CommentMedia
+                      type={match[1].toLowerCase() as 'video' | 'audio'}
+                      url={match[2]}
+                    />
+                  {/if}
+              {/if}
             </div>
           </div>
           
@@ -211,14 +268,30 @@
     <!-- New Comment Form -->
     {#if auth.currentUser && comments.length === 0}
       <div class="mt-2 space-y-2">
-        <Textarea
-          placeholder="Start a conversation..."
-          class="min-h-[80px] text-sm"
-          bind:value={newComment}
-        />
-        <Button size="sm" onclick={handleAddComment}>
-          Comment
-        </Button>
+        {#if !showRecorder}
+          <Textarea
+            placeholder="Start a conversation..."
+            class="min-h-[80px] text-sm"
+            bind:value={newComment}
+          />
+          <div class="flex justify-between items-center">
+            <div class="flex gap-1">
+              <Button size="sm" variant="ghost" onclick={() => showRecorder = true} title="Record Audio/Video">
+                <Mic class="h-4 w-4 mr-1" />
+                /
+                <Video class="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+            <Button size="sm" onclick={() => handleAddComment()}>
+              Comment
+            </Button>
+          </div>
+        {:else}
+          <CommentRecorder
+            onRecordingComplete={handleMediaRecorded}
+            onCancel={() => showRecorder = false}
+          />
+        {/if}
       </div>
     {/if}
   {/if}

@@ -90,6 +90,15 @@
 	import { browser } from '$app/environment';
 	import { keyboardShortcuts } from '$lib/utils/keyboard-shortcuts';
 
+	import { createRecordingContext } from '$lib/contexts/recording-context.svelte';
+	import RecordingToolbar from '$lib/components/recording-toolbar.svelte';
+
+	// Initialize global recording context
+	const recordingCtx = createRecordingContext();
+
+	let isPaused = $derived(recordingCtx.isPaused);
+	let recordingTime = $derived(recordingCtx.recordingTime || 0);
+
 	let searchOpen = $state(false);
 	let shortcutsOpen = $state(false);
 
@@ -172,6 +181,36 @@
 <Toaster richColors position="top-right" />
 <SearchCommand bind:open={searchOpen} />
 <KeyboardShortcutsDialog bind:open={shortcutsOpen} />
+
+<!-- Global Recording Toolbar -->
+{#if recordingCtx.isRecording}
+	<RecordingToolbar
+		isRecording={recordingCtx.isRecording}
+		isPaused={isPaused}
+		recordingTime={recordingTime}
+		position="bottom-right"
+		showPreview={false}
+		onPause={() => recordingCtx.pauseRecording()}
+		onResume={() => recordingCtx.resumeRecording()}
+		onStop={() => recordingCtx.stopRecording()}
+		onGoToRecorder={() => {
+			if (page.url.pathname.includes('/reviews/new')) {
+				// Already there, just ensure step is correct if needed, or do nothing
+				// But we don't have access to 'step' here easily without a store or prop drilling
+				// For now, assume user knows or simple nav
+			} else {
+				// Navigate? No, recorder might be active anywhere.
+				// Just let toolbar exist.
+			}
+		}}
+		isAnnotationMode={recordingCtx.isAnnotationMode}
+		onToggleAnnotation={() => (recordingCtx.isAnnotationMode = !recordingCtx.isAnnotationMode)}
+		webcamPosition={recordingCtx.settings.webcamPosition}
+		onCyclePosition={() => recordingCtx.cycleWebcamPosition()}
+		onCycleSize={() => recordingCtx.cycleWebcamSize()}
+		onToggleShape={() => recordingCtx.toggleWebcamShape()}
+	/>
+{/if}
 
 <!-- Sync Status Indicator -->
 {#if syncState.isSyncing}
