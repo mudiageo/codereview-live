@@ -163,6 +163,7 @@
 		// Fallback: create a single file from codeContent if available
 		if (review?.codeContent && review.codeContent.trim()) {
 			return [
+				{
 					name: review.title || 'code',
 					path: review.title || 'code',
 					type: 'file',
