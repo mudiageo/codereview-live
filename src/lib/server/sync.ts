@@ -18,7 +18,7 @@ export const config: SyncConfig = {
     },
     comments: {
       table: 'comments',
-      columns: ['id', 'reviewId', 'authorId', 'parentId', 'description', 'videoUrl', 'textContent' , 'videoTimestamp', 'codeLineStart', 'codeLineEnd', 'isResolved', 'createdAt', 'updatedAt', '_version', '_updatedAt'],
+      columns: ['id', 'reviewId', 'authorId', 'parentId', 'description', 'videoUrl', 'textContent', 'videoTimestamp', 'codeLineStart', 'codeLineEnd', 'isResolved', 'createdAt', 'updatedAt', '_version', '_updatedAt'],
     },
     subscriptions: {
       table: 'subscriptions',
@@ -41,7 +41,7 @@ export const config: SyncConfig = {
   realtime: {
     authenticate: async (request) => {
       const user = await getUser()
-      return { userId: user.id, ...user};
+      return { userId: user.id, ...user };
     }
   }
 };

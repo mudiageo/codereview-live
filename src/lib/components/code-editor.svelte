@@ -23,6 +23,11 @@
 		class: className = '',
 		onscroll
 	}: Props = $props();
+	
+	// Use settings for line numbers if not explicitly provided
+	const shouldShowLineNumbers = $derived(showLineNumbers ?? settingsStore.settings.lineNumbers);
+	const wordWrap = $derived(settingsStore.settings.wordWrap);
+	const tabSize = $derived(settingsStore.settings.tabSize);
 
 	// Use settings for line numbers if not explicitly provided
 	const shouldShowLineNumbers = $derived(showLineNumbers ?? settingsStore.settings.lineNumbers);

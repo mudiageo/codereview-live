@@ -16,6 +16,7 @@ export const uploadVideo = form(
     video: v.file('Video file is required'),
     reviewId: v.string(),
     storageProvider: v.optional(v.union([v.literal('local'), v.literal('cloud')])),
+    action: v.string(),
   }),
   async ({ video, reviewId, storageProvider }) => {
     const user = await getUser();

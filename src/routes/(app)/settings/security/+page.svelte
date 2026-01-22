@@ -26,6 +26,19 @@
 
 	let showDeleteConfirm = $state(false);
 	let deleteConfirmText = $state('');
+	
+	// Check 2FA status on mount
+	onMount(async () => {
+		try {
+			const session = await authClient.getSession();
+			if (session.data?.user) {
+				// Check if user has 2FA enabled
+				twoFactorEnabled = session.data.user.twoFactorEnabled || false;
+			}
+		} catch (error) {
+			console.error('Failed to check 2FA status:', error);
+		}
+	});
 
 	// Check 2FA status on mount
 	onMount(async () => {
@@ -63,7 +76,7 @@
 				newPassword,
 				revokeOtherSessions: true,
 			});
-
+			
 			if (result.error) {
 				toast.error(result.error.message || 'Failed to change password');
 			} else {
@@ -85,12 +98,11 @@
 			const result = await authClient.twoFactor.enable({
 				password: currentPassword,
 			});
-
+			
 			if (result.error) {
 				toast.error(result.error.message || 'Failed to enable 2FA');
 				return;
-			}
-
+			}	
 			if (result.data) {
 				qrCode = result.data.qrCode;
 				totpUri = result.data.totpUri;
@@ -103,23 +115,22 @@
 			isSettingUp2FA = false;
 		}
 	}
-
+	
 	async function handleVerify2FA() {
 		if (!verificationCode || verificationCode.length !== 6) {
 			toast.error('Please enter a valid 6-digit code');
 			return;
 		}
-
+		
 		try {
 			const result = await authClient.twoFactor.verify({
 				code: verificationCode,
 			});
-
+			
 			if (result.error) {
 				toast.error(result.error.message || 'Invalid code');
 				return;
 			}
-
 			twoFactorEnabled = true;
 			showQRCode = false;
 			verificationCode = '';
@@ -129,14 +140,9 @@
 			toast.error(error.message || 'Failed to verify code');
 		}
 	}
-
-	async function handleDisable2FA() {
-		isSettingUp2FA = true;
 		try {
-			const result = await authClient.twoFactor.disable({
 				password: currentPassword,
 			});
-
 			if (result.error) {
 				toast.error(result.error.message || 'Failed to disable 2FA');
 			} else {
@@ -150,24 +156,19 @@
 			isSettingUp2FA = false;
 		}
 	}
-
-	async function handleDeleteAccount() {
-		if (deleteConfirmText !== 'DELETE') {
 			toast.error('Please type DELETE to confirm');
-			return;
 		}
 
 		try {
 			const result = await authClient.deleteUser();
-
 			if (result.error) {
 				toast.error(result.error.message || 'Failed to delete account');
 				return;
 			}
-
+			
 			toast.success('Account deletion initiated. You will receive a confirmation email.');
 			showDeleteConfirm = false;
-
+			
 			// Sign out and redirect
 			await auth.signOut();
 			goto('/');
@@ -251,7 +252,6 @@
 					<p class="text-xs text-muted-foreground mt-2">Or enter this key manually:</p>
 					<code class="text-sm bg-muted px-2 py-1 rounded">{totpUri}</code>
 				</div>
-
 				<div class="space-y-2">
 					<Label for="verification-code">Enter Verification Code</Label>
 					<Input
@@ -261,7 +261,6 @@
 						maxlength="6"
 					/>
 				</div>
-
 				<div class="flex gap-2">
 					<Button onclick={handleVerify2FA}>Verify and Enable</Button>
 					<Button variant="outline" onclick={() => { showQRCode = false; verificationCode = ''; }}>
@@ -269,16 +268,11 @@
 					</Button>
 				</div>
 			</div>
-		{:else}
-			<div class="flex items-center justify-between">
-				<div>
 					<p class="font-medium">
-						Status: <span class={twoFactorEnabled ? 'text-green-600' : 'text-muted-foreground'}>
 							{twoFactorEnabled ? 'Enabled' : 'Disabled'}
 						</span>
 					</p>
 				</div>
-
 				{#if twoFactorEnabled}
 					<div class="space-y-2">
 						{#if !currentPassword}
@@ -309,13 +303,6 @@
 								autocomplete="current-password"
 							/>
 						{/if}
-						<Button
-							onclick={handleEnable2FA}
-							disabled={isSettingUp2FA || !currentPassword}
-							variant="outline"
-						>
-							{isSettingUp2FA ? 'Processing...' : 'Enable 2FA'}
-						</Button>
 					</div>
 				{/if}
 			</div>

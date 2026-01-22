@@ -193,13 +193,15 @@
 					<p class="text-sm">Collaborate with your team in real-time just like in Google Docs:</p>
 					<ul class="list-disc list-inside mt-2 space-y-1 text-sm">
 						<li>
-							<strong>Presence Indicators:</strong> See who is currently viewing the review with live avatars in the top bar.
+							<strong>Presence Indicators:</strong> See who is currently viewing the review with live
+							avatars in the top bar.
 						</li>
 						<li>
 							<strong>Live Cursors:</strong> See your teammates' cursors moving over the code in real-time.
 						</li>
 						<li>
-							<strong>Instant Updates:</strong> Comments and code selections are synced instantly across all connected users.
+							<strong>Instant Updates:</strong> Comments and code selections are synced instantly across
+							all connected users.
 						</li>
 					</ul>
 				</AccordionContent>

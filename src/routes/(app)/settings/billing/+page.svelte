@@ -21,7 +21,6 @@
   onMount(async () => {
     await subscriptionsStore.load();
     await aiUsageStore.load();
-
     // Load subscription history
     subscriptionHistory = subscriptionsStore.data || [];
     loading = false;
@@ -33,20 +32,20 @@
   
   // Parse storage limit from string to bytes
   const storageLimitBytes = $derived(parseStorageString(currentPlanDetails.limits.storage));
-
+  
   // Usage data with proper types
   const usage = $derived({
-    cloudReviews: {
-      used: 4,
-      limit: currentPlanDetails.limits.localReviews
+    cloudReviews: { 
+      used: 4, 
+      limit: currentPlanDetails.limits.localReviews 
     },
-    storage: {
+    storage: { 
       used: 234 * 1024 * 1024, // Convert MB to bytes for calculation
       limit: storageLimitBytes
     },
-    aiCredits: {
-      used: aiUsageStore.totalTokens,
-      limit: currentPlanDetails.limits.aiCredits
+    aiCredits: { 
+      used: aiUsageStore.totalTokens, 
+      limit: currentPlanDetails.limits.aiCredits 
     }
   });
   
@@ -57,15 +56,15 @@
   ];
   
   const PAYMENT_PROVIDER_MESSAGE = 'Payment method setup will redirect to Stripe';
-
+  
   function formatDate(date: Date | string) {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(date).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
     });
   }
-
+  
   function downloadInvoice(invoiceId: string) {
     // TODO: Implement actual invoice download
     toast.info('Downloading invoice...');
@@ -171,10 +170,10 @@
                   {sub.status}
                 </Badge>
                 {#if sub.invoiceUrl}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="gap-2"
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    class="gap-2" 
                     onclick={() => window.open(sub.invoiceUrl, '_blank', 'noopener,noreferrer')}
                   >
                     <Download class="h-4 w-4" />
@@ -186,7 +185,6 @@
           {/each}
         </div>
       {/if}
-    </CardContent>
   </Card>
 
   <!-- Plans -->
@@ -247,7 +245,7 @@
             <p class="text-sm text-muted-foreground">Add a payment method to upgrade</p>
           </div>
         </div>
-        <Button
+        <Button 
           variant="outline"
           onclick={() => toast.info(PAYMENT_PROVIDER_MESSAGE)}
         >

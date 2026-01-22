@@ -1,9 +1,9 @@
 /**
  * Client-Side Video Storage Service
- *
- * Provides a comprehensive client-side video storage solution with browser API
+ * 
+ * Provides a comprehensive client-side video storage solution with browser API 
  * fallback chain for cross-browser support.
- *
+ * 
  * Priority: tauri > opfs > filesystem > indexeddb
  */
 

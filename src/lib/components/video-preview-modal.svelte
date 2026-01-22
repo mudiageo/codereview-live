@@ -445,5 +445,5 @@
 	<input {...uploadVideo.fields.video.as('file')} />
 	<input {...uploadVideo.fields.reviewId.as('text')} bind:value={reviewId} />
 	<input {...uploadVideo.fields.storageProvider.as('text')} value="cloud" />
-	<button bind:this={uploadButton} {...uploadVideo.buttonProps}></button>
+	<button bind:this={uploadButton} {...uploadVideo.fields.action.as('submit', 'upload')} }></button>
 </form>

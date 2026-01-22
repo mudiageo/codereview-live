@@ -34,6 +34,11 @@
 	}
 
 	let { analysis, loading = false, onAnalyze, code }: Props = $props();
+	
+	// Check if AI features are enabled
+	const aiEnabled = $derived(settingsStore.settings.aiEnabled);
+	const detectSmells = $derived(settingsStore.settings.detectSmells);
+	const suggestImprovements = $derived(settingsStore.settings.suggestImprovements);
 
 	// Check if AI features are enabled
 	const aiEnabled = $derived(settingsStore.settings.aiEnabled);

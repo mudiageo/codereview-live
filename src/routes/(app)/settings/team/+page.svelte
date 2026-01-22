@@ -18,8 +18,6 @@
 	let newMemberEmail = $state('');
 	let newMemberRole = $state('member');
 	let isInviting = $state(false);
-;
-
 	async function handleInvite() {
 		if (!newMemberEmail) {
 			toast.error('Email is required');
@@ -109,10 +107,10 @@
 					<Select
 						type="single"
 						value={newMemberRole}
-						onValueChange={(value) => newMemberRole = value || 'member'}
+						onValueChange={(value) => (newMemberRole = value || 'member')}
 					>
 						<SelectTrigger>
-							{newMemberRole || ""}
+							{newMemberRole || ''}
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="member">Member</SelectItem>
@@ -144,11 +142,7 @@
 									).toLocaleDateString()}
 								</p>
 							</div>
-							<Button
-								variant="ghost"
-								size="sm"
-								onclick={() => cancelInvitation(invitation.id)}
-							>
+							<Button variant="ghost" size="sm" onclick={() => cancelInvitation(invitation.id)}>
 								<Trash2 class="h-4 w-4" />
 							</Button>
 						</div>
