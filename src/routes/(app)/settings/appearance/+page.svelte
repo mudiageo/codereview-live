@@ -223,7 +223,11 @@
           <SelectTrigger>
             {settings.renderWhitespace.charAt(0).toUpperCase() + settings.renderWhitespace.slice(1)}
           </SelectTrigger>
-            <SelectItem value="none">None</SelectItem>
+          <SelectContent> 
+              <SelectItem value="none">None</SelectItem> 
+             <SelectItem value="boundary">Boundary</SelectItem> 
+             <SelectItem value="selection">Selection</SelectItem> 
+             <SelectItem value="all">All</SelectItem>
           </SelectContent>
         </Select>
       </div>

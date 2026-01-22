@@ -185,6 +185,7 @@
           {/each}
         </div>
       {/if}
+    </CardContent>
   </Card>
 
   <!-- Plans -->

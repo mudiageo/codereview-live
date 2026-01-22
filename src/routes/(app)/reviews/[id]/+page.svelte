@@ -59,8 +59,8 @@
 	const channel = $derived(reviewId ? syncEngine.channel(`review:${reviewId}`, { presence: true }, auth.currentUser) : null);
 
 	const presence = usePresence(
-		() => channel,
-		() => auth.currentUser,
+		channel,
+		auth.currentUser,
 		{
 			trackCursor: false, // We will handle tracking manually to scope it to specific elements
 			idleTimeout: 300000
