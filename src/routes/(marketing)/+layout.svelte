@@ -133,7 +133,7 @@
 						Revolutionizing code reviews with async video, AI insights, and real-time collaboration.
 					</p>
                     <div class="flex gap-4 pt-2">
-                         <a href="https://github.com" target="_blank" rel="noreferrer" class="text-muted-foreground hover:text-primary transition-colors">
+                         <a href="https://github.com/mudiageo/codereview-live" target="_blank" rel="noreferrer" class="text-muted-foreground hover:text-primary transition-colors">
                              <Github class="h-5 w-5" />
                              <span class="sr-only">GitHub</span>
                          </a>

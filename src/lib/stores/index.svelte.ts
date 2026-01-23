@@ -120,7 +120,7 @@ class ReviewsStore {
   }
 
   sortByDate(order: 'asc' | 'desc' = 'desc') {
-    return this.data.sort((a, b) => {
+    return [...this.data].sort((a, b) => {
       const timeA = new Date(a.createdAt).getTime();
       const timeB = new Date(b.createdAt).getTime();
       return order === 'desc' ? timeB - timeA : timeA - timeB;

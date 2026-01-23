@@ -35,7 +35,7 @@
                 CodeSpring Hackathon Submission
             </div>
 
-            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-blue-500 pb-2">
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-blue-500 pb-2" style="-webkit-background-clip: text; background-clip: text;">
                 Code Reviews, <br class="hidden md:block" /> Reimagined.
             </h1>
 
