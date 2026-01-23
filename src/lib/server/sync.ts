@@ -10,7 +10,7 @@ export const config: SyncConfig = {
   tables: {
     projects: {
       table: 'projects',
-      columns: ['id', 'name', 'description', 'userId', 'repoUrl', 'color', 'isTeam', 'updatedAt', 'createdAt', '_version', '_updatedAt'],
+      columns: ['id', 'name', 'description', 'userId', 'repoUrl', 'color', 'isTeam', 'members', 'settings', 'updatedAt', 'createdAt', '_version', '_updatedAt'],
     },
     reviews: {
       table: 'reviews',

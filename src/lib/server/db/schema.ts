@@ -99,6 +99,20 @@ export const projects = pgTable('projects', {
   repoUrl: text('repo_url'),
   color: text('color').default('#8B5CF6'), // Project color for UI
   isTeam: boolean('is_team').default(false),
+  members: jsonb('members').$type<{
+    userId?: string;
+    email: string;
+    role: 'owner' | 'admin' | 'member' | 'viewer';
+    status: 'active' | 'invited';
+    addedAt: string;
+  }[]>(),
+  settings: jsonb('settings').$type<{
+    isPublic: boolean;
+    syncToRepo: boolean;
+    allowComments: boolean;
+    autoSummarize: boolean;
+    requireApproval: boolean;
+  }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())

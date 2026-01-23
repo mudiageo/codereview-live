@@ -244,6 +244,51 @@ class ProjectsStore {
         project.description?.toLowerCase().includes(q)
     );
   }
+
+  async addMember(projectId: string, member: { email: string; role: string; userId?: string }) {
+    const project = this.findById(projectId);
+    if (!project) return;
+
+    const members = (project.members as any[]) || [];
+    // Check if exists
+    if (members.find((m: any) => m.email === member.email)) return;
+
+    const newMember = {
+      ...member,
+      status: member.userId ? 'active' : 'invited',
+      addedAt: new Date().toISOString(),
+    };
+
+    const updatedMembers = [...members, newMember];
+
+    await this.update(projectId, {
+      members: updatedMembers,
+      isTeam: true,
+    });
+  }
+
+  async removeMember(projectId: string, email: string) {
+    const project = this.findById(projectId);
+    if (!project) return;
+
+    const members = (project.members as any[]) || [];
+    const updatedMembers = members.filter((m: any) => m.email !== email);
+
+    await this.update(projectId, {
+      members: updatedMembers,
+      isTeam: updatedMembers.length > 0,
+    });
+  }
+
+  async updateSettings(projectId: string, settings: any) {
+    const project = this.findById(projectId);
+    if (!project) return;
+
+    const currentSettings = (project.settings as any) || {};
+    await this.update(projectId, {
+      settings: { ...currentSettings, ...settings },
+    });
+  }
 }
 
 export const projectsStore = new ProjectsStore();

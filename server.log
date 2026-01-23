@@ -1,0 +1,30 @@
+
+> codereview-live@0.0.1 dev
+> vite dev --port 3232
+
+11:30:22 AM [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite-plugin-sveltekit-setup" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+11:30:22 AM [vite] (client) Forced re-optimization of dependencies
+
+  VITE v8.0.0-beta.8  ready in 6509 ms
+
+  ➜  Local:   http://localhost:3232/
+  ➜  Network: use --host to expose
+Error: DATABASE_URL is not set
+    at /app/src/lib/server/db/index.ts:6:30
+    at async ESModulesEvaluator.runInlinedModule (file:///app/node_modules/vite/dist/node/module-runner.js:913:3)
+    at async SSRCompatModuleRunner.directRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1143:59)
+    at async SSRCompatModuleRunner.directRequest (file:///app/node_modules/vite/dist/node/chunks/node.js:13170:20)
+    at async SSRCompatModuleRunner.cachedRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1050:73)
+    at async eval (/app/src/lib/server/auth.ts:5:1)
+    at async ESModulesEvaluator.runInlinedModule (file:///app/node_modules/vite/dist/node/module-runner.js:913:3)
+    at async SSRCompatModuleRunner.directRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1143:59)
+    at async SSRCompatModuleRunner.directRequest (file:///app/node_modules/vite/dist/node/chunks/node.js:13170:20)
+    at async SSRCompatModuleRunner.cachedRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1050:73)
+11:31:41 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+11:31:41 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+11:31:41 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
+Files prefixed with + are reserved (saw src/routes/(app)/projects/[id]/settings/+page.svelte.spec.ts)
+11:48:57 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+11:48:57 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+11:48:57 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
