@@ -25,7 +25,7 @@
 	async function handleComplete() {
 		loading = true;
 		try {
-			settingsStore.update({
+			await settingsStore.update({
 				theme,
 				aiEnabled,
 				hybridSyncEnabled: autoSync
