@@ -10,7 +10,12 @@ export const plans = {
 			aiCredits: 5000,
 			teamMembers: 1
 		},
-		features: ['10 local reviews', 'Basic features', 'Community support']
+		features: [
+			'Unlimited Public Repos',
+			'5 Private Repos',
+			'100 Video Minutes/mo',
+			'Basic AI Analysis'
+		]
 	},
 	pro: {
 		id: 'pro' as const,
@@ -24,12 +29,11 @@ export const plans = {
 			teamMembers: 1
 		},
 		features: [
-			'Unlimited local reviews',
-			'Unlimited cloud sync',
-			'50GB storage',
-			'1,000 AI credits/month',
-			'Advanced AI features',
-			'Priority support'
+			'Unlimited Repos',
+			'Unlimited Video Minutes',
+			'Advanced AI (GPT-4)',
+			'Priority Support',
+			'P2P Transfer Priority'
 		]
 	},
 	team: {
@@ -45,12 +49,10 @@ export const plans = {
 		},
 		features: [
 			'Everything in Pro',
-			'200GB storage',
-			'5,000 AI credits/month',
-			'Up to 10 team members',
-			'SSO & Admin controls',
-			'Analytics dashboard',
-			'Priority support'
+			'SSO & SAML',
+			'Audit Logs',
+			'Dedicated Success Manager',
+			'On-Premise Option'
 		]
 	}
 };

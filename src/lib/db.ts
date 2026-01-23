@@ -3,6 +3,7 @@ import { SyncEngine } from 'sveltekit-sync';
 import { pushChanges, pullChanges } from '$lib/sync.remote';
 import { browser } from '$app/environment';
 import { reviewsStore, projectsStore, commentsStore, teamsStore, aiUsageStore, subscriptionsStore, teamInvitationsStore, settingsStore } from '$lib/stores/index.svelte';
+import { notificationsStore } from '$lib/stores/notifications.svelte';
 
 
 export const adapter = new IndexedDBAdapter('codereview-db', 1);
@@ -42,6 +43,7 @@ export async function initDb() {
       teams: 'id',
       teamInvitations: 'id',
       aiUsage: 'id',
+      notifications: 'id'
     });
 
     // SyncEngine.init() now handles initial data pull automatically
@@ -54,7 +56,8 @@ export async function initDb() {
         teamsStore.load(),
         teamInvitationsStore.load(),
         aiUsageStore.load(),
-        subscriptionsStore.load()
+        subscriptionsStore.load(),
+        notificationsStore.load()
       ]);
 
     console.log('✅ Database initialized successfully');
@@ -63,4 +66,3 @@ export async function initDb() {
     throw error;
   }
 }
-
