@@ -579,7 +579,7 @@
 							<line x1="200" y1="100" x2="200" y2="160" stroke="currentColor" stroke-opacity="0.2" stroke-width="2" />
 							<line x1="100" y1="140" x2="200" y2="160" stroke="currentColor" stroke-opacity="0.2" stroke-width="2" />
 							<line x1="300" y1="140" x2="200" y2="160" stroke="currentColor" stroke-opacity="0.2" stroke-width="2" />
-							
+
 							<!-- Nodes -->
 							{#each codeMap.nodes as node, i}
 								{@const positions = [
@@ -593,36 +593,36 @@
 								]}
 								{@const pos = positions[i] || { x: 200, y: 100 }}
 								<g class="cursor-pointer hover:scale-110 transition-transform" style="transform-origin: {pos.x}px {pos.y}px">
-									<circle 
-										cx={pos.x} 
-										cy={pos.y} 
-										r={15 + node.reviews / 5} 
+									<circle
+										cx={pos.x}
+										cy={pos.y}
+										r={15 + node.reviews / 5}
 										fill="url(#nodeGradient{i})"
 										class="opacity-80"
 									/>
-									<text 
-										x={pos.x} 
-										y={pos.y + 30} 
-										text-anchor="middle" 
+									<text
+										x={pos.x}
+										y={pos.y + 30}
+										text-anchor="middle"
 										class="fill-white text-xs font-medium"
 									>
 										{node.name}
 									</text>
-									<text 
-										x={pos.x} 
-										y={pos.y + 5} 
-										text-anchor="middle" 
+									<text
+										x={pos.x}
+										y={pos.y + 5}
+										text-anchor="middle"
 										class="fill-white text-xs font-bold"
 									>
 										{node.reviews}
-									</text> 
-								</g> 
-                <defs> 
-                  <radialGradient id="nodeGradient{i}"> 
-                  <stop offset="0%" stop-color="hsl(var(--primary))" /> 
-                  <stop offset="100%" stop-color="hsl(var(--primary) / 0.5)" />
-                  								</radialGradient>
-                </defs>
+									</text>
+								</g>
+								<defs>
+									<radialGradient id="nodeGradient{i}">
+										<stop offset="0%" stop-color="hsl(var(--primary))" />
+										<stop offset="100%" stop-color="hsl(var(--primary) / 0.5)" />
+									</radialGradient>
+								</defs>
 							{/each}
 						</svg>
 						<div class="absolute bottom-4 left-4 text-xs text-white/60">
@@ -650,7 +650,7 @@
 					<div class="h-48 flex items-end gap-2">
 						{#each codeQualityTrends.smellReduction as data, i}
 							<div class="flex-1 flex flex-col items-center gap-2">
-								<div 
+								<div
 									class="w-full rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-400 transition-all duration-500 hover:from-amber-400 hover:to-amber-300"
 									style="height: {(data.smells / maxSmellValue) * 100}%"
 								></div>
@@ -770,7 +770,7 @@
 										<span class="font-bold">{value}%</span>
 									</div>
 									<div class="h-2 rounded-full bg-muted overflow-hidden">
-										<div 
+										<div
 											class="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-500"
 											style="width: {value}%"
 										></div>
@@ -784,8 +784,8 @@
 							<h4 class="font-medium mb-3">Your Strong Topics</h4>
 							<div class="flex flex-wrap gap-2">
 								{#each personalStats.topicsStrength as topic}
-									<Badge 
-										variant="outline" 
+									<Badge
+										variant="outline"
 										class="px-3 py-1.5 {topic.score >= 85 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : topic.score >= 75 ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'}"
 									>
 										{topic.topic}
@@ -796,12 +796,13 @@
 						</div>
 
 						<!-- Quick Stats -->
-						<div class="grid grid-cols-3 gap-4">  
-						  <div class="text-center p-4 rounded-xl bg-muted/50"> 
-						    <div class="text-2xl font-bold">{personalStats.totalReviews}</div>
-						    <div class="text-xs text-muted-foreground">Total Reviews</div>
-						  </div>
-						  <div class="text-center p-4 rounded-xl bg-muted/50">								<div class="text-2xl font-bold">{formatTime(personalStats.totalWatchTime)}</div>
+						<div class="grid grid-cols-3 gap-4">
+							<div class="text-center p-4 rounded-xl bg-muted/50">
+								<div class="text-2xl font-bold">{personalStats.totalReviews}</div>
+								<div class="text-xs text-muted-foreground">Total Reviews</div>
+							</div>
+							<div class="text-center p-4 rounded-xl bg-muted/50">
+								<div class="text-2xl font-bold">{formatTime(personalStats.totalWatchTime)}</div>
 								<div class="text-xs text-muted-foreground">Time Invested</div>
 							</div>
 							<div class="text-center p-4 rounded-xl bg-muted/50">
@@ -822,13 +823,13 @@
 					</CardHeader>
 					<CardContent>
 						<div class="space-y-3">
-						  {#each personalStats.achievements as achievement} 
-						    <div class="flex items-center gap-3 p-3 rounded-lg {achievement.unlocked ? 'bg-primary/5 border border-primary/20' : 'bg-muted/30 opacity-60'}"> 
-						    <div class="h-10 w-10 rounded-full {achievement.unlocked ? 'bg-primary/20' : 'bg-muted'} flex items-center justify-center"> 
-						    <achievement.icon class="h-5 w-5 {achievement.unlocked ? 'text-primary' : 'text-muted-foreground'}" />
+							{#each personalStats.achievements as achievement}
+								<div class="flex items-center gap-3 p-3 rounded-lg {achievement.unlocked ? 'bg-primary/5 border border-primary/20' : 'bg-muted/30 opacity-60'}">
+									<div class="h-10 w-10 rounded-full {achievement.unlocked ? 'bg-primary/20' : 'bg-muted'} flex items-center justify-center">
+										<svelte:component this={achievement.icon} class="h-5 w-5 {achievement.unlocked ? 'text-primary' : 'text-muted-foreground'}" />
 									</div>
 									<div class="flex-1">
-									  <div class="font-medium text-sm">{achievement.name}</div>
+										<div class="font-medium text-sm">{achievement.name}</div>
 										<div class="text-xs text-muted-foreground">{achievement.description}</div>
 									</div>
 									{#if achievement.unlocked}

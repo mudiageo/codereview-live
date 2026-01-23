@@ -988,6 +988,7 @@ export class RecordingContext {
 							console.log('Added system audio track from display media');
 						});
 					}
+
 					// Add microphone audio tracks if available
 					if (microphoneStream) {
 						const audioTracks = microphoneStream.getAudioTracks();

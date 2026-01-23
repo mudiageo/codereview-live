@@ -4,13 +4,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
 	import { Separator } from '$lib/components/ui/separator';
-	import {
-		Dialog,
-		DialogContent,
-		DialogDescription,
-		DialogHeader,
-		DialogTitle
-	} from '$lib/components/ui/dialog';
+	import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
 	import CodeEditor from './code-editor.svelte';
 	import DiffViewer from './diff-viewer.svelte';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -33,7 +27,6 @@
 	import { LanguageDetector } from '$lib/utils/language-detector';
 	import { toast } from 'svelte-sonner';
 	import { getRecordingContext } from '$lib/contexts/recording-context.svelte';
-	import { explainCodeAI } from '$lib/ai.remote';
 
 	export interface FileNode {
 		name: string;
@@ -66,9 +59,6 @@
 		onAutoCheck?: () => void;
 		children?: import('svelte').Snippet;
 		onscroll?: (e: Event) => void;
-		// Replay props for video playback sync
-		replayScrollPosition?: number | null;
-		replaySidebarTab?: 'files' | 'ai' | 'checklist' | null;
 	}
 
 	let {
@@ -85,9 +75,7 @@
 		onAutoCheck,
 		children,
 		activeFilePath,
-		onscroll,
-		replayScrollPosition = null,
-		replaySidebarTab = null
+		onscroll
 	}: Props = $props();
 
 	const ctx = getRecordingContext();
@@ -107,9 +95,7 @@
 	let explainContent = $state('');
 	let explainCode = $state('');
 	let explainLineNumber = $state(0);
-  
-  let lastScrollTime = $state()
-  
+
 	const languageDetector = new LanguageDetector();
 
 	// Helper function to navigate to a line in the first file
@@ -135,16 +121,21 @@
 
 		try {
 			const language = activeTab?.language || 'javascript';
-			const result = await explainCodeAI({
+			const response = await fetch('/api/ai/explain', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
 					code: code.trim(),
-					language,
+					language
 				})
+			});
 
-			if (!result) {
+			if (!response.ok) {
 				throw new Error('Failed to get explanation');
 			}
 
-			explainContent = result.explanation || 'No explanation available';
+			const data = await response.json();
+			explainContent = data.explanation || 'No explanation available';
 		} catch (error) {
 			console.error('Error explaining code:', error);
 			toast.error('Failed to explain code. Please try again.');
@@ -250,13 +241,6 @@
 		expandedDirs = dirs;
 	});
 
-	// Handle replay sidebar tab changes from video playback
-	$effect(() => {
-		if (replaySidebarTab && replaySidebarTab !== activeSidebarTab) {
-			activeSidebarTab = replaySidebarTab;
-		}
-	});
-
 	function toggleDirectory(path: string) {
 		if (expandedDirs.has(path)) {
 			expandedDirs.delete(path);
@@ -289,17 +273,10 @@
 
 	function closeTab(file: FileNode, e?: Event) {
 		e?.stopPropagation();
-		const closedTabIndex = openTabs.findIndex((t) => t.path === file.path);
 		openTabs = openTabs.filter((t) => t.path !== file.path);
 
 		if (activeTab?.path === file.path) {
-			if (openTabs.length > 0) {
-				// Select the next tab, or the new last tab if the closed one was last
-				const newIndex = Math.min(closedTabIndex, openTabs.length - 1);
-				activeTab = openTabs[newIndex];
-			} else {
-				activeTab = null;
-			}
+			activeTab = openTabs[openTabs.length - 1] || null;
 		}
 	}
 
@@ -401,528 +378,510 @@
 			: 'hidden lg:flex'} {sidebarOpen ? '' : 'lg:w-0 lg:overflow-hidden'}"
 		style={sidebarOpen ? `width: ${sidebarWidth}px` : ''}
 	>
-		<!-- Sidebar Tabs/Header -->
-		<div class="flex items-center justify-between border-b p-2 bg-muted/50">
-			<div class="flex items-center gap-1 rounded-lg bg-background border p-1">
-				<Button
-					variant={activeSidebarTab === 'files' ? 'secondary' : 'ghost'}
-					size="sm"
-					class="h-7 w-7 px-0"
-					title="Files"
-					onclick={() => {
-						activeSidebarTab = 'files';
-						if (ctx?.isRecording) ctx.addEvent('tab-change', { tab: 'files' });
-					}}
-				>
-					<Folder class="h-4 w-4" />
-				</Button>
-				<Button
-					variant={activeSidebarTab === 'ai' ? 'secondary' : 'ghost'}
-					size="sm"
-					class="h-7 w-7 px-0"
-					title="AI Analysis"
-					onclick={() => {
-						activeSidebarTab = 'ai';
-						if (ctx?.isRecording) ctx.addEvent('tab-change', { tab: 'ai' });
-					}}
-				>
-					<Bot class="h-4 w-4" />
-				</Button>
-				<Button
-					variant={activeSidebarTab === 'checklist' ? 'secondary' : 'ghost'}
-					size="sm"
-					class="h-7 w-7 px-0"
-					title="Checklist"
-					onclick={() => {
-						activeSidebarTab = 'checklist';
-						if (ctx?.isRecording) ctx.addEvent('tab-change', { tab: 'checklist' });
-					}}
-				>
-					<CheckSquare class="h-4 w-4" />
-				</Button>
+			<!-- Sidebar Tabs/Header -->
+			<div class="flex items-center justify-between border-b p-2 bg-muted/50">
+				<div class="flex items-center gap-1 rounded-lg bg-background border p-1">
+					<Button
+						variant={activeSidebarTab === 'files' ? 'secondary' : 'ghost'}
+						size="sm"
+						class="h-7 w-7 px-0"
+						title="Files"
+						onclick={() => {
+							activeSidebarTab = 'files';
+							if (ctx?.isRecording) ctx.addEvent('tab-change', { tab: 'files' });
+						}}
+					>
+						<Folder class="h-4 w-4" />
+					</Button>
+					<Button
+						variant={activeSidebarTab === 'ai' ? 'secondary' : 'ghost'}
+						size="sm"
+						class="h-7 w-7 px-0"
+						title="AI Analysis"
+						onclick={() => {
+							activeSidebarTab = 'ai';
+							if (ctx?.isRecording) ctx.addEvent('tab-change', { tab: 'ai' });
+						}}
+					>
+						<Bot class="h-4 w-4" />
+					</Button>
+					<Button
+						variant={activeSidebarTab === 'checklist' ? 'secondary' : 'ghost'}
+						size="sm"
+						class="h-7 w-7 px-0"
+						title="Checklist"
+						onclick={() => {
+							activeSidebarTab = 'checklist';
+							if (ctx?.isRecording) ctx.addEvent('tab-change', { tab: 'checklist' });
+						}}
+					>
+						<CheckSquare class="h-4 w-4" />
+					</Button>
+				</div>
+
+				<div class="flex items-center gap-2">
+					{#if activeSidebarTab === 'files'}
+						<Badge variant="secondary" class="text-xs">
+							{totalStats.files}
+						</Badge>
+					{/if}
+					<Button
+						variant="ghost"
+						size="icon"
+						class="h-7 w-7 lg:hidden"
+						onclick={() => (mobileDrawerOpen = false)}
+					>
+						<X class="h-4 w-4" />
+					</Button>
+				</div>
 			</div>
 
-			<div class="flex items-center gap-2">
-				{#if activeSidebarTab === 'files'}
-					<Badge variant="secondary" class="text-xs">
-						{totalStats.files}
-					</Badge>
+			<!-- FILES PANEL -->
+			{#if activeSidebarTab === 'files'}
+				<!-- Stats -->
+				{#if mode === 'diff'}
+					<div class="flex items-center gap-2 border-b px-3 py-2 text-xs">
+						<Badge variant="outline" class="text-green-600">+{totalStats.additions}</Badge>
+						<Badge variant="outline" class="text-red-600">-{totalStats.deletions}</Badge>
+						{#if importSource}
+							<span class="ml-auto text-muted-foreground truncate">{importSource}</span>
+						{/if}
+					</div>
 				{/if}
+
+				<!-- Search -->
+				<div class="border-b p-2">
+					<div class="relative">
+						<Search
+							class="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+						/>
+						<Input
+							placeholder="Filter files..."
+							bind:value={searchQuery}
+							class="h-8 pl-8 text-sm"
+						/>
+					</div>
+				</div>
+
+				<!-- File Tree -->
+				<ScrollArea class="flex-1">
+					<div class="p-2">
+						{#each fileTree() as node (node.path)}
+							{@render FileTreeNode(node, 0)}
+						{/each}
+					</div>
+				</ScrollArea>
+			{:else if activeSidebarTab === 'ai'}
+				<!-- AI PANEL -->
+				<ScrollArea class="flex-1">
+					<div class="p-4 space-y-4">
+						{#if aiAnalysis}
+							<div class="space-y-4">
+								<!-- Summary -->
+								<div>
+									<h4 class="font-semibold mb-2 flex items-center gap-2">
+										<Sparkles class="h-4 w-4 text-primary" />
+										Summary
+									</h4>
+									<p class="text-sm text-muted-foreground">{aiAnalysis.summary}</p>
+								</div>
+
+								<!-- Bugs -->
+								{#if aiAnalysis.bugs?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 text-destructive flex items-center gap-2">
+											<span>Bugs</span>
+											<Badge variant="destructive" class="text-xs">{aiAnalysis.bugs.length}</Badge>
+										</h4>
+										<div class="space-y-2">
+											{#each aiAnalysis.bugs as bug}
+												<button
+													type="button"
+													class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+													onclick={() => bug.line && navigateToLine(bug.line)}
+												>
+													<div class="flex items-start gap-2">
+														<Badge
+															variant={bug.severity === 'critical' || bug.severity === 'high'
+																? 'destructive'
+																: 'outline'}
+															class="text-xs shrink-0"
+														>
+															{bug.severity}
+														</Badge>
+														<div class="flex-1 min-w-0">
+															<p class="text-sm font-medium">{bug.type}</p>
+															<p class="text-xs text-muted-foreground mt-1">{bug.description}</p>
+															{#if bug.line}
+																<p class="text-xs text-primary mt-1">Line {bug.line}</p>
+															{/if}
+														</div>
+													</div>
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Security Issues -->
+								{#if aiAnalysis.securityIssues?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 text-orange-500 flex items-center gap-2">
+											<span>Security Issues</span>
+											<Badge variant="secondary" class="text-xs">{aiAnalysis.securityIssues.length}</Badge>
+										</h4>
+										<div class="space-y-2">
+											{#each aiAnalysis.securityIssues as issue}
+												<div class="p-3 rounded-lg border bg-orange-50 dark:bg-orange-950/20">
+													<div class="flex items-start gap-2">
+														<Badge
+															variant={issue.severity === 'critical' || issue.severity === 'high'
+																? 'destructive'
+																: 'outline'}
+															class="text-xs shrink-0"
+														>
+															{issue.severity}
+														</Badge>
+														<div class="flex-1 min-w-0">
+															<p class="text-sm font-medium">{issue.type}</p>
+															<p class="text-xs text-muted-foreground mt-1">{issue.description}</p>
+															<p class="text-xs mt-1 font-medium">→ {issue.recommendation}</p>
+														</div>
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Suggestions -->
+								{#if aiAnalysis.suggestions?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 text-blue-500 flex items-center gap-2">
+											<span>Suggestions</span>
+											<Badge variant="secondary" class="text-xs">{aiAnalysis.suggestions.length}</Badge>
+										</h4>
+										<div class="space-y-2">
+											{#each aiAnalysis.suggestions as suggestion}
+												<button
+													type="button"
+													class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+													onclick={() => suggestion.line && navigateToLine(suggestion.line)}
+												>
+													<div class="flex items-start gap-2">
+														<Badge variant="outline" class="text-xs shrink-0 capitalize">
+															{suggestion.type}
+														</Badge>
+														<div class="flex-1 min-w-0">
+															<p class="text-sm font-medium">{suggestion.description}</p>
+															{#if suggestion.line}
+																<p class="text-xs text-primary mt-1">Line {suggestion.line}</p>
+															{/if}
+															<Badge variant="secondary" class="text-xs mt-1">{suggestion.impact} impact</Badge>
+														</div>
+													</div>
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Performance Notes -->
+								{#if aiAnalysis.performanceNotes?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 text-amber-500 flex items-center gap-2">
+											<span>Performance</span>
+											<Badge variant="secondary" class="text-xs">{aiAnalysis.performanceNotes.length}</Badge>
+										</h4>
+										<div class="space-y-2">
+											{#each aiAnalysis.performanceNotes as note}
+												<div class="p-3 rounded-lg border">
+													<div class="flex items-start gap-2">
+														<Badge variant="outline" class="text-xs shrink-0">
+															{note.impact}
+														</Badge>
+														<div class="flex-1 min-w-0">
+															<p class="text-sm">{note.description}</p>
+															<p class="text-xs text-muted-foreground mt-1">→ {note.recommendation}</p>
+														</div>
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Code Smells -->
+								{#if aiAnalysis.codeSmells?.length > 0}
+									<div>
+										<h4 class="font-semibold mb-2 flex items-center gap-2">
+											<span>Code Smells</span>
+											<Badge variant="secondary" class="text-xs">{aiAnalysis.codeSmells.length}</Badge>
+										</h4>
+										<div class="space-y-2">
+											{#each aiAnalysis.codeSmells as smell}
+												<button
+													type="button"
+													class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+													onclick={() => smell.line && navigateToLine(smell.line)}
+												>
+													<div class="flex-1 min-w-0">
+														<p class="text-sm font-medium">{smell.type}</p>
+														<p class="text-xs text-muted-foreground mt-1">{smell.description}</p>
+														{#if smell.line}
+															<p class="text-xs text-primary mt-1">Line {smell.line}</p>
+														{/if}
+													</div>
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Overall Score -->
+								{#if aiAnalysis.overallScore !== undefined}
+									<div class="pt-4 border-t">
+										<div class="flex items-center justify-between">
+											<span class="text-sm font-medium">Overall Score</span>
+											<Badge
+												variant={aiAnalysis.overallScore >= 80
+													? 'default'
+													: aiAnalysis.overallScore >= 60
+														? 'secondary'
+														: 'destructive'}
+												class="text-lg px-3 py-1"
+											>
+												{aiAnalysis.overallScore}/100
+											</Badge>
+										</div>
+									</div>
+								{/if}
+							</div>
+						{:else}
+							<div class="text-center py-8 text-muted-foreground">
+								<Bot class="h-8 w-8 mx-auto mb-2 opacity-50" />
+								<p>No AI analysis available yet.</p>
+								{#if onRunAI}
+									<Button variant="outline" size="sm" class="mt-4" onclick={onRunAI}>
+										<Sparkles class="h-4 w-4 mr-2" />
+										Run Analysis
+									</Button>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				</ScrollArea>
+			{:else if activeSidebarTab === 'checklist'}
+				<!-- CHECKLIST PANEL -->
+				<ScrollArea class="flex-1">
+					<div class="p-4">
+						{#if checklist}
+							<div class="space-y-4">
+								<div class="flex items-center justify-between">
+									<h4 class="font-semibold">Review Checklist</h4>
+									<Badge variant="outline" class="text-xs">
+										{Object.values(checklist.items).filter(Boolean).length}/{Object.keys(
+											checklist.items
+										).length}
+									</Badge>
+								</div>
+
+								{#if onAutoCheck}
+									<Button variant="outline" size="sm" class="w-full mb-4" onclick={onAutoCheck}>
+										<Bot class="h-4 w-4 mr-2" />
+										Auto-check with AI
+									</Button>
+								{/if}
+
+								<div class="space-y-2">
+									{#each Object.keys(checklist.items) as item}
+										<div
+											class="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border transition-colors"
+										>
+											<input
+												type="checkbox"
+												id={item}
+												checked={checklist.items[item]}
+												onchange={(e) => {
+													const newItems = { ...checklist?.items, [item]: e.currentTarget.checked };
+													onChecklistChange?.(newItems);
+												}}
+												class="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+											/>
+											<div class="space-y-1">
+												<label
+													for={item}
+													class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+												>
+													{item}
+												</label>
+												{#if checklist.notes?.[item]}
+													<p class="text-xs text-muted-foreground bg-muted/50 p-1.5 rounded">
+														<Bot class="h-3 w-3 inline mr-1 text-primary" />
+														{checklist.notes[item]}
+													</p>
+												{/if}
+											</div>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{:else}
+							<div class="text-center py-8 text-muted-foreground">
+								<CheckSquare class="h-8 w-8 mx-auto mb-2 opacity-50" />
+								<p>No checklist available.</p>
+							</div>
+						{/if}
+					</div>
+				</ScrollArea>
+			{/if}
+
+			<!-- Keyboard Hints -->
+			<div class="border-t p-2 text-xs text-muted-foreground">
+				<div class="flex items-center justify-between">
+					<span>j/k navigate</span>
+					<span>[ toggle sidebar</span>
+				</div>
+			</div>
+
+			<!-- Resize Handle -->
+			<button
+				class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/20 transition-colors {isDragging
+					? 'bg-primary/30'
+					: ''}"
+				onmousedown={handleResizeStart}
+				aria-label="Resize sidebar"
+			></button>
+		</aside>
+
+		<!-- Main Content -->
+		<main class="flex flex-1 flex-col overflow-hidden">
+			<!-- Header Bar -->
+			<div class="flex items-center gap-2 border-b px-2 py-1.5 bg-muted/20">
+				<!-- Mobile Menu Button -->
 				<Button
 					variant="ghost"
 					size="icon"
-					class="h-7 w-7 lg:hidden"
-					onclick={() => (mobileDrawerOpen = false)}
+					class="h-8 w-8 lg:hidden"
+					onclick={() => (mobileDrawerOpen = true)}
 				>
-					<X class="h-4 w-4" />
+					<Menu class="h-4 w-4" />
 				</Button>
-			</div>
-		</div>
 
-		<!-- FILES PANEL -->
-		{#if activeSidebarTab === 'files'}
-			<!-- Stats -->
-			{#if mode === 'diff'}
-				<div class="flex items-center gap-2 border-b px-3 py-2 text-xs">
-					<Badge variant="outline" class="text-green-600">+{totalStats.additions}</Badge>
-					<Badge variant="outline" class="text-red-600">-{totalStats.deletions}</Badge>
-					{#if importSource}
-						<span class="ml-auto text-muted-foreground truncate">{importSource}</span>
-					{/if}
-				</div>
-			{/if}
-
-			<!-- Search -->
-			<div class="border-b p-2">
-				<div class="relative">
-					<Search class="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-					<Input placeholder="Filter files..." bind:value={searchQuery} class="h-8 pl-8 text-sm" />
-				</div>
-			</div>
-
-			<!-- File Tree -->
-			<ScrollArea class="flex-1">
-				<div class="p-2">
-					{#each fileTree() as node (node.path)}
-						{@render FileTreeNode(node, 0)}
-					{/each}
-				</div>
-			</ScrollArea>
-		{:else if activeSidebarTab === 'ai'}
-			<!-- AI PANEL -->
-			<ScrollArea class="flex-1">
-				<div class="p-4 space-y-4">
-					{#if aiAnalysis}
-						<div class="space-y-4">
-							<!-- Summary -->
-							<div>
-								<h4 class="font-semibold mb-2 flex items-center gap-2">
-									<Sparkles class="h-4 w-4 text-primary" />
-									Summary
-								</h4>
-								<p class="text-sm text-muted-foreground">{aiAnalysis.summary}</p>
-							</div>
-
-							<!-- Bugs -->
-							{#if aiAnalysis.bugs?.length > 0}
-								<div>
-									<h4 class="font-semibold mb-2 text-destructive flex items-center gap-2">
-										<span>Bugs</span>
-										<Badge variant="destructive" class="text-xs">{aiAnalysis.bugs.length}</Badge>
-									</h4>
-									<div class="space-y-2">
-										{#each aiAnalysis.bugs as bug}
-											<button
-												type="button"
-												class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-												onclick={() => bug.line && navigateToLine(bug.line)}
-											>
-												<div class="flex items-start gap-2">
-													<Badge
-														variant={bug.severity === 'critical' || bug.severity === 'high'
-															? 'destructive'
-															: 'outline'}
-														class="text-xs shrink-0"
-													>
-														{bug.severity}
-													</Badge>
-													<div class="flex-1 min-w-0">
-														<p class="text-sm font-medium">{bug.type}</p>
-														<p class="text-xs text-muted-foreground mt-1">{bug.description}</p>
-														{#if bug.line}
-															<p class="text-xs text-primary mt-1">Line {bug.line}</p>
-														{/if}
-													</div>
-												</div>
-											</button>
-										{/each}
-									</div>
-								</div>
-							{/if}
-
-							<!-- Security Issues -->
-							{#if aiAnalysis.securityIssues?.length > 0}
-								<div>
-									<h4 class="font-semibold mb-2 text-orange-500 flex items-center gap-2">
-										<span>Security Issues</span>
-										<Badge variant="secondary" class="text-xs"
-											>{aiAnalysis.securityIssues.length}</Badge
-										>
-									</h4>
-									<div class="space-y-2">
-										{#each aiAnalysis.securityIssues as issue}
-											<div class="p-3 rounded-lg border bg-orange-50 dark:bg-orange-950/20">
-												<div class="flex items-start gap-2">
-													<Badge
-														variant={issue.severity === 'critical' || issue.severity === 'high'
-															? 'destructive'
-															: 'outline'}
-														class="text-xs shrink-0"
-													>
-														{issue.severity}
-													</Badge>
-													<div class="flex-1 min-w-0">
-														<p class="text-sm font-medium">{issue.type}</p>
-														<p class="text-xs text-muted-foreground mt-1">{issue.description}</p>
-														<p class="text-xs mt-1 font-medium">→ {issue.recommendation}</p>
-													</div>
-												</div>
-											</div>
-										{/each}
-									</div>
-								</div>
-							{/if}
-
-							<!-- Suggestions -->
-							{#if aiAnalysis.suggestions?.length > 0}
-								<div>
-									<h4 class="font-semibold mb-2 text-blue-500 flex items-center gap-2">
-										<span>Suggestions</span>
-										<Badge variant="secondary" class="text-xs"
-											>{aiAnalysis.suggestions.length}</Badge
-										>
-									</h4>
-									<div class="space-y-2">
-										{#each aiAnalysis.suggestions as suggestion}
-											<button
-												type="button"
-												class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-												onclick={() => suggestion.line && navigateToLine(suggestion.line)}
-											>
-												<div class="flex items-start gap-2">
-													<Badge variant="outline" class="text-xs shrink-0 capitalize">
-														{suggestion.type}
-													</Badge>
-													<div class="flex-1 min-w-0">
-														<p class="text-sm font-medium">{suggestion.description}</p>
-														{#if suggestion.line}
-															<p class="text-xs text-primary mt-1">Line {suggestion.line}</p>
-														{/if}
-														<Badge variant="secondary" class="text-xs mt-1"
-															>{suggestion.impact} impact</Badge
-														>
-													</div>
-												</div>
-											</button>
-										{/each}
-									</div>
-								</div>
-							{/if}
-
-							<!-- Performance Notes -->
-							{#if aiAnalysis.performanceNotes?.length > 0}
-								<div>
-									<h4 class="font-semibold mb-2 text-amber-500 flex items-center gap-2">
-										<span>Performance</span>
-										<Badge variant="secondary" class="text-xs"
-											>{aiAnalysis.performanceNotes.length}</Badge
-										>
-									</h4>
-									<div class="space-y-2">
-										{#each aiAnalysis.performanceNotes as note}
-											<div class="p-3 rounded-lg border">
-												<div class="flex items-start gap-2">
-													<Badge variant="outline" class="text-xs shrink-0">
-														{note.impact}
-													</Badge>
-													<div class="flex-1 min-w-0">
-														<p class="text-sm">{note.description}</p>
-														<p class="text-xs text-muted-foreground mt-1">
-															→ {note.recommendation}
-														</p>
-													</div>
-												</div>
-											</div>
-										{/each}
-									</div>
-								</div>
-							{/if}
-
-							<!-- Code Smells -->
-							{#if aiAnalysis.codeSmells?.length > 0}
-								<div>
-									<h4 class="font-semibold mb-2 flex items-center gap-2">
-										<span>Code Smells</span>
-										<Badge variant="secondary" class="text-xs">{aiAnalysis.codeSmells.length}</Badge
-										>
-									</h4>
-									<div class="space-y-2">
-										{#each aiAnalysis.codeSmells as smell}
-											<button
-												type="button"
-												class="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-												onclick={() => smell.line && navigateToLine(smell.line)}
-											>
-												<div class="flex-1 min-w-0">
-													<p class="text-sm font-medium">{smell.type}</p>
-													<p class="text-xs text-muted-foreground mt-1">{smell.description}</p>
-													{#if smell.line}
-														<p class="text-xs text-primary mt-1">Line {smell.line}</p>
-													{/if}
-												</div>
-											</button>
-										{/each}
-									</div>
-								</div>
-							{/if}
-
-							<!-- Overall Score -->
-							{#if aiAnalysis.overallScore !== undefined}
-								<div class="pt-4 border-t">
-									<div class="flex items-center justify-between">
-										<span class="text-sm font-medium">Overall Score</span>
-										<Badge
-											variant={aiAnalysis.overallScore >= 80
-												? 'default'
-												: aiAnalysis.overallScore >= 60
-													? 'secondary'
-													: 'destructive'}
-											class="text-lg px-3 py-1"
-										>
-											{aiAnalysis.overallScore}/100
-										</Badge>
-									</div>
-								</div>
-							{/if}
-						</div>
+				<!-- Sidebar Toggle (Desktop) -->
+				<Button
+					variant="ghost"
+					size="icon"
+					class="hidden lg:flex h-8 w-8"
+					onclick={() => (sidebarOpen = !sidebarOpen)}
+					title="Toggle sidebar ([)"
+				>
+					{#if sidebarOpen}
+						<PanelLeftClose class="h-4 w-4" />
 					{:else}
-						<div class="text-center py-8 text-muted-foreground">
-							<Bot class="h-8 w-8 mx-auto mb-2 opacity-50" />
-							<p>No AI analysis available yet.</p>
-							{#if onRunAI}
-								<Button variant="outline" size="sm" class="mt-4" onclick={onRunAI}>
-									<Sparkles class="h-4 w-4 mr-2" />
-									Run Analysis
-								</Button>
-							{/if}
-						</div>
+						<PanelLeft class="h-4 w-4" />
 					{/if}
-				</div>
-			</ScrollArea>
-		{:else if activeSidebarTab === 'checklist'}
-			<!-- CHECKLIST PANEL -->
-			<ScrollArea class="flex-1">
-				<div class="p-4">
-					{#if checklist}
-						<div class="space-y-4">
-							<div class="flex items-center justify-between">
-								<h4 class="font-semibold">Review Checklist</h4>
-								<Badge variant="outline" class="text-xs">
-									{Object.values(checklist.items).filter(Boolean).length}/{Object.keys(
-										checklist.items
-									).length}
-								</Badge>
-							</div>
+				</Button>
 
-							{#if onAutoCheck}
-								<Button variant="outline" size="sm" class="w-full mb-4" onclick={onAutoCheck}>
-									<Bot class="h-4 w-4 mr-2" />
-									Auto-check with AI
-								</Button>
-							{/if}
-
-							<div class="space-y-2">
-								{#each Object.keys(checklist.items) as item}
-									<div
-										class="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border transition-colors"
-									>
-										<input
-											type="checkbox"
-											id={item}
-											checked={checklist.items[item]}
-											onchange={(e) => {
-												const newItems = { ...checklist?.items, [item]: e.currentTarget.checked };
-												onChecklistChange?.(newItems);
-											}}
-											class="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-										/>
-										<div class="space-y-1">
-											<label
-												for={item}
-												class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-											>
-												{item}
-											</label>
-											{#if checklist.notes?.[item]}
-												<p class="text-xs text-muted-foreground bg-muted/50 p-1.5 rounded">
-													<Bot class="h-3 w-3 inline mr-1 text-primary" />
-													{checklist.notes[item]}
-												</p>
-											{/if}
-										</div>
-									</div>
-								{/each}
-							</div>
-						</div>
-					{:else}
-						<div class="text-center py-8 text-muted-foreground">
-							<CheckSquare class="h-8 w-8 mx-auto mb-2 opacity-50" />
-							<p>No checklist available.</p>
-						</div>
-					{/if}
-				</div>
-			</ScrollArea>
-		{/if}
-
-		<!-- Keyboard Hints -->
-		<div class="border-t p-2 text-xs text-muted-foreground">
-			<div class="flex items-center justify-between">
-				<span>j/k navigate</span>
-				<span>[ toggle sidebar</span>
-			</div>
-		</div>
-
-		<!-- Resize Handle -->
-		<button
-			class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/20 transition-colors {isDragging
-				? 'bg-primary/30'
-				: ''}"
-			onmousedown={handleResizeStart}
-			aria-label="Resize sidebar"
-		></button>
-	</aside>
-
-	<!-- Main Content -->
-	<main class="flex flex-1 flex-col overflow-hidden">
-		<!-- Header Bar -->
-		<div class="flex items-center gap-2 border-b px-2 py-1.5 bg-muted/20">
-			<!-- Mobile Menu Button -->
-			<Button
-				variant="ghost"
-				size="icon"
-				class="h-8 w-8 lg:hidden"
-				onclick={() => (mobileDrawerOpen = true)}
-			>
-				<Menu class="h-4 w-4" />
-			</Button>
-
-			<!-- Sidebar Toggle (Desktop) -->
-			<Button
-				variant="ghost"
-				size="icon"
-				class="hidden lg:flex h-8 w-8"
-				onclick={() => (sidebarOpen = !sidebarOpen)}
-				title="Toggle sidebar ([)"
-			>
-				{#if sidebarOpen}
-					<PanelLeftClose class="h-4 w-4" />
-				{:else}
-					<PanelLeft class="h-4 w-4" />
+				<!-- Back Button -->
+				{#if onBack}
+					<Button variant="ghost" size="sm" onclick={onBack} class="gap-1">
+						<ChevronLeft class="h-4 w-4" />
+						<span class="hidden sm:inline">Back to Editor</span>
+					</Button>
+					<Separator orientation="vertical" class="h-6" />
 				{/if}
-			</Button>
 
-			<!-- Back Button -->
-			{#if onBack}
-				<Button variant="ghost" size="sm" onclick={onBack} class="gap-1">
-					<ChevronLeft class="h-4 w-4" />
-					<span class="hidden sm:inline">Back to Editor</span>
-				</Button>
-				<Separator orientation="vertical" class="h-6" />
-			{/if}
-
-			<!-- File Tabs -->
-			<div class="flex-1 overflow-x-auto">
-				<div class="flex items-center gap-1">
-					{#each openTabs as tab (tab.path)}
-						{@const icon = getFileIcon(tab.name, tab.status)}
-						<div
-							class="group flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab?.path ===
-							tab.path
-								? 'bg-background border shadow-sm'
-								: 'hover:bg-muted'}"
-						>
-							<button onclick={() => (activeTab = tab)} class="flex items-center gap-1.5 min-w-0">
-								<icon.component class={icon.class} />
-								<span class="max-w-32 truncate">{tab.name}</span>
-								{#if tab.additions || tab.deletions}
-									<span class="flex items-center gap-0.5 text-xs">
-										{#if tab.additions}<span class="text-green-600">+{tab.additions}</span>{/if}
-										{#if tab.deletions}<span class="text-red-600">-{tab.deletions}</span>{/if}
-									</span>
-								{/if}
-							</button>
-							<button
-								onclick={(e) => closeTab(tab, e)}
-								class="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20 flex-shrink-0"
+				<!-- File Tabs -->
+				<div class="flex-1 overflow-x-auto">
+					<div class="flex items-center gap-1">
+						{#each openTabs as tab (tab.path)}
+							{@const icon = getFileIcon(tab.name, tab.status)}
+							<div
+								class="group flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors {activeTab?.path ===
+								tab.path
+									? 'bg-background border shadow-sm'
+									: 'hover:bg-muted'}"
 							>
-								<X class="h-3 w-3" />
-							</button>
-						</div>
-					{/each}
+								<button onclick={() => (activeTab = tab)} class="flex items-center gap-1.5 min-w-0">
+									<icon.component class={icon.class} />
+									<span class="max-w-32 truncate">{tab.name}</span>
+									{#if tab.additions || tab.deletions}
+										<span class="flex items-center gap-0.5 text-xs">
+											{#if tab.additions}<span class="text-green-600">+{tab.additions}</span>{/if}
+											{#if tab.deletions}<span class="text-red-600">-{tab.deletions}</span>{/if}
+										</span>
+									{/if}
+								</button>
+								<button
+									onclick={(e) => closeTab(tab, e)}
+									class="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/20 flex-shrink-0"
+								>
+									<X class="h-3 w-3" />
+								</button>
+							</div>
+						{/each}
+					</div>
 				</div>
 			</div>
-		</div>
 
-		<!-- File Content -->
-		<div class="flex-1 overflow-auto">
-			{#if activeTab}
-				<div class="h-full">
-					{#if mode === 'diff' && activeTab.diff}
-						<div class="p-4">
-							<DiffViewer
-								diff={activeTab.diff}
-								filename={activeTab.path}
-								{onLineClick}
-								{aiAnalysis}
-								onExplainCode={handleExplainCode}
-								scrollTo={replayScrollPosition}
+			<!-- File Content -->
+			<div class="flex-1 overflow-auto">
+				{#if activeTab}
+					<div class="h-full">
+						{#if mode === 'diff' && activeTab.diff}
+							<div class="p-4">
+								<DiffViewer
+									diff={activeTab.diff}
+									filename={activeTab.path}
+									{onLineClick}
+									{aiAnalysis}
+									onExplainCode={handleExplainCode}
+									onscroll={(e) => {
+										onscroll?.(e);
+										if (ctx?.isRecording) {
+											const target = e.target as HTMLElement;
+											ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+										}
+									}}
+								/>
+							</div>
+						{:else if activeTab.content}
+							<CodeEditor
+								value={activeTab.content}
+								language={activeTab.language || 'text'}
+								readonly
+								showLineNumbers
+								class="h-full"
 								onscroll={(e) => {
 									onscroll?.(e);
 									if (ctx?.isRecording) {
-										
-										// Throttle this event to avoid performance issues
-                		// TODO A proper throttle/debounce implementation would be used here.
-                		// For simplicity, a basic time-based check is used.
-                		if (!lastScrollTime || Date.now() - lastScrollTime > 100) {
-                			lastScrollTime = Date.now();
-                			const target = e.target as HTMLElement;
-                			ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
-                		}
+										const target = e.target as HTMLElement;
+										ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
 									}
 								}}
 							/>
-						</div>
-					{:else if activeTab.content}
-						<CodeEditor
-							value={activeTab.content}
-							language={activeTab.language || 'text'}
-							readonly
-							showLineNumbers
-							class="h-full"
-							onscroll={(e) => {
-								onscroll?.(e);
-								if (ctx?.isRecording) {
-									// Throttle this event to avoid performance issues
-              		// TODO A proper throttle/debounce implementation should be used here.
-              		if (!lastScrollTime || Date.now() - lastScrollTime > 100) {
-              			lastScrollTime = Date.now();
-              			const target = e.target as HTMLElement;
-              			ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
-              		}
-								}
-							}}
-						/>
-					{:else}
-						<div class="flex h-full items-center justify-center text-muted-foreground">
-							<div class="text-center">
-								<FileText class="mx-auto h-12 w-12 opacity-20" />
-								<p class="mt-4">No content available</p>
+						{:else}
+							<div class="flex h-full items-center justify-center text-muted-foreground">
+								<div class="text-center">
+									<FileText class="mx-auto h-12 w-12 opacity-20" />
+									<p class="mt-4">No content available</p>
+								</div>
 							</div>
-						</div>
-					{/if}
-				</div>
-				{@render children?.()}
-			{:else}
-				<div class="flex h-full items-center justify-center text-muted-foreground">
-					<div class="text-center">
-						<Folder class="mx-auto h-12 w-12 opacity-20" />
-						<p class="mt-4">Select a file to view</p>
-						<p class="text-sm mt-1">Use the file tree on the left or press j/k to navigate</p>
+						{/if}
 					</div>
-				</div>
-			{/if}
-		</div>
-	</main>
+					{@render children?.()}
+				{:else}
+					<div class="flex h-full items-center justify-center text-muted-foreground">
+						<div class="text-center">
+							<Folder class="mx-auto h-12 w-12 opacity-20" />
+							<p class="mt-4">Select a file to view</p>
+							<p class="text-sm mt-1">Use the file tree on the left or press j/k to navigate</p>
+						</div>
+					</div>
+				{/if}
+			</div>
+		</main>
 </div>
 
 <!-- Recursive File Tree Node Snippet -->
@@ -987,15 +946,16 @@
 					<Badge variant="outline">Line {explainLineNumber}</Badge>
 				{/if}
 			</DialogTitle>
-			<DialogDescription>Understanding the selected code</DialogDescription>
+			<DialogDescription>
+				Understanding the selected code
+			</DialogDescription>
 		</DialogHeader>
 
 		<div class="flex-1 overflow-auto space-y-4">
 			<!-- Original Code -->
 			<div class="space-y-2">
 				<h4 class="text-sm font-semibold">Code:</h4>
-				<pre class="p-3 bg-muted rounded-lg text-xs overflow-x-auto"><code>{explainCode}</code
-					></pre>
+				<pre class="p-3 bg-muted rounded-lg text-xs overflow-x-auto"><code>{explainCode}</code></pre>
 			</div>
 
 			<!-- Explanation -->
@@ -1008,14 +968,14 @@
 					</div>
 				{:else}
 					<div class="prose prose-sm max-w-none p-3 bg-muted/50 rounded-lg">
-						<pre class="text-sm whitespace-pre-wrap font-sans">{explainContent}</pre>
+						{@html explainContent.replace(/\n/g, '<br>')}
 					</div>
 				{/if}
 			</div>
 		</div>
 
 		<div class="flex justify-end gap-2 pt-4 border-t">
-			<Button variant="outline" onclick={() => (explainDialogOpen = false)}>Close</Button>
+			<Button variant="outline" onclick={() => explainDialogOpen = false}>Close</Button>
 		</div>
 	</DialogContent>
 </Dialog>

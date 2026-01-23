@@ -106,8 +106,8 @@
           <Slider 
             value={[settings.fontSize]} 
             onValueChange={(value) => updateSetting('fontSize', value[0])}
-            max={EDITOR.MAX_FONT_SIZE} 
-            min={EDITOR.MIN_FONT_SIZE} 
+            max={EDITOR.MAX_FONT_SIZE}
+            min={EDITOR.MIN_FONT_SIZE}
             step={1} 
             class="flex-1" 
           />
@@ -154,7 +154,7 @@
           <Label>Line Numbers</Label>
           <p class="text-sm text-muted-foreground">Show line numbers in the editor</p>
         </div>
-        <Switch 
+        <Switch
           checked={settings.lineNumbers}
           onCheckedChange={(checked) => updateSetting('lineNumbers', checked)}
         />
@@ -166,7 +166,7 @@
           <Label>Minimap</Label>
           <p class="text-sm text-muted-foreground">Show code minimap for navigation</p>
         </div>
-        <Switch 
+        <Switch
           checked={settings.minimap}
           onCheckedChange={(checked) => updateSetting('minimap', checked)}
         />
@@ -177,8 +177,8 @@
         <Label>Word Wrap</Label>
         <Select type="single" value={settings.wordWrap} onValueChange={(value) => updateSetting('wordWrap', value)}>
           <SelectTrigger>
-            {settings.wordWrap === 'off' ? 'Off' : 
-             settings.wordWrap === 'on' ? 'On' : 
+            {settings.wordWrap === 'off' ? 'Off' :
+             settings.wordWrap === 'on' ? 'On' :
              settings.wordWrap === 'wordWrapColumn' ? 'At Column' : 'Bounded'}
           </SelectTrigger>
           <SelectContent>
@@ -198,19 +198,21 @@
             value={[settings.tabSize]}
             onValueChange={(value) => updateSetting('tabSize', value[0])}
             max={8}
-            step={1} 
-            class="flex-1" 
+            min={1}
+            step={1}
+            class="flex-1"
           />
           <span class="text-sm w-12 text-right">{settings.tabSize} spaces</span>
         </div>
       </div>
+
       <!-- Insert Spaces -->
       <div class="flex items-center justify-between">
         <div class="space-y-0.5">
           <Label>Insert Spaces</Label>
           <p class="text-sm text-muted-foreground">Use spaces instead of tabs</p>
         </div>
-        <Switch 
+        <Switch
           checked={settings.insertSpaces}
           onCheckedChange={(checked) => updateSetting('insertSpaces', checked)}
         />
@@ -223,11 +225,11 @@
           <SelectTrigger>
             {settings.renderWhitespace.charAt(0).toUpperCase() + settings.renderWhitespace.slice(1)}
           </SelectTrigger>
-          <SelectContent> 
-              <SelectItem value="none">None</SelectItem> 
-             <SelectItem value="boundary">Boundary</SelectItem> 
-             <SelectItem value="selection">Selection</SelectItem> 
-             <SelectItem value="all">All</SelectItem>
+          <SelectContent>
+            <SelectItem value="none">None</SelectItem>
+            <SelectItem value="boundary">Boundary</SelectItem>
+            <SelectItem value="selection">Selection</SelectItem>
+            <SelectItem value="all">All</SelectItem>
           </SelectContent>
         </Select>
       </div>

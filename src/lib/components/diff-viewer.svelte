@@ -23,7 +23,6 @@
 		aiAnalysis?: CodeAnalysis;
 		onExplainCode?: (lineNumber: number, code: string) => void;
 		onscroll?: (e: Event) => void;
-		scrollTo?: number | null;
 	}
 
 	let {
@@ -33,8 +32,7 @@
 		onLineClick,
 		aiAnalysis,
 		onExplainCode,
-		onscroll,
-		scrollTo = null
+		onscroll
 	}: Props = $props();
 
 	let viewport = $state<HTMLElement | null>(null);
@@ -43,13 +41,6 @@
 		if (viewport && onscroll) {
 			viewport.addEventListener('scroll', onscroll);
 			return () => viewport?.removeEventListener('scroll', onscroll);
-		}
-	});
-
-	// Handle programmatic scroll from replay
-	$effect(() => {
-		if (viewport && scrollTo !== null && scrollTo !== undefined) {
-			viewport.scrollTop = scrollTo;
 		}
 	});
 

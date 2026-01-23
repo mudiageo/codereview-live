@@ -2,7 +2,7 @@
 
 ## Inspiration
 
-We've all been there: hours spent on code review, dozens of text comments—and still, confusion lingers. Text alone lacks context, emotion, and clarity.  
+We've all been there: hours spent on code review, dozens of text comments—and still, confusion lingers. Text alone lacks context, emotion, and clarity.
 **CodeReview.live** was born from the insight that a 2-minute video can replace 20 minutes of typing, making code review more human and effective. Inspired by CodeSpring’s “renewal” theme, we’re transforming developer communication from frustrating text exchanges to clear, async video conversations.
 
 ---
@@ -72,20 +72,20 @@ Think of it as “Loom meets GitHub”—optimized for code review.
 
 ### Quick Start
 
-1. **Clone the repository**  
+1. **Clone the repository**
    ```sh
    git clone https://github.com/mudiageo/codereview-live.git
    cd codereview-live
    ```
 
-2. **Install dependencies**  
+2. **Install dependencies**
    ```sh
    pnpm install
    # or
    npm install
    ```
 
-3. **Set up environment variables**  
+3. **Set up environment variables**
    - Copy `.env.example` to `.env`
    - Fill in keys for database, auth, payments, OAuth, SMTP, and AI (see sample below):
 
@@ -99,24 +99,24 @@ Think of it as “Loom meets GitHub”—optimized for code review.
      ...
      ```
 
-4. **Initialize the database**  
+4. **Initialize the database**
    ```sh
    pnpm run db:push
    pnpm run db:migrate
    ```
 
-5. **Start the local dev server**  
+5. **Start the local dev server**
    ```sh
    pnpm run dev
    # open http://localhost:3232
    ```
 
-6. **(Optional) Build desktop app (requires Rust/Tauri CLI)**  
+6. **(Optional) Build desktop app (requires Rust/Tauri CLI)**
    ```sh
    pnpm run tauri
    ```
 
-7. **Run tests and lint**  
+7. **Run tests and lint**
    ```sh
    pnpm run test
    pnpm run lint
@@ -172,7 +172,7 @@ Think of it as “Loom meets GitHub”—optimized for code review.
 - 🎯 Advanced AI code analysis
 - 🏢 Enterprise features (SSO, audit logs)
 
-**Long-term:**  
+**Long-term:**
 To become the standard for async code reviews—replacing PR text comments with clear video communication, searchable knowledge, AI-powered suggestions, and seamless onboarding.
 
 ---

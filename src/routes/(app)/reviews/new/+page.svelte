@@ -449,7 +449,7 @@
 						`--- /dev/null`,
 						`+++ b/${fileName}`,
 						`@@ -0,0 +1,${lines.length} @@`,
-						...lines.map((line) => `+${line}`)
+						...lines.map(line => `+${line}`)
 					].join('\n');
 
 					processedFiles.push({
@@ -468,8 +468,7 @@
 
 			if (processedFiles.length > 0) {
 				importedFiles = processedFiles;
-				importSource =
-					filesArray.length === 1 ? filesArray[0].name : `${filesArray.length} files uploaded`;
+				importSource = filesArray.length === 1 ? filesArray[0].name : `${filesArray.length} files uploaded`;
 
 				// Calculate totals
 				let totalAdditions = 0;
@@ -480,24 +479,18 @@
 				}
 
 				// Combine all content for code field (for backward compatibility)
-				code = processedFiles.map((f) => f.diff || f.content || '').join('\n\n');
+				code = processedFiles.map(f => f.diff || f.content || '').join('\n\n');
 
 				// Determine language: use file language if single non-diff file, else 'diff'
-				const isSingleNonDiffFile =
-					processedFiles.length === 1 &&
+				const isSingleNonDiffFile = processedFiles.length === 1 &&
 					!filesArray[0].name.endsWith('.diff') &&
 					!filesArray[0].name.endsWith('.patch');
-				language = isSingleNonDiffFile ? processedFiles[0].language || 'text' : 'diff';
+				language = isSingleNonDiffFile ? (processedFiles[0].language || 'text') : 'diff';
 
-				title =
-					filesArray.length === 1
-						? `Imported from ${filesArray[0].name}`
-						: `Imported ${filesArray.length} files`;
+				title = filesArray.length === 1 ? `Imported from ${filesArray[0].name}` : `Imported ${filesArray.length} files`;
 				description = `${processedFiles.length} files, ${totalAdditions} additions, ${totalDeletions} deletions`;
 
-				toast.success(
-					`Uploaded ${processedFiles.length} file${processedFiles.length > 1 ? 's' : ''} successfully`
-				);
+				toast.success(`Uploaded ${processedFiles.length} file${processedFiles.length > 1 ? 's' : ''} successfully`);
 			} else {
 				toast.error('No valid files found');
 			}
@@ -610,38 +603,36 @@
 				});
 			} else {
 				// Create new published review
-				reviewId = (
-					await reviewsStore.create({
-						title,
-						description,
-						projectId,
-						authorId: auth.currentUser?.id || '',
-						codeContent: code,
-						codeLanguage: language,
-						videoUrl: uploadedVideoUrl || null,
-						videoSize: uploadedMetadata?.size || null,
-						videoDuration:
-							uploadedMetadata?.duration && Number.isFinite(uploadedMetadata.duration)
-								? Math.round(uploadedMetadata.duration)
-								: null,
-						thumbnailUrl: uploadedThumbnailUrl || null,
-						shareToken: crypto.randomUUID(),
-						isPublic: false,
-						status: 'published',
-						aiSummary,
-						metadata: {
-							recordingEvents: recordingCtx?.getRecordingEvents() || [],
-							files: $state.snapshot(importedFiles),
-							importSource,
-							aiAnalysis: $state.snapshot(analysis),
-							checklist: {
-								items: $state.snapshot(checklistItems),
-								notes: $state.snapshot(checklistNotes),
-								template: checklistTemplate
-							}
+				reviewId = (await reviewsStore.create({
+					title,
+					description,
+					projectId,
+					authorId: auth.currentUser?.id || '',
+					codeContent: code,
+					codeLanguage: language,
+					videoUrl: uploadedVideoUrl || null,
+					videoSize: uploadedMetadata?.size || null,
+					videoDuration:
+						uploadedMetadata?.duration && Number.isFinite(uploadedMetadata.duration)
+							? Math.round(uploadedMetadata.duration)
+							: null,
+					thumbnailUrl: uploadedThumbnailUrl || null,
+					shareToken: crypto.randomUUID(),
+					isPublic: false,
+					status: 'published',
+					aiSummary,
+					metadata: {
+						recordingEvents: recordingCtx?.getRecordingEvents() || [],
+						files: $state.snapshot(importedFiles),
+						importSource,
+						aiAnalysis: $state.snapshot(analysis),
+						checklist: {
+							items: $state.snapshot(checklistItems),
+							notes: $state.snapshot(checklistNotes),
+							template: checklistTemplate
 						}
-					})
-				).id;
+					}
+				})).id;
 			}
 
 			toast.success('Review published!');
@@ -796,425 +787,423 @@
 			{#if step === 2}
 				<!-- Step 2: Add Code -->
 				<div bind:this={workspaceContainerRef}>
-					<Card>
-						<CardHeader>
-							<CardTitle>Add Code</CardTitle>
-							<CardDescription>Add the code you want to review</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Tabs value="paste" class="w-full">
-								<TabsList class="grid w-full grid-cols-5">
-									<TabsTrigger value="paste">Paste</TabsTrigger>
-									<TabsTrigger value="upload">Upload</TabsTrigger>
-									<TabsTrigger value="github">GitHub</TabsTrigger>
-									<TabsTrigger value="gitlab">GitLab</TabsTrigger>
-									<TabsTrigger value="git">Local Git</TabsTrigger>
-								</TabsList>
+				<Card>
+					<CardHeader>
+						<CardTitle>Add Code</CardTitle>
+						<CardDescription>Add the code you want to review</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Tabs value="paste" class="w-full">
+							<TabsList class="grid w-full grid-cols-5">
+								<TabsTrigger value="paste">Paste</TabsTrigger>
+								<TabsTrigger value="upload">Upload</TabsTrigger>
+								<TabsTrigger value="github">GitHub</TabsTrigger>
+								<TabsTrigger value="gitlab">GitLab</TabsTrigger>
+								<TabsTrigger value="git">Local Git</TabsTrigger>
+							</TabsList>
 
-								<TabsContent value="paste" class="space-y-4">
-									{#if code}
-										<!-- Code Review Workspace -->
-										<div class="space-y-3">
-											<div class="flex items-center justify-between">
-												<div class="flex items-center gap-2">
-													<Label>Language</Label>
-													<Select bind:value={language}>
-														<SelectTrigger class="w-[180px]">
-															{language || 'Auto-detect'}
-														</SelectTrigger>
-														<SelectContent>
-															{#each languages as lang}
-																<SelectItem value={lang}>
-																	{lang.charAt(0).toUpperCase() + lang.slice(1)}
-																</SelectItem>
-															{/each}
-														</SelectContent>
-													</Select>
-												</div>
-												<div class="flex items-center gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onclick={() => (showCodeWorkspace = true)}
-													>
-														<Maximize2 class="h-4 w-4 mr-1" />
-														Fullscreen
-													</Button>
-													<Button
-														variant="ghost"
-														size="sm"
-														onclick={() => {
-															code = '';
-															importedFiles = [];
-														}}
-													>
-														Clear
-													</Button>
-												</div>
+							<TabsContent value="paste" class="space-y-4">
+								{#if code}
+									<!-- Code Review Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Label>Language</Label>
+												<Select bind:value={language}>
+													<SelectTrigger class="w-[180px]">
+														{language || 'Auto-detect'}
+													</SelectTrigger>
+													<SelectContent>
+														{#each languages as lang}
+															<SelectItem value={lang}>
+																{lang.charAt(0).toUpperCase() + lang.slice(1)}
+															</SelectItem>
+														{/each}
+													</SelectContent>
+												</Select>
 											</div>
-											<div class="border rounded-lg h-[400px] overflow-hidden">
-												<CodeReviewWorkspace
-													files={[
-														{
-															name: 'code',
-															path: 'code',
-															type: 'file',
-															content: code,
-															language: language || 'text'
-														}
-													]}
-													mode="view"
-													aiAnalysis={analysis}
-													checklist={{
-														items: checklistItems,
-														notes: checklistNotes,
-														template: checklistTemplate
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														code = '';
+														importedFiles = [];
 													}}
-													onRunAI={runAIAnalysis}
-													onAutoCheck={handleAutoCheck}
-													onChecklistChange={(items) => (checklistItems = items)}
-													onFileChange={handleWorkspaceFileChange}
-												/>
+												>
+													Clear
+												</Button>
 											</div>
 										</div>
-									{:else}
-										<div class="space-y-2">
-											<Label>Language</Label>
-											<Select bind:value={language}>
-												<SelectTrigger>
-													{language || 'Auto-detect'}
-												</SelectTrigger>
-												<SelectContent>
-													{#each languages as lang}
-														<SelectItem value={lang}>
-															{lang.charAt(0).toUpperCase() + lang.slice(1)}
-														</SelectItem>
-													{/each}
-												</SelectContent>
-											</Select>
-										</div>
-
-										<CodeEditor
-											bind:value={code}
-											{language}
-											readonly={false}
-											showLineNumbers={true}
-										/>
-									{/if}
-								</TabsContent>
-
-								<TabsContent value="upload" class="space-y-4">
-									{#if importedFiles.length > 0}
-										<!-- Imported Files Workspace -->
-										<div class="space-y-3">
-											<div class="flex items-center justify-between">
-												<div class="flex items-center gap-2">
-													<Badge variant="secondary">
-														<FileCode class="h-3 w-3 mr-1" />
-														{importedFiles.length} files
-													</Badge>
-													<span class="text-xs text-muted-foreground truncate max-w-[200px]"
-														>{importSource}</span
-													>
-												</div>
-												<div class="flex items-center gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onclick={() => (showCodeWorkspace = true)}
-													>
-														<Maximize2 class="h-4 w-4 mr-1" />
-														Fullscreen
-													</Button>
-													<Button
-														variant="ghost"
-														size="sm"
-														onclick={() => {
-															importedFiles = [];
-															code = '';
-															importSource = '';
-														}}
-													>
-														Clear
-													</Button>
-												</div>
-											</div>
-											<div class="border rounded-lg h-[400px] overflow-hidden">
-												<CodeReviewWorkspace
-													files={importedFiles}
-													mode={importedFiles.some((f) => f.status && f.status !== 'added')
-														? 'diff'
-														: 'view'}
-													{importSource}
-													aiAnalysis={analysis}
-													checklist={{
-														items: checklistItems,
-														notes: checklistNotes,
-														template: checklistTemplate
-													}}
-													onRunAI={runAIAnalysis}
-													onAutoCheck={handleAutoCheck}
-													onChecklistChange={(items) => (checklistItems = items)}
-													onFileChange={handleWorkspaceFileChange}
-												/>
-											</div>
-										</div>
-									{:else}
-										<div
-											class="border-2 border-dashed rounded-lg p-12 text-center hover:border-primary/50 transition-colors"
-										>
-											<Upload class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-											<p class="text-sm text-muted-foreground mb-2">
-												Drag & drop files or click to browse
-											</p>
-											<input
-												type="file"
-												id="file-upload"
-												class="hidden"
-												accept=".js,.ts,.py,.diff,.patch,.java,.go,.rs,.rb,.php,.c,.cpp,.cs,.html,.css,.jsx,.tsx,.svelte,.vue,.md"
-												multiple
-												onchange={handleDiffFileUpload}
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace
+												files={[
+													{
+														name: 'code',
+														path: 'code',
+														type: 'file',
+														content: code,
+														language: language || 'text'
+													}
+												]}
+												mode="view"
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+												onFileChange={handleWorkspaceFileChange}
 											/>
-											<Button
-												variant="outline"
-												size="sm"
-												onclick={() => document.getElementById('file-upload')?.click()}
-											>
-												Choose Files
-											</Button>
-											<p class="text-xs text-muted-foreground mt-2">
-												Supports multiple files: .js, .ts, .py, .diff, .patch and more
-											</p>
 										</div>
-									{/if}
-								</TabsContent>
+									</div>
+								{:else}
+									<div class="space-y-2">
+										<Label>Language</Label>
+										<Select bind:value={language}>
+											<SelectTrigger>
+												{language || 'Auto-detect'}
+											</SelectTrigger>
+											<SelectContent>
+												{#each languages as lang}
+													<SelectItem value={lang}>
+														{lang.charAt(0).toUpperCase() + lang.slice(1)}
+													</SelectItem>
+												{/each}
+											</SelectContent>
+										</Select>
+									</div>
 
-								<TabsContent value="github">
-									{#if importedFiles.length > 0 && importSource.includes('github')}
-										<!-- Imported Files Workspace -->
-										<div class="space-y-3">
-											<div class="flex items-center justify-between">
-												<div class="flex items-center gap-2">
-													<Badge variant="secondary">
-														<FileCode class="h-3 w-3 mr-1" />
-														{importedFiles.length} files
-													</Badge>
-													<span class="text-xs text-muted-foreground truncate max-w-[200px]"
-														>{importSource}</span
-													>
-												</div>
-												<div class="flex items-center gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onclick={() => (showCodeWorkspace = true)}
-													>
-														<Maximize2 class="h-4 w-4 mr-1" />
-														Fullscreen
-													</Button>
-													<Button
-														variant="ghost"
-														size="sm"
-														onclick={() => {
-															importedFiles = [];
-															code = '';
-															importSource = '';
-														}}
-													>
-														Clear
-													</Button>
-												</div>
+									<CodeEditor
+										bind:value={code}
+										{language}
+										readonly={false}
+										showLineNumbers={true}
+									/>
+								{/if}
+							</TabsContent>
+
+							<TabsContent value="upload" class="space-y-4">
+								{#if importedFiles.length > 0}
+									<!-- Imported Files Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Badge variant="secondary">
+													<FileCode class="h-3 w-3 mr-1" />
+													{importedFiles.length} files
+												</Badge>
+												<span class="text-xs text-muted-foreground truncate max-w-[200px]"
+													>{importSource}</span
+												>
 											</div>
-											<div class="border rounded-lg h-[400px] overflow-hidden">
-												<CodeReviewWorkspace
-													files={importedFiles}
-													mode="diff"
-													{importSource}
-													aiAnalysis={analysis}
-													checklist={{
-														items: checklistItems,
-														notes: checklistNotes,
-														template: checklistTemplate
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														importedFiles = [];
+														code = '';
+														importSource = '';
 													}}
-													onRunAI={runAIAnalysis}
-													onAutoCheck={handleAutoCheck}
-													onChecklistChange={(items) => (checklistItems = items)}
-													onFileChange={handleWorkspaceFileChange}
-												/>
+												>
+													Clear
+												</Button>
 											</div>
 										</div>
-									{:else}
-										<div class="space-y-4">
-											<Button
-												variant="outline"
-												class="w-full gap-2"
-												onclick={() => (showGitHubImport = true)}
-											>
-												<Github class="h-4 w-4" />
-												Connect GitHub
-											</Button>
-											<p class="text-sm text-muted-foreground text-center">
-												Connect your GitHub account to import pull requests
-											</p>
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace
+												files={importedFiles}
+												mode={importedFiles.some(f => f.status && f.status !== 'added') ? 'diff' : 'view'}
+												{importSource}
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+												onFileChange={handleWorkspaceFileChange}
+											/>
 										</div>
-									{/if}
-								</TabsContent>
+									</div>
+								{:else}
+									<div
+										class="border-2 border-dashed rounded-lg p-12 text-center hover:border-primary/50 transition-colors"
+									>
+										<Upload class="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+										<p class="text-sm text-muted-foreground mb-2">
+											Drag & drop files or click to browse
+										</p>
+										<input
+											type="file"
+											id="file-upload"
+											class="hidden"
+											accept=".js,.ts,.py,.diff,.patch,.java,.go,.rs,.rb,.php,.c,.cpp,.cs,.html,.css,.jsx,.tsx,.svelte,.vue,.md"
+											multiple
+											onchange={handleDiffFileUpload}
+										/>
+										<Button
+											variant="outline"
+											size="sm"
+											onclick={() => document.getElementById('file-upload')?.click()}
+										>
+											Choose Files
+										</Button>
+										<p class="text-xs text-muted-foreground mt-2">
+											Supports multiple files: .js, .ts, .py, .diff, .patch and more
+										</p>
+									</div>
+								{/if}
+							</TabsContent>
 
-								<TabsContent value="gitlab">
-									{#if importedFiles.length > 0 && importSource.includes('gitlab')}
-										<!-- Imported Files Workspace -->
-										<div class="space-y-3">
-											<div class="flex items-center justify-between">
-												<div class="flex items-center gap-2">
-													<Badge variant="secondary">
-														<FileCode class="h-3 w-3 mr-1" />
-														{importedFiles.length} files
-													</Badge>
-													<span class="text-xs text-muted-foreground truncate max-w-[200px]"
-														>{importSource}</span
-													>
-												</div>
-												<div class="flex items-center gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onclick={() => (showCodeWorkspace = true)}
-													>
-														<Maximize2 class="h-4 w-4 mr-1" />
-														Fullscreen
-													</Button>
-													<Button
-														variant="ghost"
-														size="sm"
-														onclick={() => {
-															importedFiles = [];
-															code = '';
-															importSource = '';
-														}}
-													>
-														Clear
-													</Button>
-												</div>
+							<TabsContent value="github">
+								{#if importedFiles.length > 0 && importSource.includes('github')}
+									<!-- Imported Files Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Badge variant="secondary">
+													<FileCode class="h-3 w-3 mr-1" />
+													{importedFiles.length} files
+												</Badge>
+												<span class="text-xs text-muted-foreground truncate max-w-[200px]"
+													>{importSource}</span
+												>
 											</div>
-											<div class="border rounded-lg h-[400px] overflow-hidden">
-												<CodeReviewWorkspace
-													files={importedFiles}
-													mode="diff"
-													{importSource}
-													aiAnalysis={analysis}
-													checklist={{
-														items: checklistItems,
-														notes: checklistNotes,
-														template: checklistTemplate
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														importedFiles = [];
+														code = '';
+														importSource = '';
 													}}
-													onRunAI={runAIAnalysis}
-													onAutoCheck={handleAutoCheck}
-													onChecklistChange={(items) => (checklistItems = items)}
-													onFileChange={handleWorkspaceFileChange}
-												/>
+												>
+													Clear
+												</Button>
 											</div>
 										</div>
-									{:else}
-										<div class="space-y-4">
-											<Button
-												variant="outline"
-												class="w-full gap-2"
-												onclick={() => (showGitLabImport = true)}
-											>
-												<FolderGit2 class="h-4 w-4" />
-												Connect GitLab
-											</Button>
-											<p class="text-sm text-muted-foreground text-center">
-												Connect your GitLab account to import merge requests
-											</p>
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace
+												files={importedFiles}
+												mode="diff"
+												{importSource}
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+											onFileChange={handleWorkspaceFileChange}
+											/>
 										</div>
-									{/if}
-								</TabsContent>
+									</div>
+								{:else}
+									<div class="space-y-4">
+										<Button
+											variant="outline"
+											class="w-full gap-2"
+											onclick={() => (showGitHubImport = true)}
+										>
+											<Github class="h-4 w-4" />
+											Connect GitHub
+										</Button>
+										<p class="text-sm text-muted-foreground text-center">
+											Connect your GitHub account to import pull requests
+										</p>
+									</div>
+								{/if}
+							</TabsContent>
 
-								<TabsContent value="git">
-									{#if importedFiles.length > 0 && importSource.includes('commit')}
-										<!-- Imported Files Workspace -->
-										<div class="space-y-3">
-											<div class="flex items-center justify-between">
-												<div class="flex items-center gap-2">
-													<Badge variant="secondary">
-														<FileCode class="h-3 w-3 mr-1" />
-														{importedFiles.length} files
-													</Badge>
-													<span class="text-xs text-muted-foreground truncate max-w-[200px]"
-														>{importSource}</span
-													>
-												</div>
-												<div class="flex items-center gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onclick={() => (showCodeWorkspace = true)}
-													>
-														<Maximize2 class="h-4 w-4 mr-1" />
-														Fullscreen
-													</Button>
-													<Button
-														variant="ghost"
-														size="sm"
-														onclick={() => {
-															importedFiles = [];
-															code = '';
-															importSource = '';
-														}}
-													>
-														Clear
-													</Button>
-												</div>
+							<TabsContent value="gitlab">
+								{#if importedFiles.length > 0 && importSource.includes('gitlab')}
+									<!-- Imported Files Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Badge variant="secondary">
+													<FileCode class="h-3 w-3 mr-1" />
+													{importedFiles.length} files
+												</Badge>
+												<span class="text-xs text-muted-foreground truncate max-w-[200px]"
+													>{importSource}</span
+												>
 											</div>
-											<div class="border rounded-lg h-[400px] overflow-hidden">
-												<CodeReviewWorkspace
-													files={importedFiles}
-													mode="diff"
-													{importSource}
-													aiAnalysis={analysis}
-													checklist={{
-														items: checklistItems,
-														notes: checklistNotes,
-														template: checklistTemplate
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														importedFiles = [];
+														code = '';
+														importSource = '';
 													}}
-													onRunAI={runAIAnalysis}
-													onAutoCheck={handleAutoCheck}
-													onChecklistChange={(items) => (checklistItems = items)}
-													onFileChange={handleWorkspaceFileChange}
-												/>
+												>
+													Clear
+												</Button>
 											</div>
 										</div>
-									{:else}
-										<div class="space-y-4">
-											<Button
-												variant="outline"
-												class="w-full gap-2"
-												onclick={() => (showLocalGitBrowser = true)}
-											>
-												<FolderGit2 class="h-4 w-4" />
-												Browse Local Repository
-											</Button>
-											<p class="text-sm text-muted-foreground text-center">
-												Select a local git repository to import changes (Chrome/Edge only)
-											</p>
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace
+												files={importedFiles}
+												mode="diff"
+												{importSource}
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+											onFileChange={handleWorkspaceFileChange}
+											/>
 										</div>
-									{/if}
-								</TabsContent>
-							</Tabs>
+									</div>
+								{:else}
+									<div class="space-y-4">
+										<Button
+											variant="outline"
+											class="w-full gap-2"
+											onclick={() => (showGitLabImport = true)}
+										>
+											<FolderGit2 class="h-4 w-4" />
+											Connect GitLab
+										</Button>
+										<p class="text-sm text-muted-foreground text-center">
+											Connect your GitLab account to import merge requests
+										</p>
+									</div>
+								{/if}
+							</TabsContent>
 
-							<div class="flex justify-between gap-2 pt-4">
-								<Button variant="ghost" onclick={() => (step = 1)}>Back</Button>
-								<div class="flex gap-2">
-									<Button variant="outline" onclick={saveDraft}>
-										<Save class="h-4 w-4 mr-2" />
-										Save Draft
-									</Button>
-									<Button onclick={() => (step = 3)} disabled={!code}>Next</Button>
-								</div>
+							<TabsContent value="git">
+								{#if importedFiles.length > 0 && importSource.includes('commit')}
+									<!-- Imported Files Workspace -->
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-2">
+												<Badge variant="secondary">
+													<FileCode class="h-3 w-3 mr-1" />
+													{importedFiles.length} files
+												</Badge>
+												<span class="text-xs text-muted-foreground truncate max-w-[200px]"
+													>{importSource}</span
+												>
+											</div>
+											<div class="flex items-center gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													onclick={() => (showCodeWorkspace = true)}
+												>
+													<Maximize2 class="h-4 w-4 mr-1" />
+													Fullscreen
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onclick={() => {
+														importedFiles = [];
+														code = '';
+														importSource = '';
+													}}
+												>
+													Clear
+												</Button>
+											</div>
+										</div>
+										<div class="border rounded-lg h-[400px] overflow-hidden">
+											<CodeReviewWorkspace
+												files={importedFiles}
+												mode="diff"
+												{importSource}
+												aiAnalysis={analysis}
+												checklist={{
+													items: checklistItems,
+													notes: checklistNotes,
+													template: checklistTemplate
+												}}
+												onRunAI={runAIAnalysis}
+												onAutoCheck={handleAutoCheck}
+												onChecklistChange={(items) => (checklistItems = items)}
+											onFileChange={handleWorkspaceFileChange}
+											/>
+										</div>
+									</div>
+								{:else}
+									<div class="space-y-4">
+										<Button
+											variant="outline"
+											class="w-full gap-2"
+											onclick={() => (showLocalGitBrowser = true)}
+										>
+											<FolderGit2 class="h-4 w-4" />
+											Browse Local Repository
+										</Button>
+										<p class="text-sm text-muted-foreground text-center">
+											Select a local git repository to import changes (Chrome/Edge only)
+										</p>
+									</div>
+								{/if}
+							</TabsContent>
+						</Tabs>
+
+						<div class="flex justify-between gap-2 pt-4">
+							<Button variant="ghost" onclick={() => (step = 1)}>Back</Button>
+							<div class="flex gap-2">
+								<Button variant="outline" onclick={saveDraft}>
+									<Save class="h-4 w-4 mr-2" />
+									Save Draft
+								</Button>
+								<Button onclick={() => (step = 3)} disabled={!code}>Next</Button>
 							</div>
-						</CardContent>
-					</Card>
+						</div>
+					</CardContent>
+				</Card>
 				</div>
 			{/if}
 
@@ -1276,7 +1265,7 @@
 												bind:this={mediaRecorderRef}
 												{reviewId}
 												onUploadComplete={(result) => {
-													uploadedVideoUrl = result.videoUrl;
+										      uploadedVideoUrl = result.videoUrl;
 													uploadedThumbnailUrl = result.thumbnailUrl;
 													uploadedMetadata = result.metadata;
 													// State cleanup handled by effect
@@ -1293,10 +1282,7 @@
 												onUploadComplete={(result) => {
 													uploadedVideoUrl = result.videoUrl;
 													uploadedThumbnailUrl = result.thumbnailUrl || '';
-													uploadedMetadata = {
-														size: result.metadata?.size,
-														duration: result.metadata?.duration
-													};
+													uploadedMetadata = { size: result.metadata?.size, duration: result.metadata?.duration };
 													toast.success('Video uploaded successfully!');
 												}}
 											/>

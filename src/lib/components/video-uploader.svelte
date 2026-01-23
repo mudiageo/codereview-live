@@ -29,11 +29,7 @@
 	/**
 	 * Validates if a file size is within the allowed maximum
 	 */
-	function validateFileSize(
-		file: File,
-		maxBytes: number,
-		maxMB: number
-	): { valid: boolean; error?: string } {
+	function validateFileSize(file: File, maxBytes: number, maxMB: number): { valid: boolean; error?: string } {
 		if (file.size > maxBytes) {
 			return {
 				valid: false,
@@ -80,6 +76,7 @@
 		const input = e.target as HTMLInputElement;
 		if (input.files?.length) {
 			const file = input.files[0];
+
 			// Validate file size against settings
 			const validation = validateFileSize(file, maxVideoSizeBytes, maxVideoSizeMB);
 			if (!validation.valid) {
@@ -146,6 +143,6 @@
 		<!-- We set video programmatically before submit -->
 		<input {...uploadVideo.fields.video.as('file')} />
 		<input {...uploadVideo.fields.reviewId.as('text')} bind:value={reviewId} />
-		<button bind:this={uploadButton} {...uploadVideo.fields.action.as('submit', 'upload')}></button>
+		<button bind:this={uploadButton} {...uploadVideo.buttonProps}></button>
 	</form>
 </div>

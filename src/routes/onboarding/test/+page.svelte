@@ -1,24 +1,13 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
+	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Progress } from '$lib/components/ui/progress';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { ScrollArea } from '$lib/components/ui/scroll-area';
-	import {
-		Accordion,
-		AccordionContent,
-		AccordionItem,
-		AccordionTrigger
-	} from '$lib/components/ui/accordion';
+	import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '$lib/components/ui/accordion';
 	import { Input } from '$lib/components/ui/input';
 	import Play from '@lucide/svelte/icons/play';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
@@ -89,36 +78,12 @@
 			completedLessons: 4,
 			estimatedTime: 25,
 			lessons: [
-				{
-					id: 'vr-1',
-					title: 'Why Video Reviews Matter',
-					completed: true,
-					duration: 4,
-					videoUrl: '#'
-				},
-				{
-					id: 'vr-2',
-					title: 'Recording Your First Review',
-					completed: true,
-					duration: 5,
-					videoUrl: '#'
-				},
+				{ id: 'vr-1', title: 'Why Video Reviews Matter', completed: true, duration: 4, videoUrl: '#' },
+				{ id: 'vr-2', title: 'Recording Your First Review', completed: true, duration: 5, videoUrl: '#' },
 				{ id: 'vr-3', title: 'Screen Recording Tips', completed: true, duration: 4, videoUrl: '#' },
 				{ id: 'vr-4', title: 'Adding Annotations', completed: true, duration: 4, videoUrl: '#' },
-				{
-					id: 'vr-5',
-					title: 'Using Picture-in-Picture',
-					completed: false,
-					duration: 4,
-					videoUrl: '#'
-				},
-				{
-					id: 'vr-6',
-					title: 'Publishing Your Review',
-					completed: false,
-					duration: 4,
-					videoUrl: '#'
-				}
+				{ id: 'vr-5', title: 'Using Picture-in-Picture', completed: false, duration: 4, videoUrl: '#' },
+				{ id: 'vr-6', title: 'Publishing Your Review', completed: false, duration: 4, videoUrl: '#' }
 			]
 		},
 		{
@@ -351,20 +316,23 @@
 	});
 
 	// Calculate overall progress
-	const totalLessons = $derived(onboardingModules.reduce((sum, m) => sum + m.totalLessons, 0));
+	const totalLessons = $derived(
+		onboardingModules.reduce((sum, m) => sum + m.totalLessons, 0)
+	);
 	const completedLessons = $derived(
 		onboardingModules.reduce((sum, m) => sum + m.completedLessons, 0)
 	);
-	const overallProgress = $derived(Math.round((completedLessons / totalLessons) * 100));
+	const overallProgress = $derived(
+		Math.round((completedLessons / totalLessons) * 100)
+	);
 
 	// Filter templates based on search
 	const filteredTemplates = $derived(
 		searchQuery
-			? reviewTemplates.filter(
-					(t) =>
-						t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-						t.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-				)
+			? reviewTemplates.filter(t =>
+				t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				t.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+			)
 			: reviewTemplates
 	);
 
@@ -378,11 +346,7 @@
 		const colors: Record<string, { bg: string; text: string; border: string }> = {
 			blue: { bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/20' },
 			purple: { bg: 'bg-purple-500/10', text: 'text-purple-500', border: 'border-purple-500/20' },
-			emerald: {
-				bg: 'bg-emerald-500/10',
-				text: 'text-emerald-500',
-				border: 'border-emerald-500/20'
-			},
+			emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/20' },
 			amber: { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/20' },
 			rose: { bg: 'bg-rose-500/10', text: 'text-rose-500', border: 'border-rose-500/20' }
 		};
@@ -391,21 +355,17 @@
 
 	function getDifficultyColor(difficulty: string) {
 		switch (difficulty) {
-			case 'beginner':
-				return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-			case 'intermediate':
-				return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-			case 'advanced':
-				return 'bg-rose-500/10 text-rose-600 border-rose-500/20';
-			default:
-				return '';
+			case 'beginner': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+			case 'intermediate': return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+			case 'advanced': return 'bg-rose-500/10 text-rose-600 border-rose-500/20';
+			default: return '';
 		}
 	}
 
 	function markLessonComplete(moduleId: string, lessonId: string) {
-		const module = onboardingModules.find((m) => m.id === moduleId);
+		const module = onboardingModules.find(m => m.id === moduleId);
 		if (module) {
-			const lesson = module.lessons.find((l) => l.id === lessonId);
+			const lesson = module.lessons.find(l => l.id === lessonId);
 			if (lesson && !lesson.completed) {
 				lesson.completed = true;
 				module.completedLessons++;
@@ -426,7 +386,9 @@
 	<!-- Header -->
 	<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
 		<div>
-			<h1 class="text-3xl font-bold tracking-tight">Developer Onboarding</h1>
+			<h1 class="text-3xl font-bold tracking-tight">
+				Developer Onboarding
+			</h1>
 			<p class="text-muted-foreground mt-1">
 				Master code reviews and explore your codebase through video walkthroughs
 			</p>
@@ -455,24 +417,20 @@
 						{#each onboardingModules as module}
 							{@const colors = getColorClasses(module.color)}
 							<Badge variant="outline" class="{colors.bg} {colors.text} {colors.border}">
-								{module.completedLessons}/{module.totalLessons}
-								{module.title}
+								{module.completedLessons}/{module.totalLessons} {module.title}
 							</Badge>
 						{/each}
 					</div>
 				</div>
 				<div class="flex gap-3">
-					<Button variant="outline" class="gap-2" onclick={() => (activeTab = 'templates')}>
+					<Button variant="outline" class="gap-2" onclick={() => activeTab = 'templates'}>
 						<BookOpen class="h-4 w-4" />
 						Templates
 					</Button>
-					<Button
-						class="gap-2"
-						onclick={() => {
-							const nextModule = onboardingModules.find((m) => m.completedLessons < m.totalLessons);
-							if (nextModule) selectedModule = nextModule.id;
-						}}
-					>
+					<Button class="gap-2" onclick={() => {
+						const nextModule = onboardingModules.find(m => m.completedLessons < m.totalLessons);
+						if (nextModule) selectedModule = nextModule.id;
+					}}>
 						<Play class="h-4 w-4" />
 						Continue Learning
 					</Button>
@@ -507,17 +465,11 @@
 					{@const isComplete = module.completedLessons === module.totalLessons}
 
 					<Card
-						class="relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 {selectedModule ===
-						module.id
-							? 'ring-2 ring-primary'
-							: ''}"
-						onclick={() => (selectedModule = selectedModule === module.id ? null : module.id)}
+						class="relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 {selectedModule === module.id ? 'ring-2 ring-primary' : ''}"
+						onclick={() => selectedModule = selectedModule === module.id ? null : module.id}
 					>
 						<div class="absolute top-0 left-0 right-0 h-1 bg-muted">
-							<div
-								class="h-full {colors.bg.replace('/10', '')} transition-all"
-								style="width: {progress}%"
-							></div>
+							<div class="h-full {colors.bg.replace('/10', '')} transition-all" style="width: {progress}%"></div>
 						</div>
 						<CardHeader class="pb-2">
 							<div class="flex items-start justify-between">
@@ -525,10 +477,7 @@
 									<svelte:component this={module.icon} class="h-6 w-6 {colors.text}" />
 								</div>
 								{#if isComplete}
-									<Badge
-										variant="outline"
-										class="bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-									>
+									<Badge variant="outline" class="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
 										<CheckCircle2 class="h-3 w-3 mr-1" />
 										Complete
 									</Badge>
@@ -547,11 +496,7 @@
 									<Clock class="h-4 w-4" />
 									{module.estimatedTime} min
 								</div>
-								<ChevronRight
-									class="h-4 w-4 transition-transform {selectedModule === module.id
-										? 'rotate-90'
-										: ''}"
-								/>
+								<ChevronRight class="h-4 w-4 transition-transform {selectedModule === module.id ? 'rotate-90' : ''}" />
 							</div>
 						</CardContent>
 					</Card>
@@ -560,7 +505,7 @@
 
 			<!-- Expanded Module Content -->
 			{#if selectedModule}
-				{@const module = onboardingModules.find((m) => m.id === selectedModule)}
+				{@const module = onboardingModules.find(m => m.id === selectedModule)}
 				{#if module}
 					{@const colors = getColorClasses(module.color)}
 					<Card class="animate-in slide-in-from-top-2">
@@ -579,15 +524,9 @@
 							<div class="space-y-2">
 								{#each module.lessons as lesson, i}
 									<div
-										class="flex items-center gap-4 p-4 rounded-xl border transition-all hover:bg-muted/50 {lesson.completed
-											? 'bg-emerald-500/5 border-emerald-500/20'
-											: ''}"
+										class="flex items-center gap-4 p-4 rounded-xl border transition-all hover:bg-muted/50 {lesson.completed ? 'bg-emerald-500/5 border-emerald-500/20' : ''}"
 									>
-										<div
-											class="flex items-center justify-center h-8 w-8 rounded-full {lesson.completed
-												? 'bg-emerald-500'
-												: 'bg-muted'} text-sm font-bold {lesson.completed ? 'text-white' : ''}"
-										>
+										<div class="flex items-center justify-center h-8 w-8 rounded-full {lesson.completed ? 'bg-emerald-500' : 'bg-muted'} text-sm font-bold {lesson.completed ? 'text-white' : ''}">
 											{#if lesson.completed}
 												<CheckCircle2 class="h-5 w-5" />
 											{:else}
@@ -626,18 +565,16 @@
 			<div class="flex flex-col sm:flex-row gap-4">
 				<div class="relative flex-1">
 					<Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-					<Input placeholder="Search templates..." bind:value={searchQuery} class="pl-9" />
+					<Input
+						placeholder="Search templates..."
+						bind:value={searchQuery}
+						class="pl-9"
+					/>
 				</div>
 				<div class="flex gap-2">
 					<Badge variant="outline" class="px-3 py-2 cursor-pointer hover:bg-muted">All</Badge>
-					<Badge
-						variant="outline"
-						class="px-3 py-2 cursor-pointer hover:bg-muted bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-						>Beginner</Badge
-					>
-					<Badge variant="outline" class="px-3 py-2 cursor-pointer hover:bg-muted"
-						>Intermediate</Badge
-					>
+					<Badge variant="outline" class="px-3 py-2 cursor-pointer hover:bg-muted bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Beginner</Badge>
+					<Badge variant="outline" class="px-3 py-2 cursor-pointer hover:bg-muted">Intermediate</Badge>
 					<Badge variant="outline" class="px-3 py-2 cursor-pointer hover:bg-muted">Advanced</Badge>
 				</div>
 			</div>
@@ -665,9 +602,7 @@
 							<div class="space-y-2">
 								{#each template.steps.slice(0, 3) as step, i}
 									<div class="flex items-center gap-2 text-sm text-muted-foreground">
-										<div
-											class="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-xs font-medium"
-										>
+										<div class="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
 											{i + 1}
 										</div>
 										<span class="truncate">{step}</span>
@@ -751,22 +686,15 @@
 										<AccordionContent>
 											<div class="space-y-2 pb-4">
 												{#each area.children as child}
-													<div
-														class="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-													>
+													<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
 														<FileCode class="h-4 w-4 text-muted-foreground" />
 														<div class="flex-1">
 															<div class="font-medium text-sm">{child.name}</div>
-															<div class="text-xs text-muted-foreground font-mono">
-																{child.path}
-															</div>
+															<div class="text-xs text-muted-foreground font-mono">{child.path}</div>
 														</div>
 														<div class="flex items-center gap-2">
 															{#if child.important}
-																<Badge
-																	variant="outline"
-																	class="bg-amber-500/10 text-amber-600 border-amber-500/20 text-xs"
-																>
+																<Badge variant="outline" class="bg-amber-500/10 text-amber-600 border-amber-500/20 text-xs">
 																	<Star class="h-3 w-3 mr-1" />
 																	Key Area
 																</Badge>
@@ -794,18 +722,16 @@
 								<FileVideo class="h-5 w-5 text-primary" />
 								Recent Walkthroughs
 							</CardTitle>
-							<CardDescription>Video reviews explaining key areas</CardDescription>
+							<CardDescription>
+								Video reviews explaining key areas
+							</CardDescription>
 						</CardHeader>
 						<CardContent class="space-y-3">
 							{#each codebaseMap.recentVideos as video}
-								<div
-									class="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer group"
-								>
+								<div class="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer group">
 									<div class="relative">
 										<div class="h-12 w-16 rounded-lg bg-muted flex items-center justify-center">
-											<Play
-												class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors"
-											/>
+											<Play class="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
 										</div>
 										<Badge class="absolute -bottom-1 -right-1 text-xs px-1">
 											{video.duration}
