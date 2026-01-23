@@ -140,7 +140,11 @@
 			toast.error(error.message || 'Failed to verify code');
 		}
 	}
-		try {
+
+	async function handleDisable2FA() { 
+    isSettingUp2FA = true; 
+    try { 
+      const result = await authClient.twoFactor.disable({
 				password: currentPassword,
 			});
 			if (result.error) {
@@ -155,8 +159,11 @@
 		} finally {
 			isSettingUp2FA = false;
 		}
-	}
-			toast.error('Please type DELETE to confirm');
+	}       
+	async function handleDeleteAccount() { 
+    if (deleteConfirmText !== 'DELETE') {
+      toast.error('Please type DELETE to confirm'); 
+      return;
 		}
 
 		try {
@@ -176,6 +183,7 @@
 			toast.error(error.message || 'Failed to delete account');
 		}
 	}
+	
 </script>
 
 <div class="space-y-6">
@@ -268,7 +276,11 @@
 					</Button>
 				</div>
 			</div>
+		{:else}
+			<div class="flex items-center justify-between">
+        <div>
 					<p class="font-medium">
+					  Status: <span class={twoFactorEnabled ? 'text-green-600' : 'text-muted-foreground'}>
 							{twoFactorEnabled ? 'Enabled' : 'Disabled'}
 						</span>
 					</p>
@@ -303,6 +315,13 @@
 								autocomplete="current-password"
 							/>
 						{/if}
+						<Button
+						  onclick={handleEnable2FA}  
+              disabled={isSettingUp2FA || !currentPassword}  
+              variant="outline" 
+            > 
+              {isSettingUp2FA ? 'Processing...' : 'Enable 2FA'}
+            </Button>
 					</div>
 				{/if}
 			</div>
