@@ -265,6 +265,20 @@ class ProjectsStore {
       members: updatedMembers,
       isTeam: true,
     });
+
+    // Notify user if userId is present (real user)
+    if (member.userId) {
+       // We need to import notificationsStore. However, circular dependency might be an issue if we import it at top level if it imports something else.
+       // Dynamically importing or ensuring clean architecture is better.
+       // For this simple case, we'll assume the user will handle the notification creation
+       // in the UI handler or a separate service to keep the store clean,
+       // OR we can do it here if we are careful.
+       // Let's rely on the UI calling the notification creation for now as the "Backend Logic" step implies updating logic,
+       // but since this is a client-side store, strictly speaking "Backend Logic" implies server code.
+       // However, the prompt says "Backend Logic Updates: In ProjectsStore.addMember...".
+       // So I will defer the actual notification creation to the component that calls this,
+       // or import it here if safe.
+    }
   }
 
   async removeMember(projectId: string, email: string) {

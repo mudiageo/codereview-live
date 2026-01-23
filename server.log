@@ -28,3 +28,7 @@ Files prefixed with + are reserved (saw src/routes/(app)/projects/[id]/settings/
 11:48:57 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
 11:48:57 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
 11:48:57 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
+12:09:02 PM [vite] (ssr) page reload src/lib/server/db/schema.ts
+12:12:33 PM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+12:12:33 PM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+12:12:33 PM [vite] (ssr) page reload .svelte-kit/generated/root.js

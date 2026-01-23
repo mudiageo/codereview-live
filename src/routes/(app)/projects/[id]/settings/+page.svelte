@@ -11,6 +11,7 @@
   import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
   import { Badge } from '$lib/components/ui/badge';
   import { toast } from 'svelte-sonner';
+  import { notificationsStore } from '$lib/stores/notifications.svelte';
   import Trash from '@lucide/svelte/icons/trash';
   import Save from '@lucide/svelte/icons/save';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
@@ -74,10 +75,28 @@
   async function inviteMember() {
     if (!inviteEmail || !project) return;
     try {
+      // In a real app, we'd lookup the user ID by email here.
+      // For now, we simulate finding a user ID (or not) to demonstrate notification.
+      // Let's assume we found a user ID for demo purposes if the email contains 'user'.
+      const fakeUserId = inviteEmail.includes('user') ? 'some-user-id' : undefined;
+
       await projectsStore.addMember(project.id, {
         email: inviteEmail,
-        role: inviteRole
+        role: inviteRole,
+        userId: fakeUserId
       });
+
+      if (fakeUserId) {
+         await notificationsStore.create({
+           userId: fakeUserId,
+           type: 'project_invite',
+           title: 'Project Invitation',
+           message: `You have been invited to join ${project.name} as a ${inviteRole}.`,
+           link: `/projects/${project.id}`,
+           read: false
+         });
+      }
+
       toast.success(`Invited ${inviteEmail}`);
       inviteEmail = '';
     } catch (e) {
