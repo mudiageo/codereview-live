@@ -1,8 +1,11 @@
 import { syncEngine } from '$lib/db';
 import type { Notification } from '$lib/server/db/schema';
+import { toast } from 'svelte-sonner';
+import { goto } from '$app/navigation';
 
 class NotificationsStore {
   private collection = { id: null };
+  private channel = null;
   data = $state<Notification[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
@@ -42,6 +45,28 @@ class NotificationsStore {
     }
   }
 
+  initRealtime(userId: string) {
+    if (this.channel) return;
+
+    // Create a user-specific channel for notifications
+    this.channel = syncEngine.channel(`notifications:${userId}`);
+
+    this.channel.on('notification', (payload: any) => {
+      // Show toast
+      toast(payload.title, {
+        description: payload.message,
+        action: payload.link ? {
+          label: 'View',
+          onClick: () => goto(payload.link)
+        } : undefined,
+        duration: 5000,
+      });
+
+      // Refresh data to ensure we have the DB record (redundant if sync works, but safe)
+      this.load();
+    });
+  }
+
   async create(notification: Omit<Notification, 'id' | 'createdAt' | 'updatedAt'>) {
     if (!this.collection) return null;
 
@@ -55,9 +80,13 @@ class NotificationsStore {
       };
 
       await this.collection.create(newNotification);
-      // Optimistic update not strictly needed as syncEngine handles it,
-      // but good for immediate feedback if not using reactive binding directly from engine
       this.data.push(newNotification);
+
+      // Emit event to the recipient's channel
+      // We need to access the channel for the target user.
+      // Since channels are lightweight, we can temporarily create/access it to emit.
+      const targetChannel = syncEngine.channel(`notifications:${notification.userId}`);
+      targetChannel.emit('notification', newNotification);
 
       return newNotification;
     } catch (err) {

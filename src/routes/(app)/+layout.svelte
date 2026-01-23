@@ -93,6 +93,7 @@
 
 	import { createRecordingContext } from '$lib/contexts/recording-context.svelte';
 	import RecordingToolbar from '$lib/components/recording-toolbar.svelte';
+    import { notificationsStore } from '$lib/stores/notifications.svelte';
 
 	// Initialize global recording context
 	const recordingCtx = createRecordingContext();
@@ -107,6 +108,11 @@
 		try {
 			// Initialize database
 			initDb();
+
+			// Initialize real-time notifications
+			if (auth.currentUser?.id) {
+				notificationsStore.initRealtime(auth.currentUser.id);
+			}
 
 			// Load initial data
 
