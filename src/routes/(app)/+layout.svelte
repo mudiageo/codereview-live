@@ -87,11 +87,13 @@
 	import { Toaster } from '$lib/components/ui/sonner';
 	import SearchCommand from '$lib/components/search-command.svelte';
 	import KeyboardShortcutsDialog from '$lib/components/keyboard-shortcuts-dialog.svelte';
+	import NotificationsDropdown from '$lib/components/ui/notifications-dropdown.svelte';
 	import { browser } from '$app/environment';
 	import { keyboardShortcuts } from '$lib/utils/keyboard-shortcuts';
 
 	import { createRecordingContext } from '$lib/contexts/recording-context.svelte';
 	import RecordingToolbar from '$lib/components/recording-toolbar.svelte';
+    import { notificationsStore } from '$lib/stores/notifications.svelte';
 
 	// Initialize global recording context
 	const recordingCtx = createRecordingContext();
@@ -106,6 +108,11 @@
 		try {
 			// Initialize database
 			initDb();
+
+			// Initialize real-time notifications
+			if (auth.currentUser?.id) {
+				notificationsStore.initRealtime(auth.currentUser.id);
+			}
 
 			// Load initial data
 
@@ -366,15 +373,7 @@
 				</Button>
 
 				<!-- Notifications -->
-				<Button variant="ghost" size="icon" class="relative hover-scale ripple">
-					<Bell class="h-5 w-5" />
-					<Badge
-						class="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs animate-bounce-soft"
-					>
-						3
-					</Badge>
-					<span class="sr-only">Notifications</span>
-				</Button>
+				<NotificationsDropdown />
 
 				<!-- User Menu (Mobile) -->
 				<div class="lg:hidden">

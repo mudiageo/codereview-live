@@ -20,14 +20,28 @@
   import FileVideo from '@lucide/svelte/icons/file-video';
   import Users from '@lucide/svelte/icons/users';
   import Clock from '@lucide/svelte/icons/clock';
-  import { projectsStore } from '$lib/stores/index.svelte';
+  import { projectsStore, reviewsStore } from '$lib/stores/index.svelte';
   import { SearchEngine } from '$lib/utils/search';
+  import { goto } from '$app/navigation';
+  import Globe from '@lucide/svelte/icons/globe';
+  import Lock from '@lucide/svelte/icons/lock';
   
   let view = $state<'grid' | 'list'>('grid');
   let searchQuery = $state('');
   let loading = $state(false);
   
-  const projects = $derived(projectsStore.data || [])
+  const projects = $derived((projectsStore.data || []).map(p => {
+    const pReviews = reviewsStore.findByProject(p.id);
+    const memberCount = ((p.members as any[])?.length || 0) + 1;
+    const settings = (p.settings as any) || {};
+    return {
+      ...p,
+      reviewCount: pReviews.length,
+      memberCount,
+      lastActivity: new Date(p.updatedAt).toLocaleDateString(),
+      isPublic: settings.isPublic
+    };
+  }));
   
   const filteredProjects = $derived(
     searchQuery 
@@ -141,9 +155,9 @@
                     {/snippet}
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                    <DropdownMenuItem onclick={() => goto(`/projects/${project.id}/settings`)}>Settings</DropdownMenuItem>
                     <DropdownMenuItem>Archive</DropdownMenuItem>
-                    <DropdownMenuItem class="text-destructive">Delete</DropdownMenuItem>
+                    <DropdownMenuItem class="text-destructive" onclick={() => projectsStore.delete(project.id)}>Delete</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -161,9 +175,14 @@
                     <span>{project.memberCount}</span>
                   </div>
                 </div>
-                {#if project.isTeam}
-                  <Badge variant="secondary">Team</Badge>
-                {/if}
+                <div class="flex gap-2">
+                  {#if project.isPublic}
+                    <Badge variant="outline" class="gap-1"><Globe class="h-3 w-3" /> Public</Badge>
+                  {/if}
+                  {#if project.isTeam}
+                    <Badge variant="secondary">Team</Badge>
+                  {/if}
+                </div>
               </div>
               
               <div class="flex items-center gap-1 text-xs text-muted-foreground">
@@ -205,9 +224,14 @@
                 <span class="text-xs">{project.lastActivity}</span>
               </div>
               
-              {#if project.isTeam}
-                <Badge variant="secondary">Team</Badge>
-              {/if}
+              <div class="flex gap-2">
+                {#if project.isPublic}
+                  <Badge variant="outline" class="gap-1"><Globe class="h-3 w-3" /> Public</Badge>
+                {/if}
+                {#if project.isTeam}
+                  <Badge variant="secondary">Team</Badge>
+                {/if}
+              </div>
             </CardContent>
           </Card>
         </a>

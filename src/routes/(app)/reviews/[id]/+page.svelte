@@ -35,6 +35,7 @@
 
 	import { toast } from 'svelte-sonner';
 	import { reviewsStore, commentsStore, teamsStore } from '$lib/stores/index.svelte';
+	import { notificationsStore } from '$lib/stores/notifications.svelte';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { ReviewExporter } from '$lib/utils/export-import';
 	import { createClientVideoStorage } from '$lib/utils/client-video-storage';
@@ -386,6 +387,36 @@
 		showP2PShare = true;
 	}
 
+	async function inviteToLiveReview() {
+		// Mock logic: Notify all online users in the channel (or specific team members)
+		// For now, we'll iterate team members and notify them if they exist
+		if (!teamMembers.length) {
+			toast.info('No team members to invite. Add members in Project Settings.');
+			return;
+		}
+
+		let sentCount = 0;
+		for (const member of teamMembers) {
+			if (member.userId && member.userId !== auth.currentUser?.id) {
+				await notificationsStore.create({
+					userId: member.userId,
+					type: 'review_invite',
+					title: 'Live Review Invitation',
+					message: `${auth.currentUser?.name} invited you to join a live review: ${review.title}`,
+					link: `/reviews/${review.id}`,
+					read: false
+				});
+				sentCount++;
+			}
+		}
+
+		if (sentCount > 0) {
+			toast.success(`Invited ${sentCount} team members to live review`);
+		} else {
+			toast.info('No other team members found to invite');
+		}
+	}
+
 	async function handleRunAI() {
 		toast.promise(
 			(async () => {
@@ -612,6 +643,10 @@
 				<Button variant="outline" size="sm" class="gap-1 hidden sm:flex" onclick={shareP2P}>
 					<Share2 class="h-4 w-4" />
 					<span>Share</span>
+				</Button>
+				<Button variant="outline" size="sm" class="gap-1 hidden sm:flex" onclick={inviteToLiveReview}>
+					<Users class="h-4 w-4" />
+					<span>Invite Live</span>
 				</Button>
 				{#if review.status === 'draft'}
 					<Button size="sm" class="gap-1" onclick={publishDraft}>

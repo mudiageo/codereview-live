@@ -99,6 +99,20 @@ export const projects = pgTable('projects', {
   repoUrl: text('repo_url'),
   color: text('color').default('#8B5CF6'), // Project color for UI
   isTeam: boolean('is_team').default(false),
+  members: jsonb('members').$type<{
+    userId?: string;
+    email: string;
+    role: 'owner' | 'admin' | 'member' | 'viewer';
+    status: 'active' | 'invited';
+    addedAt: string;
+  }[]>(),
+  settings: jsonb('settings').$type<{
+    isPublic: boolean;
+    syncToRepo: boolean;
+    allowComments: boolean;
+    autoSummarize: boolean;
+    requireApproval: boolean;
+  }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
@@ -255,6 +269,23 @@ export const webhookEvents = pgTable('webhook_events', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Notifications table
+export const notifications = pgTable('notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  type: text('type').notNull(), // project_invite, review_invite, comment, system, etc.
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  link: text('link'),
+  read: boolean('read').default(false).notNull(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  ...syncMetadata
+});
+
 
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -370,6 +401,13 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   }),
 }));
 
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -386,3 +424,4 @@ export type NewTeam = typeof teams.$inferInsert;
 export type TeamInvitation = typeof teamInvitations.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
