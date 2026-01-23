@@ -45,7 +45,12 @@ export const POST: RequestHandler = async ({ request }) => {
     // Ensure upload directory exists
     const uploadDir = join(process.cwd(), 'static', 'uploads', 'avatars');
     await mkdir(uploadDir, { recursive: true });
-
+    
+    // Save file 
+     const filepath = join(uploadDir, filename); 
+     const buffer = Buffer.from(await avatar.arrayBuffer()); 
+     await writeFile(filepath, buffer); 
+     
     // Return public URL
     const url = `/uploads/avatars/${filename}`;
 
