@@ -9,15 +9,18 @@ We've all been there: hours spent on code review, dozens of text comments—and 
 
 ## What It Does
 
-**CodeReview.live** transforms code reviews into async video walkthroughs:
+**CodeReview.live** transforms code reviews into async video walkthroughs with a suite of modern collaboration tools:
 
-- **🎥 Record & Explain:** Create video walkthroughs as you review code, explaining your logic and decisions.
-- **💬 Video Responses:** Reviewers can respond with timestamped video comments linked to specific code lines.
-- **🤖 AI-Powered Insights:** Gemini AI provides code explanations, suggestions, and detects code smells.
-- **🔄 Works Everywhere:** Local-first, works offline and syncs when online—web, desktop, and mobile.
-- **👥 Team Collaboration:** Real-time updates, threaded conversations, and team management.
-- **📤 Flexible Sharing:** Share via link, export as file, or peer-to-peer transfer.
-- **Syntax Highlighting & Diff Views:** Purpose-built for code review with powerful visualizations.
+- **🎥 Async Live Code Reviews:** Record video walkthroughs as you review code, explaining your logic and decisions in real-time.
+- **👥 Teams & Presence Sharing:** Create teams, invite members, and see who is viewing a review with real-time presence indicators and live cursors.
+- **💬 Video Commenting:** Replace text threads with timestamped video responses linked to specific code lines.
+- **🛠️ Modern Code Review Workspace:** A VS Code-like environment with syntax highlighting, unified/split diff views, and file tree navigation.
+- **🤖 AI Analysis & Explain:** Gemini AI provides instant code explanations, detects code smells, and suggests improvements.
+- **✅ Smart Checklists:** AI-powered checklists verify common requirements automatically.
+- **🔗 GitHub Integration:** Import repositories and pull requests directly from GitHub without leaving the app.
+- **📤 Flexible & P2P Sharing:** Share reviews via link, or transfer large files directly between devices (P2P) without cloud upload limits.
+- **📍 Smart Chapters:** Automatically detects when you switch files during recording and creates navigable chapters.
+- **📝 Rich Commenting:** Support for Markdown, mentions, and threaded discussions.
 
 Think of it as “Loom meets GitHub”—optimized for code review.
 
@@ -29,11 +32,11 @@ Think of it as “Loom meets GitHub”—optimized for code review.
 
 - **Frontend:** SvelteKit (Svelte 5 runes), TailwindCSS, shadcn-svelte components
 - **Local-First Sync:** sveltekit-sync, IndexedDB
-- **Desktop/Mobile:** Tauri 2.x for native cross-platform apps
+- **Desktop/Mobile:** Tauri 2.x for native cross-platform apps (Native Mobile Feel)
 - **Database:** PostgreSQL + Drizzle ORM
 - **Authentication:** Better-Auth (email, Google, GitHub)
 - **AI:** Gemini 2.0 Flash (Google) for code analysis
-- **Payments:** Stripe (global) & Paystack (Africa)
+- **Payments:** Dual Payments (Stripe (global) & Paystack (Africa))
 - **Video:** MediaRecorder API with ffmpeg.wasm for compression
 - **Storage:** Cloudflare R2 for video files
 
@@ -127,12 +130,20 @@ Think of it as “Loom meets GitHub”—optimized for code review.
 
 ## Challenges We Ran Into
 
-- **Video Recording in Browser:** Solved MediaRecorder API limitations using Tauri desktop features and web fallbacks.
-- **Offline-First Sync:** Built robust conflict resolution with “last-write-wins” and a reliable sync queue.
-- **Video Storage & Compression:** Client-side ffmpeg.wasm reduces file size by 60-70%, hybrid local/cloud storage for performance.
-- **Svelte 5 Migration:** Adopted runes and class-based stores for state management.
-- **Native Mobile Feel:** Optimized touch targets, bottom navs, swipe gestures, and safe areas.
-- **Dual Payments:** Integrated Stripe and Paystack, handling different webhooks and syncing subscription states.
+- **The Sync Challenge (Solved with `sveltekit-sync`):**
+  Building a local-first app that syncs seamlessly across devices was our biggest hurdle. Existing solutions were either too heavy or didn't fit SvelteKit's architecture. We solved this by building **`sveltekit-sync`**, a custom library that handles offline storage (IndexedDB), conflict resolution (CRDT-inspired last-write-wins), and efficient delta updates. This allows users to work offline and sync instantly when back online.
+
+- **Real-Time Presence & Cursors:**
+  Implementing live cursors and presence indicators without overloading the server required careful optimization. We used ephemeral state in our sync engine to broadcast position updates efficiently, ensuring smooth collaboration without persistent database writes.
+
+- **High-Fidelity Video Recording:**
+  Capturing high-quality code walkthroughs in the browser while maintaining performance was tricky. We utilized `ffmpeg.wasm` for client-side compression to ensure videos upload quickly and playback smoothly, even on slower connections.
+
+- **Native Mobile Support:**
+  Getting the app to feel "native" on mobile while sharing a codebase with the web version was challenging. We had to carefully manage touch events, viewport scaling, and navigation gestures to ensure a smooth experience on iOS and Android devices via Tauri.
+
+- **Real-Time Data Consistency:**
+  Balancing local-first optimistic updates with real-time server state (for presence and cursors) required complex conflict resolution strategies to ensure users never saw stale data or overwrote each other's work blindly.
 
 ---
 

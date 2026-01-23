@@ -355,7 +355,7 @@
 		<p class="text-muted-foreground mb-4">
 			Our support team is here to help you get the most out of CodeReview.live
 		</p>
-		<div class="flex gap-4">
+		<div class="flex flex-col sm:flex-row gap-4">
 			<Button href="mailto:support@codereview.live">Email Support</Button>
 			<Button
 				variant="outline"
@@ -363,6 +363,9 @@
 				target="_blank"
 			>
 				Report Bug
+			</Button>
+			<Button variant="outline" href="/onboarding" class="sm:ml-auto">
+				Continue Onboarding
 			</Button>
 		</div>
 	</section>
