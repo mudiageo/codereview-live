@@ -72,7 +72,7 @@
 			<!-- CTA Buttons -->
 			<div class="hidden md:flex items-center gap-4">
 				<Button variant="ghost" href="/login">Log in</Button>
-				<Button href="/register">Get Started</Button>
+				<Button href="/signup">Get Started</Button>
 			</div>
 
 			<!-- Mobile Menu Toggle -->
@@ -106,7 +106,7 @@
 				{/each}
 				<div class="h-px bg-border my-2"></div>
 				<Button variant="ghost" href="/login" class="w-full justify-start">Log in</Button>
-				<Button href="/register" class="w-full">Get Started</Button>
+				<Button href="/signup" class="w-full">Get Started</Button>
 			</div>
 		{/if}
 	</header>
