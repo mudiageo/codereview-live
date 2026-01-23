@@ -50,7 +50,6 @@
 	import Lock from '@lucide/svelte/icons/lock';
 	import Eye from '@lucide/svelte/icons/eye';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
-	import { reviewsStore, teamsStore } from '$lib/stores/index.svelte';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
