@@ -11,11 +11,10 @@ class AuthState {
 	constructor() {
 		// Initialize auth state
 		if (typeof window !== 'undefined') {
-			authClient.getSession().then((session) => {
-				if (session.data?.user) {
-					this.currentUser = session.data.user;
-				}
-			});
+			const session = authClient.getSession();
+			if (session.data?.user) {
+				this.currentUser = session.data.user;
+			}
 		}
 	}
 
@@ -91,7 +90,7 @@ export const userPlan = auth.userPlan;
 
 // Initialize auth state
 if (typeof window !== 'undefined') {
-  authClient.getSession().then((session) => {
-    if (session.data?.user) auth.currentUser = session.data.user;
-  });
+	const session = await authClient.getSession();
+
+	if (session.data?.user) auth.currentUser = session.data.user;
 }
