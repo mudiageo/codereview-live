@@ -796,9 +796,12 @@
 						</div>
 
 						<!-- Quick Stats -->
-						<div class="grid grid-cols-3 gap-4">
-							</div>
-								<div class="text-2xl font-bold">{formatTime(personalStats.totalWatchTime)}</div>
+						<div class="grid grid-cols-3 gap-4">  
+						  <div class="text-center p-4 rounded-xl bg-muted/50"> 
+						    <div class="text-2xl font-bold">{personalStats.totalReviews}</div>
+						    <div class="text-xs text-muted-foreground">Total Reviews</div>
+						  </div>
+						  <div class="text-center p-4 rounded-xl bg-muted/50">								<div class="text-2xl font-bold">{formatTime(personalStats.totalWatchTime)}</div>
 								<div class="text-xs text-muted-foreground">Time Invested</div>
 							</div>
 							<div class="text-center p-4 rounded-xl bg-muted/50">
