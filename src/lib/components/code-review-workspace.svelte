@@ -33,6 +33,7 @@
 	import { LanguageDetector } from '$lib/utils/language-detector';
 	import { toast } from 'svelte-sonner';
 	import { getRecordingContext } from '$lib/contexts/recording-context.svelte';
+	import { explainCodeAI } from '$lib/ai.remote';
 
 	export interface FileNode {
 		name: string;
@@ -134,21 +135,16 @@
 
 		try {
 			const language = activeTab?.language || 'javascript';
-			const response = await fetch('/api/ai/explain', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
+			const result = await explainCodeAI({
 					code: code.trim(),
-					language
+					language,
 				})
-			});
 
-			if (!response.ok) {
+			if (!result) {
 				throw new Error('Failed to get explanation');
 			}
 
-			const data = await response.json();
-			explainContent = data.explanation || 'No explanation available';
+			explainContent = result.explanation || 'No explanation available';
 		} catch (error) {
 			console.error('Error explaining code:', error);
 			toast.error('Failed to explain code. Please try again.');
