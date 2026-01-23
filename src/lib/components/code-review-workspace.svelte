@@ -293,10 +293,17 @@
 
 	function closeTab(file: FileNode, e?: Event) {
 		e?.stopPropagation();
+		const closedTabIndex = openTabs.findIndex((t) => t.path === file.path);
 		openTabs = openTabs.filter((t) => t.path !== file.path);
 
 		if (activeTab?.path === file.path) {
-			activeTab = openTabs[openTabs.length - 1] || null;
+			if (openTabs.length > 0) {
+				// Select the next tab, or the new last tab if the closed one was last
+				const newIndex = Math.min(closedTabIndex, openTabs.length - 1);
+				activeTab = openTabs[newIndex];
+			} else {
+				activeTab = null;
+			}
 		}
 	}
 
@@ -1005,7 +1012,7 @@
 					</div>
 				{:else}
 					<div class="prose prose-sm max-w-none p-3 bg-muted/50 rounded-lg">
-						{@html explainContent.replace(/\n/g, '<br>')}
+						<pre class="text-sm whitespace-pre-wrap font-sans">{explainContent}</pre>
 					</div>
 				{/if}
 			</div>
