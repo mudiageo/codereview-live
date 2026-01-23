@@ -35,6 +35,7 @@
 
 	import { toast } from 'svelte-sonner';
 	import { reviewsStore, commentsStore, teamsStore } from '$lib/stores/index.svelte';
+	import { notificationsStore } from '$lib/stores/notifications.svelte';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { ReviewExporter } from '$lib/utils/export-import';
 	import { createClientVideoStorage } from '$lib/utils/client-video-storage';
@@ -46,8 +47,45 @@
 	import { analyzeCodeAI, checkReviewItemsAI } from '$lib/ai.remote';
 	import { checklistTemplates, getTemplate } from '$lib/config/checklist-templates';
 
+	// Collaboration Imports
+	import { syncEngine } from '$lib/db';
+	import { usePresence, useCursorTracking } from 'sveltekit-sync';
+	import PresenceAvatars from '$lib/components/collaboration/PresenceAvatars.svelte';
+	import CursorOverlay from '$lib/components/collaboration/CursorOverlay.svelte';
+
 	const reviewId = $derived(page.params.id);
 	const isMobile = $derived(typeof window !== 'undefined' && window.innerWidth < 1024);
+
+    // Collaboration Setup
+	const channel = $derived(reviewId ? syncEngine.channel(`review:${reviewId}`, { presence: true }, auth.currentUser) : null);
+
+	const presence = usePresence(
+		channel,
+		auth.currentUser,
+		{
+			trackCursor: false, // We will handle tracking manually to scope it to specific elements
+			idleTimeout: 300000
+		}
+	);
+
+	const onlineUsers = $derived(presence.others);
+
+	// Cursor Tracking for Code Area
+	let codeAreaElement = $state<HTMLElement>();
+	const cursorTracking = useCursorTracking(presence, {
+		container: () => codeAreaElement, // This needs to be a getter or bound element
+		throttle: 50
+	});
+
+	$effect(() => {
+		if (codeAreaElement) {
+			cursorTracking.startTracking();
+		}
+		return () => {
+			cursorTracking.stopTracking();
+		};
+	});
+
 
 	const review = $derived(
 		reviewsStore.findById(reviewId) || {
@@ -349,6 +387,36 @@
 		showP2PShare = true;
 	}
 
+	async function inviteToLiveReview() {
+		// Mock logic: Notify all online users in the channel (or specific team members)
+		// For now, we'll iterate team members and notify them if they exist
+		if (!teamMembers.length) {
+			toast.info('No team members to invite. Add members in Project Settings.');
+			return;
+		}
+
+		let sentCount = 0;
+		for (const member of teamMembers) {
+			if (member.userId && member.userId !== auth.currentUser?.id) {
+				await notificationsStore.create({
+					userId: member.userId,
+					type: 'review_invite',
+					title: 'Live Review Invitation',
+					message: `${auth.currentUser?.name} invited you to join a live review: ${review.title}`,
+					link: `/reviews/${review.id}`,
+					read: false
+				});
+				sentCount++;
+			}
+		}
+
+		if (sentCount > 0) {
+			toast.success(`Invited ${sentCount} team members to live review`);
+		} else {
+			toast.info('No other team members found to invite');
+		}
+	}
+
 	async function handleRunAI() {
 		toast.promise(
 			(async () => {
@@ -484,8 +552,7 @@
 						videoSrc = URL.createObjectURL(result.blob);
 					} else {
 						console.warn('Video not found in client storage:', id);
-						videoError =
-							'Video not found in local storage. It may have been deleted or not properly saved.';
+						videoError = 'Video not found in local storage. It may have been deleted or not properly saved.';
 						videoSrc = '';
 					}
 				} catch (error) {
@@ -568,18 +635,18 @@
 			</div>
 
 			<div class="flex items-center gap-2 shrink-0">
-				<Button
-					variant="outline"
-					size="sm"
-					class="gap-1 hidden sm:flex pointer-events-none opacity-50"
-				>
-					<!-- Placeholder for collaborators/viewers -->
-					<Users class="h-4 w-4" />
-					<span>2 viewing</span>
-				</Button>
+				<!-- Presence Avatars -->
+				<div class="hidden sm:block mr-2">
+					<PresenceAvatars users={onlineUsers} />
+				</div>
+
 				<Button variant="outline" size="sm" class="gap-1 hidden sm:flex" onclick={shareP2P}>
 					<Share2 class="h-4 w-4" />
 					<span>Share</span>
+				</Button>
+				<Button variant="outline" size="sm" class="gap-1 hidden sm:flex" onclick={inviteToLiveReview}>
+					<Users class="h-4 w-4" />
+					<span>Invite Live</span>
 				</Button>
 				{#if review.status === 'draft'}
 					<Button size="sm" class="gap-1" onclick={publishDraft}>
@@ -654,7 +721,10 @@
 		<!-- Desktop Layout: Split View -->
 		<div class="hidden lg:flex h-full">
 			<!-- Left: Code Workspace -->
-			<div class="flex-1 min-w-0 border-r relative flex flex-col">
+			<div class="flex-1 min-w-0 border-r relative flex flex-col" bind:this={codeAreaElement}>
+				<!-- Cursors Overlay -->
+				<CursorOverlay cursors={[...cursorTracking.cursors.values()]} />
+
 				{#if fileNodes.length > 0}
 					<CodeReviewWorkspace
 						files={fileNodes}
@@ -678,51 +748,51 @@
 									style="top: {activeCommentLine * 24 +
 										40}px; margin-left: 280px; width: calc(100% - 320px);"
 								>
-									<!-- Note: Positioning might need adjustment based on sidebar width in workspace. 
+									<!-- Note: Positioning might need adjustment based on sidebar width in workspace.
                                 CodeReviewWorkspace sidebar is roughly 280px.
                                 We might need a smarter way to position this relative to the DiffViewer content.
-                                Since we can't easily access the internal sidebar state/width here, 
+                                Since we can't easily access the internal sidebar state/width here,
                                 we might need to rely on the fact that children are rendered INSIDE the workspace's main area.
-                                Actually, checking CodeReviewWorkspace structure: 
+                                Actually, checking CodeReviewWorkspace structure:
                                 {@render children?.()} is inside the main content area, AFTER the activeTab content.
                                 So `absolute` positioning here is relative to `main class="flex flex-1..."`.
-                                So `top` should be correct relative to scroll if we are careful, 
+                                So `top` should be correct relative to scroll if we are careful,
                                 but wait, `CodeEditor` inside has `overflow-auto`.
                                 If `children` is outside the scroll container, `top` based on line number won't scroll with code.
-                                
+
                                 Issue: `children` snippet is rendered outside the scrolling container of code/diff ?
-                                Checking `code-review-workspace.svelte`: 
+                                Checking `code-review-workspace.svelte`:
                                 It is rendered inside `main`, but `DiffViewer` is inside `div class="flex-1 overflow-auto"`.
                                 If `children` is a sibling to `activeTab` content div, it stays fixed while `activeTab` scrolls?
                                 Actually `activeTab` div has `h-full`.
                                 The `DiffViewer` creates its own scroll area or just renders long content?
                                 `DiffViewer` usually renders long content.
                                 If the parent `div class="flex-1 overflow-auto"` scrolls, then `children` (which is sibling to it? no, check code again)
-                                
+
                                 Re-checking CodeReviewWorkspace snippet earlier:
                                 <div class="flex-1 overflow-auto">
                                     {#if activeTab}... content ...{/if}
                                 </div>
                                 {@render children?.()}
-                                
-                                So `children` is OUTSIDE the `overflow-auto` container. 
+
+                                So `children` is OUTSIDE the `overflow-auto` container.
                                 This means `children` won't scroll with the code. This is BAD for inline comments.
-                                
+
                                 FIX NEEDED: `children` should probably be inside the scroll container or we need a different approach.
                                 However, modifying `CodeReviewWorkspace` again is expensive.
-                                
-                                Alternative: `DiffViewer` handles content. 
-                                
+
+                                Alternative: `DiffViewer` handles content.
+
                                 Workaround: Sticky comments? Or just center it on screen?
                                 No, inline comments need to be attached to lines.
-                                
-                                Decision: I will modify CodeReviewWorkspace one more time to put children INSIDE the scroll container, 
+
+                                Decision: I will modify CodeReviewWorkspace one more time to put children INSIDE the scroll container,
                                 OR pass children TO DiffViewer/CodeEditor?  No.
-                                
-                                Actually, let's look at `reviews/[id]/+page.svelte` behavior. 
-                                It had an `absolute` div `style="top:..."`. 
+
+                                Actually, let's look at `reviews/[id]/+page.svelte` behavior.
+                                It had an `absolute` div `style="top:..."`.
                                 And it was inside `div class="flex-1 overflow-auto relative"`.
-                                
+
                                 I need `CodeReviewWorkspace` to wrap the content + children in a relative container that scrolls?
                                 The current `CodeReviewWorkspace` has `div class="flex-1 overflow-auto"`.
                                 I should move `{@render children?.()}` INSIDE that div.

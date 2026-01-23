@@ -23,7 +23,7 @@
 		class: className = '',
 		onscroll
 	}: Props = $props();
-	
+
 	// Use settings for line numbers if not explicitly provided
 	const shouldShowLineNumbers = $derived(showLineNumbers ?? settingsStore.settings.lineNumbers);
 	const wordWrap = $derived(settingsStore.settings.wordWrap);
@@ -87,13 +87,20 @@
 			onscroll={readonly ? onscroll : undefined}
 		>
 			{#if readonly}
-				<pre class="p-4 font-mono leading-6" style="font-size: var(--editor-font-size); white-space: {wordWrap === 'off' ? 'pre' : 'pre-wrap'}; tab-size: {Number(tabSize) || 4};"><code>{value}</code></pre>
+				<pre
+					class="p-4 font-mono leading-6"
+					style="font-size: var(--editor-font-size); white-space: {wordWrap === 'off'
+						? 'pre'
+						: 'pre-wrap'}; tab-size: {Number(tabSize) || 4};"><code>{value}</code></pre>
 			{:else}
 				<Textarea
 					bind:ref={textareaRef}
 					bind:value
 					class="min-h-[400px] resize-none border-0 bg-transparent font-mono focus-visible:ring-0"
-					style="font-size: var(--editor-font-size); line-height: 1.5; white-space: {wordWrap === 'off' ? 'pre' : 'pre-wrap'}; tab-size: {tabSize};"
+					style="font-size: var(--editor-font-size); line-height: 1.5; white-space: {wordWrap ===
+					'off'
+						? 'pre'
+						: 'pre-wrap'}; tab-size: {tabSize};"
 					placeholder="Paste your code here..."
 					{onscroll}
 				/>

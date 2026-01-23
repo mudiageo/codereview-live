@@ -21,15 +21,19 @@
 	let uploadComplete = $state(false);
 	const uploadVideo = uploadVideoForm.for('uploader');
 	let uploadButton: HTMLButtonElement | null = $state(null);
-	
+
 	// Get max video size from settings
 	const maxVideoSizeMB = $derived(settingsStore.settings.maxVideoSize);
 	const maxVideoSizeBytes = $derived(maxVideoSizeMB * FILE_SIZE.BYTES_PER_MB);
-	
+
 	/**
 	 * Validates if a file size is within the allowed maximum
 	 */
-	function validateFileSize(file: File, maxBytes: number, maxMB: number): { valid: boolean; error?: string } {
+	function validateFileSize(
+		file: File,
+		maxBytes: number,
+		maxMB: number
+	): { valid: boolean; error?: string } {
 		if (file.size > maxBytes) {
 			return {
 				valid: false,
@@ -76,7 +80,6 @@
 		const input = e.target as HTMLInputElement;
 		if (input.files?.length) {
 			const file = input.files[0];
-			
 			// Validate file size against settings
 			const validation = validateFileSize(file, maxVideoSizeBytes, maxVideoSizeMB);
 			if (!validation.valid) {
@@ -84,7 +87,7 @@
 				input.value = ''; // Clear the input
 				return;
 			}
-			
+
 			videoFile = file;
 			uploadComplete = false;
 			progress = 0;

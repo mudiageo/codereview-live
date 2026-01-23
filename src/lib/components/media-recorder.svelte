@@ -52,8 +52,10 @@
 
 	// Reset to workspace if screen/window selected but not supported
 	$effect(() => {
-		if (!supportsScreenCapture && 
-		    (ctx.settings.selectedSource === 'screen' || ctx.settings.selectedSource === 'window')) {
+		if (
+			!supportsScreenCapture &&
+			(ctx.settings.selectedSource === 'screen' || ctx.settings.selectedSource === 'window')
+		) {
 			ctx.updateSettings({ selectedSource: 'workspace' });
 		}
 	});

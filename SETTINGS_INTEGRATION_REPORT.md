@@ -128,7 +128,6 @@ function getDefaultSettings(): RecordingSettings {
 onMount(() => {
   playbackRate = settingsStore.settings.defaultSpeed;
   videoElement.playbackRate = playbackRate;
-  
   const shouldAutoplay = autoplay ?? settingsStore.settings.autoplay;
   if (shouldAutoplay) videoElement.play();
 });

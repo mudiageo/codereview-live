@@ -169,8 +169,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(svelte@5.47.1)
       sveltekit-sync:
-        specifier: 0.2.0
-        version: 0.2.0(svelte@5.47.1)(typescript@5.9.3)
+        specifier: 0.3.0
+        version: 0.3.0(svelte@5.47.1)(typescript@5.9.3)
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
@@ -2995,8 +2995,8 @@ packages:
     resolution: {integrity: sha512-MhSWfWEpG5T57z0Oyfk9D1GhAz/KTZKZZlWtGEsy9zNk2fafpuU7sJQlXNSA8HtvwKxVC9XlDyl5YovXUXjjHA==}
     engines: {node: '>=18'}
 
-  sveltekit-sync@0.2.0:
-    resolution: {integrity: sha512-UCFMaKuMvyRzNjMPN4/FiHZ2b1G8gic8BV3UUQhAd7OfB7BW4KOxZnk5GthUEMH9y59avbmON90Gvljj2v3gYw==}
+  sveltekit-sync@0.3.0:
+    resolution: {integrity: sha512-yM+vJbcspiwQ34YrxUuE0rXd4lPFqyenEvPQw84tRoWgHlpWKr6KegRjlWGLtme5ZzGnUYHwbiZZUvHDwkaixw==}
     peerDependencies:
       svelte: ^5.0.0
 
@@ -6505,7 +6505,7 @@ snapshots:
       magic-string: 0.30.21
       zimmerframe: 1.1.4
 
-  sveltekit-sync@0.2.0(svelte@5.47.1)(typescript@5.9.3):
+  sveltekit-sync@0.3.0(svelte@5.47.1)(typescript@5.9.3):
     dependencies:
       idb: 8.0.3
       postgres: 3.4.7

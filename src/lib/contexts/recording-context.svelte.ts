@@ -954,7 +954,7 @@ export class RecordingContext {
 				// Capture stream from MASTER canvas for recording
 				if (this.masterCanvas) {
 					this.canvasStream = this.masterCanvas.captureStream(CAPTURE_FPS);
-					
+
 					// Add microphone audio tracks if available
 					if (microphoneStream) {
 						const audioTracks = microphoneStream.getAudioTracks();
@@ -988,7 +988,6 @@ export class RecordingContext {
 							console.log('Added system audio track from display media');
 						});
 					}
-					
 					// Add microphone audio tracks if available
 					if (microphoneStream) {
 						const audioTracks = microphoneStream.getAudioTracks();

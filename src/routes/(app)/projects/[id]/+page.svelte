@@ -56,7 +56,7 @@
       <p class="text-muted-foreground">{project.description}</p>
     </div>
     
-    <Button variant="outline" class="gap-2">
+    <Button variant="outline" href="/projects/{projectId}/settings" class="gap-2">
       <Settings class="h-4 w-4" />
       Settings
     </Button>
@@ -86,7 +86,7 @@
         <Users class="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div class="text-2xl font-bold">{project.isTeam ? (teamsStore.current?.memberCount || 1) : 1}</div>
+        <div class="text-2xl font-bold">{(project.members?.length || 0) + 1}</div>
         <p class="text-xs text-muted-foreground">{project.isTeam ? 'Team project' : 'Personal'}</p>
       </CardContent>
     </Card>
@@ -146,19 +146,32 @@
       </div>
     </TabsContent>
     
-    <TabsContent value="members" class="space-y-2">
-      {#if project.isTeam && teamsStore.current}
+    <TabsContent value="members" class="space-y-4">
+      {#if !project.members || project.members.length === 0}
         <Card>
-          <CardContent class="flex items-center justify-center p-8 text-center text-muted-foreground">
-            <p>Team member management available in <a href="/settings/team" class="text-primary hover:underline">Team Settings</a></p>
+          <CardContent class="flex flex-col items-center justify-center p-8 text-center text-muted-foreground space-y-4">
+             <Users class="h-12 w-12 opacity-20" />
+            <p>No other team members yet.</p>
+            <Button variant="outline" href="/projects/{projectId}/settings">Manage Team</Button>
           </CardContent>
         </Card>
       {:else}
-        <Card>
-          <CardContent class="flex items-center justify-center p-8 text-center text-muted-foreground">
-            <p>This is a personal project. Upgrade to Team plan to add members.</p>
-          </CardContent>
-        </Card>
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+           {#each (project.members as any[]) as member}
+            <Card>
+              <CardContent class="flex items-center gap-4 p-4">
+                <Avatar>
+                  <AvatarImage src="" />
+                  <AvatarFallback>{getInitials(member.email)}</AvatarFallback>
+                </Avatar>
+                <div>
+                   <p class="font-medium">{member.email}</p>
+                   <p class="text-sm text-muted-foreground capitalize">{member.role}</p>
+                </div>
+              </CardContent>
+            </Card>
+           {/each}
+        </div>
       {/if}
     </TabsContent>
   </Tabs>

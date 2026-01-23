@@ -21,7 +21,6 @@
   onMount(async () => {
     await subscriptionsStore.load();
     await aiUsageStore.load();
-    
     // Load subscription history
     subscriptionHistory = subscriptionsStore.data || [];
     loading = false;

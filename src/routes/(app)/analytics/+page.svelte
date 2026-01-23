@@ -615,14 +615,14 @@
 										class="fill-white text-xs font-bold"
 									>
 										{node.reviews}
-									</text>
-								</g>
-								<defs>
-									<radialGradient id="nodeGradient{i}">
-										<stop offset="0%" stop-color="hsl(var(--primary))" />
-										<stop offset="100%" stop-color="hsl(var(--primary) / 0.5)" />
-									</radialGradient>
-								</defs>
+									</text> 
+								</g> 
+                <defs> 
+                  <radialGradient id="nodeGradient{i}"> 
+                  <stop offset="0%" stop-color="hsl(var(--primary))" /> 
+                  <stop offset="100%" stop-color="hsl(var(--primary) / 0.5)" />
+                  								</radialGradient>
+                </defs>
 							{/each}
 						</svg>
 						<div class="absolute bottom-4 left-4 text-xs text-white/60">
@@ -796,13 +796,12 @@
 						</div>
 
 						<!-- Quick Stats -->
-						<div class="grid grid-cols-3 gap-4">
-							<div class="text-center p-4 rounded-xl bg-muted/50">
-								<div class="text-2xl font-bold">{personalStats.totalReviews}</div>
-								<div class="text-xs text-muted-foreground">Total Reviews</div>
-							</div>
-							<div class="text-center p-4 rounded-xl bg-muted/50">
-								<div class="text-2xl font-bold">{formatTime(personalStats.totalWatchTime)}</div>
+						<div class="grid grid-cols-3 gap-4">  
+						  <div class="text-center p-4 rounded-xl bg-muted/50"> 
+						    <div class="text-2xl font-bold">{personalStats.totalReviews}</div>
+						    <div class="text-xs text-muted-foreground">Total Reviews</div>
+						  </div>
+						  <div class="text-center p-4 rounded-xl bg-muted/50">								<div class="text-2xl font-bold">{formatTime(personalStats.totalWatchTime)}</div>
 								<div class="text-xs text-muted-foreground">Time Invested</div>
 							</div>
 							<div class="text-center p-4 rounded-xl bg-muted/50">
@@ -823,13 +822,13 @@
 					</CardHeader>
 					<CardContent>
 						<div class="space-y-3">
-							{#each personalStats.achievements as achievement}
-								<div class="flex items-center gap-3 p-3 rounded-lg {achievement.unlocked ? 'bg-primary/5 border border-primary/20' : 'bg-muted/30 opacity-60'}">
-									<div class="h-10 w-10 rounded-full {achievement.unlocked ? 'bg-primary/20' : 'bg-muted'} flex items-center justify-center">
-										<svelte:component this={achievement.icon} class="h-5 w-5 {achievement.unlocked ? 'text-primary' : 'text-muted-foreground'}" />
+						  {#each personalStats.achievements as achievement} 
+						    <div class="flex items-center gap-3 p-3 rounded-lg {achievement.unlocked ? 'bg-primary/5 border border-primary/20' : 'bg-muted/30 opacity-60'}"> 
+						    <div class="h-10 w-10 rounded-full {achievement.unlocked ? 'bg-primary/20' : 'bg-muted'} flex items-center justify-center"> 
+						    <achievement.icon class="h-5 w-5 {achievement.unlocked ? 'text-primary' : 'text-muted-foreground'}" />
 									</div>
 									<div class="flex-1">
-										<div class="font-medium text-sm">{achievement.name}</div>
+									  <div class="font-medium text-sm">{achievement.name}</div>
 										<div class="text-xs text-muted-foreground">{achievement.description}</div>
 									</div>
 									{#if achievement.unlocked}

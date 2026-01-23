@@ -194,18 +194,16 @@
       <div class="space-y-2">
         <Label>Tab Size</Label>
         <div class="flex items-center gap-4">
-          <Slider 
-            value={[settings.tabSize]} 
+          <Slider
+            value={[settings.tabSize]}
             onValueChange={(value) => updateSetting('tabSize', value[0])}
-            max={8} 
-            min={1} 
+            max={8}
             step={1} 
             class="flex-1" 
           />
           <span class="text-sm w-12 text-right">{settings.tabSize} spaces</span>
         </div>
       </div>
-
       <!-- Insert Spaces -->
       <div class="flex items-center justify-between">
         <div class="space-y-0.5">
@@ -225,11 +223,11 @@
           <SelectTrigger>
             {settings.renderWhitespace.charAt(0).toUpperCase() + settings.renderWhitespace.slice(1)}
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="boundary">Boundary</SelectItem>
-            <SelectItem value="selection">Selection</SelectItem>
-            <SelectItem value="all">All</SelectItem>
+          <SelectContent> 
+              <SelectItem value="none">None</SelectItem> 
+             <SelectItem value="boundary">Boundary</SelectItem> 
+             <SelectItem value="selection">Selection</SelectItem> 
+             <SelectItem value="all">All</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -33,6 +33,7 @@
 	import { LanguageDetector } from '$lib/utils/language-detector';
 	import { toast } from 'svelte-sonner';
 	import { getRecordingContext } from '$lib/contexts/recording-context.svelte';
+	import { explainCodeAI } from '$lib/ai.remote';
 
 	export interface FileNode {
 		name: string;
@@ -106,7 +107,9 @@
 	let explainContent = $state('');
 	let explainCode = $state('');
 	let explainLineNumber = $state(0);
-
+  
+  let lastScrollTime = $state()
+  
 	const languageDetector = new LanguageDetector();
 
 	// Helper function to navigate to a line in the first file
@@ -132,21 +135,16 @@
 
 		try {
 			const language = activeTab?.language || 'javascript';
-			const response = await fetch('/api/ai/explain', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
+			const result = await explainCodeAI({
 					code: code.trim(),
-					language
+					language,
 				})
-			});
 
-			if (!response.ok) {
+			if (!result) {
 				throw new Error('Failed to get explanation');
 			}
 
-			const data = await response.json();
-			explainContent = data.explanation || 'No explanation available';
+			explainContent = result.explanation || 'No explanation available';
 		} catch (error) {
 			console.error('Error explaining code:', error);
 			toast.error('Failed to explain code. Please try again.');
@@ -291,10 +289,17 @@
 
 	function closeTab(file: FileNode, e?: Event) {
 		e?.stopPropagation();
+		const closedTabIndex = openTabs.findIndex((t) => t.path === file.path);
 		openTabs = openTabs.filter((t) => t.path !== file.path);
 
 		if (activeTab?.path === file.path) {
-			activeTab = openTabs[openTabs.length - 1] || null;
+			if (openTabs.length > 0) {
+				// Select the next tab, or the new last tab if the closed one was last
+				const newIndex = Math.min(closedTabIndex, openTabs.length - 1);
+				activeTab = openTabs[newIndex];
+			} else {
+				activeTab = null;
+			}
 		}
 	}
 
@@ -864,8 +869,15 @@
 								onscroll={(e) => {
 									onscroll?.(e);
 									if (ctx?.isRecording) {
-										const target = e.target as HTMLElement;
-										ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+										
+										// Throttle this event to avoid performance issues
+                		// TODO A proper throttle/debounce implementation would be used here.
+                		// For simplicity, a basic time-based check is used.
+                		if (!lastScrollTime || Date.now() - lastScrollTime > 100) {
+                			lastScrollTime = Date.now();
+                			const target = e.target as HTMLElement;
+                			ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+                		}
 									}
 								}}
 							/>
@@ -880,8 +892,13 @@
 							onscroll={(e) => {
 								onscroll?.(e);
 								if (ctx?.isRecording) {
-									const target = e.target as HTMLElement;
-									ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+									// Throttle this event to avoid performance issues
+              		// TODO A proper throttle/debounce implementation should be used here.
+              		if (!lastScrollTime || Date.now() - lastScrollTime > 100) {
+              			lastScrollTime = Date.now();
+              			const target = e.target as HTMLElement;
+              			ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+              		}
 								}
 							}}
 						/>
@@ -991,7 +1008,7 @@
 					</div>
 				{:else}
 					<div class="prose prose-sm max-w-none p-3 bg-muted/50 rounded-lg">
-						{@html explainContent.replace(/\n/g, '<br>')}
+						<pre class="text-sm whitespace-pre-wrap font-sans">{explainContent}</pre>
 					</div>
 				{/if}
 			</div>
