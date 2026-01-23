@@ -18,7 +18,7 @@ We've all been there: hours spent on code review, dozens of text comments—and 
 - **🤖 AI Analysis & Explain:** Gemini AI provides instant code explanations, detects code smells, and suggests improvements.
 - **✅ Smart Checklists:** AI-powered checklists verify common requirements automatically.
 - **🔗 GitHub Integration:** Import repositories and pull requests directly from GitHub without leaving the app.
-- **📤 P2P Sharing:** Share large video reviews directly between devices without cloud upload limits.
+- **📤 Flexible & P2P Sharing:** Share reviews via link, or transfer large files directly between devices (P2P) without cloud upload limits.
 - **📍 Smart Chapters:** Automatically detects when you switch files during recording and creates navigable chapters.
 - **📝 Rich Commenting:** Support for Markdown, mentions, and threaded discussions.
 
@@ -32,11 +32,11 @@ Think of it as “Loom meets GitHub”—optimized for code review.
 
 - **Frontend:** SvelteKit (Svelte 5 runes), TailwindCSS, shadcn-svelte components
 - **Local-First Sync:** sveltekit-sync, IndexedDB
-- **Desktop/Mobile:** Tauri 2.x for native cross-platform apps
+- **Desktop/Mobile:** Tauri 2.x for native cross-platform apps (Native Mobile Feel)
 - **Database:** PostgreSQL + Drizzle ORM
 - **Authentication:** Better-Auth (email, Google, GitHub)
 - **AI:** Gemini 2.0 Flash (Google) for code analysis
-- **Payments:** Stripe (global) & Paystack (Africa)
+- **Payments:** Dual Payments (Stripe (global) & Paystack (Africa))
 - **Video:** MediaRecorder API with ffmpeg.wasm for compression
 - **Storage:** Cloudflare R2 for video files
 
@@ -139,8 +139,11 @@ Think of it as “Loom meets GitHub”—optimized for code review.
 - **High-Fidelity Video Recording:**
   Capturing high-quality code walkthroughs in the browser while maintaining performance was tricky. We utilized `ffmpeg.wasm` for client-side compression to ensure videos upload quickly and playback smoothly, even on slower connections.
 
-- **AI Context Management:**
-  Feeding large codebases into an AI context window is expensive and slow. We implemented a smart context pruning strategy that only sends relevant file diffs and surrounding lines to Gemini, ensuring fast and accurate AI insights.
+- **Native Mobile Support:**
+  Getting the app to feel "native" on mobile while sharing a codebase with the web version was challenging. We had to carefully manage touch events, viewport scaling, and navigation gestures to ensure a smooth experience on iOS and Android devices via Tauri.
+
+- **Real-Time Data Consistency:**
+  Balancing local-first optimistic updates with real-time server state (for presence and cursors) required complex conflict resolution strategies to ensure users never saw stale data or overwrote each other's work blindly.
 
 ---
 

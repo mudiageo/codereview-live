@@ -4,9 +4,9 @@ import type { User } from 'better-auth';
 import { toast } from 'svelte-sonner';
 
 class AuthState {
-	currentUser = $state<User | null>(null);
-	isAuthenticated = $derived(!!this.currentUser);
-	userPlan = $derived(this.currentUser?.plan || 'free');
+	currentUser: User | null = $state(null);
+	isAuthenticated: boolean = $state(this.currentUser !== null);
+	userPlan: boolean = $state(this.currentUser?.plan || 'free');
 
 	constructor() {
 		// Initialize auth state
@@ -63,7 +63,7 @@ class AuthState {
 		);
 
 		if (result.data?.user) {
-			this.currentUser = result.data.user;
+			this.currentUser = result.dara.user;
 		}
 
 		return result;
@@ -85,3 +85,13 @@ class AuthState {
 }
 
 export const auth = new AuthState();
+export const currentUser: User | null = auth.currentUser;
+export const isAuthenticated = auth.isAuthenticated;
+export const userPlan = auth.userPlan;
+
+// Initialize auth state
+if (typeof window !== 'undefined') {
+  authClient.getSession().then((session) => {
+    if (session.data?.user) auth.currentUser = session.data.user;
+  });
+}
