@@ -106,7 +106,9 @@
 	let explainContent = $state('');
 	let explainCode = $state('');
 	let explainLineNumber = $state(0);
-
+  
+  let lastScrollTime = $state()
+  
 	const languageDetector = new LanguageDetector();
 
 	// Helper function to navigate to a line in the first file
@@ -864,8 +866,15 @@
 								onscroll={(e) => {
 									onscroll?.(e);
 									if (ctx?.isRecording) {
-										const target = e.target as HTMLElement;
-										ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+										
+										// Throttle this event to avoid performance issues
+                		// TODO A proper throttle/debounce implementation would be used here.
+                		// For simplicity, a basic time-based check is used.
+                		if (!lastScrollTime || Date.now() - lastScrollTime > 100) {
+                			lastScrollTime = Date.now();
+                			const target = e.target as HTMLElement;
+                			ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+                		}
 									}
 								}}
 							/>
@@ -880,8 +889,13 @@
 							onscroll={(e) => {
 								onscroll?.(e);
 								if (ctx?.isRecording) {
-									const target = e.target as HTMLElement;
-									ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+									// Throttle this event to avoid performance issues
+              		// TODO A proper throttle/debounce implementation should be used here.
+              		if (!lastScrollTime || Date.now() - lastScrollTime > 100) {
+              			lastScrollTime = Date.now();
+              			const target = e.target as HTMLElement;
+              			ctx.addEvent('scroll', { scrollTop: target.scrollTop, path: activeTab?.path });
+              		}
 								}
 							}}
 						/>
