@@ -28,6 +28,7 @@
 	import X from '@lucide/svelte/icons/x';
 	import { cn } from '$lib/utils';
 	import { auth } from '$lib/stores/auth.svelte';
+	import { SsgoiTransition } from '@ssgoi/svelte';
 
 	let { children } = $props();
 
@@ -417,9 +418,9 @@
 
 		<!-- Page Content -->
 		<main class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 pb-20 md:pb-6 animate-fade-in">
-			<div class="view-transition-card">
+			<SsgoiTransition id={page.url.pathname}>
 				{@render children()}
-			</div>
+			</SsgoiTransition>
 		</main>
 	</div>
 </div>

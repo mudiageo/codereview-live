@@ -8,6 +8,7 @@
 	import Twitter from '@lucide/svelte/icons/twitter';
 	import { cn } from '$lib/utils';
 	import { onMount } from 'svelte';
+	import { SsgoiTransition } from '@ssgoi/svelte';
 	import '../layout.css';
 
 	let { children } = $props();
@@ -113,7 +114,9 @@
 
 	<!-- Main Content -->
 	<main class="flex-1 pt-16">
-		{@render children()}
+		<SsgoiTransition id={page.url.pathname}>
+			{@render children()}
+		</SsgoiTransition>
 	</main>
 
 	<!-- Footer -->
