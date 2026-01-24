@@ -7,6 +7,8 @@
 	import { onMount } from 'svelte';
 	import { settingsStore } from '$lib/stores/index.svelte';
 	import { CSS_VARS } from '$lib/constants';
+	import { Ssgoi } from '@ssgoi/svelte';
+	import { fade } from '@ssgoi/svelte/view-transitions';
 
 	let { children } = $props();
 
@@ -35,17 +37,6 @@
 		}
 	}
 
-	// Enable View Transitions API for smooth page navigation
-	onNavigate((navigation) => {
-		if (!document.startViewTransition) return;
-
-		return new Promise((resolve) => {
-			document.startViewTransition(async () => {
-				resolve();
-				await navigation.complete;
-			});
-		});
-	});
 </script>
 
 <svelte:head>
@@ -53,4 +44,8 @@
 </svelte:head>
 
 <ModeWatcher />
-{@render children()}
+<Ssgoi config={{ defaultTransition: fade() }}>
+	<div style="position: relative; min-height: 100vh;">
+		{@render children()}
+	</div>
+</Ssgoi>

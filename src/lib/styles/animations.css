@@ -1,45 +1,6 @@
 /* Modern Animations & Transitions Library */
 /* Inspired by Svelte Magic, Luxe, and Aceternity UI */
 
-/* ==================== View Transitions ==================== */
-@view-transition {
-  navigation: auto;
-}
-
-/* Default page transition */
-::view-transition-old(root) {
-  animation: 300ms cubic-bezier(0.4, 0, 1, 1) both fade-out;
-}
-
-::view-transition-new(root) {
-  animation: 300ms cubic-bezier(0, 0, 0.2, 1) both fade-in;
-}
-
-/* Scoped transitions for specific elements */
-.view-transition-card {
-  view-transition-name: card;
-}
-
-::view-transition-old(card) {
-  animation: 200ms ease-out both scale-out, 200ms ease-out both fade-out;
-}
-
-::view-transition-new(card) {
-  animation: 400ms ease-in both scale-in, 400ms ease-in both fade-in;
-}
-
-.view-transition-modal {
-  view-transition-name: modal;
-}
-
-::view-transition-old(modal) {
-  animation: 200ms ease-out both slide-down, 200ms ease-out both fade-out;
-}
-
-::view-transition-new(modal) {
-  animation: 300ms cubic-bezier(0.16, 1, 0.3, 1) both slide-up, 300ms ease-in both fade-in;
-}
-
 /* ==================== Keyframe Animations ==================== */
 
 @keyframes fade-in {
