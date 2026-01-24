@@ -23,6 +23,9 @@ importers:
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
+      '@ssgoi/svelte':
+        specifier: ^4.0.0
+        version: 4.0.0(svelte@5.47.1)
       '@tauri-apps/plugin-fs':
         specifier: ~2
         version: 2.4.4
@@ -1389,6 +1392,16 @@ packages:
   '@smithy/uuid@1.1.0':
     resolution: {integrity: sha512-4aUIteuyxtBUhVdiQqcDhKFitwfd9hqoSDYY2KRXiWtgoWJ9Bmise+KfEPDiVHWeJepvF8xJO9/9+WDIciMFFw==}
     engines: {node: '>=18.0.0'}
+
+  '@ssgoi/core@4.4.0':
+    resolution: {integrity: sha512-aOEy2VZUN4NAgg7Bea0KKXY1ukCWn9Vqfy1Hvcn2KZnFLztZHjY9L6ws+pra7K+tBEePIy5go9GO9I1nLKDMjQ==}
+    engines: {node: '>=18.0.0'}
+
+  '@ssgoi/svelte@4.0.0':
+    resolution: {integrity: sha512-GxhIyNFkfWx1kLWdMzdNNzz8upg2pn3LJzDUCrM+4mxzXHZ71lvQZUQhVaid0lZ3GMhFYwHxbRFIvZ8320oZ1A==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      svelte: ^5.0.0
 
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
@@ -4952,6 +4965,13 @@ snapshots:
   '@smithy/uuid@1.1.0':
     dependencies:
       tslib: 2.8.1
+
+  '@ssgoi/core@4.4.0': {}
+
+  '@ssgoi/svelte@4.0.0(svelte@5.47.1)':
+    dependencies:
+      '@ssgoi/core': 4.4.0
+      svelte: 5.47.1
 
   '@stablelib/base64@1.0.1': {}
 
