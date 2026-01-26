@@ -8,7 +8,7 @@
 	import { settingsStore } from '$lib/stores/index.svelte';
 	import { CSS_VARS } from '$lib/constants';
 	import { Ssgoi } from '@ssgoi/svelte';
-	import { fade } from '@ssgoi/svelte/view-transitions';
+	import { transitionConfig } from '$lib/config/transitions';
 
 	let { children } = $props();
 
@@ -44,7 +44,7 @@
 </svelte:head>
 
 <ModeWatcher />
-<Ssgoi config={{ defaultTransition: fade() }}>
+<Ssgoi config={transitionConfig}>
 	<div style="position: relative; min-height: 100vh;">
 		{@render children()}
 	</div>
