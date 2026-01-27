@@ -7,7 +7,6 @@
 	import { teamsStore, teamInvitationsStore } from '$lib/stores/index.svelte';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { hasFeatureAccess } from '$lib/config';
-	import { sendTeamInviteEmailRemote } from '$lib/team.remote';
 	import UserPlus from '@lucide/svelte/icons/user-plus';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import Mail from '@lucide/svelte/icons/mail';
@@ -33,20 +32,13 @@
 				return;
 			}
 
-			const token = crypto.randomUUID();
 			await teamInvitationsStore.create({
 				teamId: currentTeam.id,
 				email: newMemberEmail,
 				role: newMemberRole as any,
 				invitedBy: auth.currentUser.id,
-				token,
+				token: crypto.randomUUID(),
 				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-			});
-
-			await sendTeamInviteEmailRemote({
-				teamId: currentTeam.id,
-				email: newMemberEmail,
-				token
 			});
 
 			toast.success('Invitation sent!');
