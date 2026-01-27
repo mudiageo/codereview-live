@@ -2,7 +2,7 @@
 	import { ModeWatcher, setMode, resetMode } from 'mode-watcher';
 	import './layout.css';
 	import '$lib/styles/animations.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '$lib/assets/icon.svg';
 	import { onNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { settingsStore } from '$lib/stores/index.svelte';

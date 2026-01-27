@@ -221,26 +221,26 @@
 {/if}
 
 <!-- Sync Status Indicator -->
-{#if syncState.isSyncing}
-	<div class="fixed top-4 right-4 z-50 animate-slide-down">
-		<div
-			class="glass flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg animate-glow-pulse"
-		>
-			<div class="h-2 w-2 bg-white rounded-full animate-ping"></div>
-			<span class="text-sm">Syncing...</span>
-		</div>
-	</div>
+<!-- {#if syncState.isSyncing}
+  <div class="fixed top-4 right-4 z-50 animate-slide-down">
+    <div
+      class="glass flex items-center gap-2 bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg animate-glow-pulse"
+    >
+      <div class="h-2 w-2 bg-white rounded-full animate-ping"></div>
+      <span class="text-sm">Syncing...</span>
+    </div>
+  </div>
 {:else if !syncState.isOnline}
-	<div class="fixed top-4 right-4 z-50 animate-slide-down">
-		<div
-			class="glass flex items-center gap-2 bg-destructive text-destructive-foreground px-3 py-2 rounded-lg shadow-lg"
-		>
-			<div class="h-2 w-2 bg-white rounded-full"></div>
-			<span class="text-sm">Offline</span>
-		</div>
-	</div>
+  <div class="fixed top-4 right-4 z-50 animate-slide-down">
+    <div
+      class="glass flex items-center gap-2 bg-destructive text-destructive-foreground px-3 py-2 rounded-lg shadow-lg"
+    >
+      <div class="h-2 w-2 bg-white rounded-full"></div>
+      <span class="text-sm">Offline</span>
+    </div>
+  </div>
 {/if}
-
+ -->
 <!-- Desktop Layout -->
 <div class="flex h-screen overflow-hidden bg-background">
 	<!-- Sidebar (Desktop & Tablet) -->
@@ -340,7 +340,7 @@
 	</aside>
 
 	<!-- Main Content Area -->
-	<div class="flex flex-1 flex-col overflow-hidden">
+	<div class="flex flex-1 flex-col overflow-hidden relative min-h-screen">
 		<!-- Header -->
 		<header class="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
 			<!-- Mobile Menu Button -->
@@ -422,6 +422,8 @@
 				{@render children()}
 			</SsgoiTransition>
 		</main>
+		
+
 	</div>
 </div>
 
@@ -468,60 +470,60 @@
 	</div>
 {/if}
 
-<!-- Mobile Bottom Navigation -->
-<nav
-	class="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-lg glass md:hidden animate-slide-up"
->
-	<div class="flex items-center justify-around px-2 h-16">
-		<a
-			href="/dashboard"
-			class={cn(
-				'flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200 hover-scale',
-				isActive('/dashboard') ? 'text-primary' : 'text-muted-foreground'
-			)}
-		>
-			<Home class="h-5 w-5" />
-			<span class="text-xs">Home</span>
-		</a>
-
-		<a
-			href="/projects"
-			class={cn(
-				'flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200 hover-scale',
-				isActive('/projects') ? 'text-primary' : 'text-muted-foreground'
-			)}
-		>
-			<Folder class="h-5 w-5" />
-			<span class="text-xs">Projects</span>
-		</a>
-
-		<a
-			href="/reviews/new"
-			class="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground -mt-6 shadow-lg hover-lift gradient-glow ripple"
-		>
-			<Plus class="h-6 w-6" />
-		</a>
-
-		<a
-			href="/reviews"
-			class={cn(
-				'flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200 hover-scale',
-				isActive('/reviews') ? 'text-primary' : 'text-muted-foreground'
-			)}
-		>
-			<Video class="h-5 w-5" />
-			<span class="text-xs">Reviews</span>
-		</a>
-
-		<a
-			href="/settings"
-			class={cn(
-				'flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200 hover-scale',
-				isActive('/settings') ? 'text-primary' : 'text-muted-foreground'
-			)}
-		>
-			<Settings class="h-5 w-5" />
-			<span class="text-xs">Settings</span>
-		</a>
-	</div>
-</nav>
+		<!-- Mobile Bottom Navigation -->
+    <nav
+    	class="fixed bottom-0 left-0 right-0 z-40 inset-x-0  mx-auto h-full max-h-14 origin-bottom border-t bg-background/95 backdrop-blur-lg glass md:hidden animate-slide-up"
+    >
+    	<div class="flex items-center justify-around px-2 h-16">
+    		<a
+    			href="/dashboard"
+    			class={cn(
+    				'flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200 hover-scale',
+    				isActive('/dashboard') ? 'text-primary' : 'text-muted-foreground'
+    			)}
+    		>
+    			<Home class="h-5 w-5" />
+    			<span class="text-xs">Home</span>
+    		</a>
+    
+    		<a
+    			href="/projects"
+    			class={cn(
+    				'flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200 hover-scale',
+    				isActive('/projects') ? 'text-primary' : 'text-muted-foreground'
+    			)}
+    		>
+    			<Folder class="h-5 w-5" />
+    			<span class="text-xs">Projects</span>
+    		</a>
+    
+    		<a
+    			href="/reviews/new"
+    			class="flex flex-col aspect-square w-60 items-center justify-center rounded-full bg-primary text-primary-foreground -mt-6 shadow-lg hover-lift gradient-glow ripple"
+    		>
+    			<Plus class="h-6 w-6" />
+    		</a>
+    
+    		<a
+    			href="/reviews"
+    			class={cn(
+    				'flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200 hover-scale',
+    				isActive('/reviews') ? 'text-primary' : 'text-muted-foreground'
+    			)}
+    		>
+    			<Video class="h-5 w-5" />
+    			<span class="text-xs">Reviews</span>
+    		</a>
+    
+    		<a
+    			href="/settings"
+    			class={cn(
+    				'flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-200 hover-scale',
+    				isActive('/settings') ? 'text-primary' : 'text-muted-foreground'
+    			)}
+    		>
+    			<Settings class="h-5 w-5" />
+    			<span class="text-xs">Settings</span>
+    		</a>
+    	</div>
+    </nav>
