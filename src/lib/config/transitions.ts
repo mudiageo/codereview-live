@@ -1,15 +1,44 @@
 import { sheet, drill, scroll, fade, snap, swap } from '@ssgoi/svelte/view-transitions';
 
+// Define the order of settings tabs for directional snapping
+const settingsTabs = [
+	'/settings', // Profile
+	'/settings/appearance',
+	'/settings/video',
+	'/settings/ai',
+	'/settings/notifications',
+	'/settings/integrations',
+	'/settings/billing',
+	'/settings/team',
+	'/settings/security'
+];
+
+// Generate snap transitions for settings tabs
+const settingsTransitions = [];
+for (let i = 0; i < settingsTabs.length; i++) {
+	for (let j = 0; j < settingsTabs.length; j++) {
+		if (i === j) continue;
+
+		const from = settingsTabs[i];
+		const to = settingsTabs[j];
+
+		// If moving to a later tab (higher index), slide to left (enter from right)
+		// If moving to an earlier tab (lower index), slide to right (enter from left)
+		const direction = i < j ? 'left' : 'right';
+
+		settingsTransitions.push({
+			from,
+			to,
+			transition: snap({ direction })
+		});
+	}
+}
+
 export const transitionConfig = {
 	defaultTransition: fade(),
 	transitions: [
 		// --- Settings Tabs (Snap) ---
-		{
-			from: '/settings/*',
-			to: '/settings/*',
-			transition: snap(),
-			symmetric: true
-		},
+		...settingsTransitions,
 
 		// --- Creation Flows (Sheet) ---
 		// Higher priority to override wildcards
@@ -68,10 +97,6 @@ export const transitionConfig = {
 			from: '/onboarding/*',
 			to: '/onboarding/*',
 			transition: scroll({ direction: 'up' }),
-            // We might need dynamic direction based on step, but simple scroll is fine for now
-            // or we use symmetric if they go back?
-            // scroll({ direction: 'up' }) implies next page comes from bottom.
-            // If we go back, we want it to go down.
             symmetric: true
 		},
 
