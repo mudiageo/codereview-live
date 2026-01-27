@@ -1,0 +1,31 @@
+{
+	"name": "CodeReview Live - Async codereview platform",
+	"short_name": "CodeReview",
+	"start_url": "/dashboard",
+	"display": "standalone",
+	"background_color": "#ffffff",
+	"theme_color": "#0284c7",
+	"icons": [
+		{
+			"src": "/android-launchericon-192x192.png",
+			"sizes": "192x192",
+			"type": "image/png"
+		},
+		{
+			"src": "/android-launchericon-512x512.png",
+			"sizes": "512x512",
+			"type": "image/png"
+		},
+
+		{
+			"src": "/android-launchericon-32x32.png",
+			"sizes": "32x32",
+			"type": "image/png"
+		},
+		{
+			"src": "/android-launchericon-16x16.png",
+			"sizes": "512x512",
+			"type": "image/png"
+		}
+	]
+}
