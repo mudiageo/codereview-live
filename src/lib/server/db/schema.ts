@@ -189,16 +189,6 @@ export const teamMembers = pgTable('team_members', {
   ...syncMetadata
 });
 
-// Project members table (explicit relational mapping, mirroring JSONB)
-export const projectMembers = pgTable('project_members', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
-  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  role: text('role').default('member').notNull(),
-  addedAt: timestamp('added_at').defaultNow().notNull(),
-  ...syncMetadata
-});
-
 // Subscriptions table
 export const subscriptions = pgTable('subscriptions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -303,7 +293,6 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   reviews: many(reviews),
   comments: many(comments),
   teamMemberships: many(teamMembers),
-  projectMemberships: many(projectMembers),
   subscription: one(subscriptions),
   aiUsage: many(aiUsage),
   ownedTeams: many(teams),
@@ -340,7 +329,6 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [users.id],
   }),
   reviews: many(reviews),
-  members: many(projectMembers),
 }));
 
 export const reviewsRelations = relations(reviews, ({ one, many }) => ({
@@ -382,17 +370,6 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
   }),
   inviter: one(users, {
     fields: [teamMembers.invitedBy],
-    references: [users.id],
-  }),
-}));
-
-export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
-  project: one(projects, {
-    fields: [projectMembers.projectId],
-    references: [projects.id],
-  }),
-  user: one(users, {
-    fields: [projectMembers.userId],
     references: [users.id],
   }),
 }));
@@ -441,7 +418,6 @@ export type NewReview = typeof reviews.$inferInsert;
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
-export type ProjectMember = typeof projectMembers.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;

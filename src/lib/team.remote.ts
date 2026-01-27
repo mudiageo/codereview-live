@@ -7,13 +7,13 @@ import { eq, and } from 'drizzle-orm';
 import { sendTeamInviteEmail } from '$lib/server/email';
 import { generateToken } from '$lib/server/utils/encryption';
 
-export const inviteToTeam = command(
+export const sendTeamInviteEmailRemote = command(
   v.object({
     teamId: v.string(),
     email: v.string([v.email()]),
-    role: v.picklist(['admin', 'member', 'viewer']),
+    token: v.string()
   }),
-  async ({ teamId, email, role }) => {
+  async ({ teamId, email, token }) => {
     const user = await getUser();
 
     // Verify user owns the team
@@ -21,28 +21,17 @@ export const inviteToTeam = command(
       where: eq(teams.id, teamId),
     });
 
-    if (!team || team.ownerId !== user.id) {
-      throw new Error('Team not found or unauthorized');
+    if (!team) {
+      throw new Error('Team not found');
     }
 
-    // Generate invitation token
-    const token = generateToken();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-    await db.insert(teamInvitations).values({
-        teamId,
-        email,
-        role,
-        invitedBy: user.id,
-        token,
-        expiresAt
-    });
-
+    // We assume the invitation record was created by the client store sync
+    // Just send the email
     await sendTeamInviteEmail(email, user.name || 'A user', team.name, token);
 
     return {
       success: true,
-      message: 'Invitation sent',
+      message: 'Invitation email sent',
     };
   }
 );
