@@ -6,7 +6,7 @@ import { reviewsStore, projectsStore, commentsStore, teamsStore, aiUsageStore, s
 import { notificationsStore } from '$lib/stores/notifications.svelte';
 
 
-export const adapter = new IndexedDBAdapter('codereview-db', 1);
+export const adapter = new IndexedDBAdapter('codereview-db', 2);
 
 export const syncEngine = new SyncEngine({
   local: {
