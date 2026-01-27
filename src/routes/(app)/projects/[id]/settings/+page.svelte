@@ -1,11 +1,13 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { projectsStore } from '$lib/stores/index.svelte';
+  import { projectsStore, teamsStore } from '$lib/stores/index.svelte';
+  import { getTeamMembers } from '$lib/team.remote';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Textarea } from '$lib/components/ui/textarea';
   import { Label } from '$lib/components/ui/label';
   import { Switch } from '$lib/components/ui/switch';
+  import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
   import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
@@ -34,11 +36,18 @@
   });
 
   // Invite state
-  let inviteEmail = $state('');
+  let selectedMemberId = $state('');
   let inviteRole = $state('member');
+  let teamMembers = $state<any[]>([]);
 
   $effect(() => {
     projectsStore.load();
+    teamsStore.load();
+    if (teamsStore.current?.id) {
+        getTeamMembers({ teamId: teamsStore.current.id }).then(res => {
+            teamMembers = res;
+        });
+    }
   });
 
   $effect(() => {
@@ -73,34 +82,31 @@
   }
 
   async function inviteMember() {
-    if (!inviteEmail || !project) return;
-    try {
-      // In a real app, we'd lookup the user ID by email here.
-      // For now, we simulate finding a user ID (or not) to demonstrate notification.
-      // Let's assume we found a user ID for demo purposes if the email contains 'user'.
-      const fakeUserId = inviteEmail.includes('user') ? 'some-user-id' : undefined;
+    if (!selectedMemberId || !project) return;
 
+    const member = teamMembers.find(m => m.user.id === selectedMemberId);
+    if (!member) return;
+
+    try {
       await projectsStore.addMember(project.id, {
-        email: inviteEmail,
+        email: member.user.email,
         role: inviteRole,
-        userId: fakeUserId
+        userId: member.user.id
       });
 
-      if (fakeUserId) {
-         await notificationsStore.create({
-           userId: fakeUserId,
-           type: 'project_invite',
-           title: 'Project Invitation',
-           message: `You have been invited to join ${project.name} as a ${inviteRole}.`,
-           link: `/projects/${project.id}`,
-           read: false
-         });
-      }
+      await notificationsStore.create({
+        userId: member.user.id,
+        type: 'project_invite',
+        title: 'Project Invitation',
+        message: `You have been added to project ${project.name} as a ${inviteRole}.`,
+        link: `/projects/${project.id}`,
+        read: false
+      });
 
-      toast.success(`Invited ${inviteEmail}`);
-      inviteEmail = '';
+      toast.success(`Added ${member.user.email} to project`);
+      selectedMemberId = '';
     } catch (e) {
-      toast.error('Failed to invite member');
+      toast.error('Failed to add member');
     }
   }
 
@@ -218,12 +224,22 @@
           <CardContent class="space-y-6">
             <div class="flex items-end gap-4">
               <div class="grid gap-2 flex-1">
-                <Label for="invite-email">Add Member</Label>
-                <Input
-                  id="invite-email"
-                  placeholder="colleague@example.com"
-                  bind:value={inviteEmail}
-                />
+                <Label for="invite-member">Add Team Member</Label>
+                <Select type="single" bind:value={selectedMemberId}>
+                    <SelectTrigger>
+                        {teamMembers.find(m => m.user.id === selectedMemberId)?.user.name || 'Select team member'}
+                    </SelectTrigger>
+                    <SelectContent>
+                        {#if teamMembers.length === 0}
+                             <SelectItem value="" disabled>No team members found</SelectItem>
+                        {:else}
+                            {#each teamMembers as member}
+                                <SelectItem value={member.user.id}>{member.user.name} ({member.user.email})</SelectItem>
+                            {/each}
+                        {/if}
+                    </SelectContent>
+                </Select>
+                <p class="text-xs text-muted-foreground">Only members of your Organization can be added.</p>
               </div>
                <div class="grid gap-2 w-[180px]">
                 <Label for="invite-role">Role</Label>
@@ -237,7 +253,7 @@
                   <option value="viewer">Viewer</option>
                 </select>
               </div>
-              <Button onclick={inviteMember} disabled={!inviteEmail}>Invite</Button>
+              <Button onclick={inviteMember} disabled={!selectedMemberId}>Add</Button>
             </div>
 
             <div class="rounded-md border">

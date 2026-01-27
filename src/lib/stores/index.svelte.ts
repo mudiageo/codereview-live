@@ -1,5 +1,6 @@
 import { browser } from '$app/environment'
 import { syncEngine } from '$lib/db';
+import { sendTeamInviteEmailRemote } from '$lib/team.remote';
 
 import type { Review, Project, Comment, Team, TeamInvitation, Subscription } from '$lib/server/db/schema';
 
@@ -615,6 +616,20 @@ class TeamInvitationsStore {
 
       await this.collection.create(newInvitation);
       this.data.push(newInvitation);
+
+      // Send invite email (remote function)
+      // This is a side-effect, we don't want to block the UI or fail the creation if email fails
+      // but we should probably log it.
+      // We need to cast invitedBy to string because it might be undefined in the type, but required for the email?
+      // Actually sendTeamInviteEmailRemote doesn't need invitedBy, it uses auth user.
+      // It needs token, email, teamId.
+      sendTeamInviteEmailRemote({
+        teamId: newInvitation.teamId,
+        email: newInvitation.email,
+        token: newInvitation.token
+      }).catch(err => {
+          console.error('Failed to send invite email:', err);
+      });
 
       return newInvitation;
     } catch (err) {
