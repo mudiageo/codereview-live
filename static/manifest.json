@@ -18,8 +18,8 @@
 		},
 
 		{
-			"src": "/android-launchericon-32x32.png",
-			"sizes": "32x32",
+			"src": "/android-launchericon-48x48.png",
+			"sizes": "48x49",
 			"type": "image/png"
 		},
 		{
