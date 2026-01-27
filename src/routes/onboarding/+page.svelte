@@ -19,6 +19,7 @@
 		AccordionItem,
 		AccordionTrigger
 	} from '$lib/components/ui/accordion';
+	import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
 	import Play from '@lucide/svelte/icons/play';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
@@ -50,6 +51,7 @@
 	import Lock from '@lucide/svelte/icons/lock';
 	import Eye from '@lucide/svelte/icons/eye';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
+	import Smartphone from '@lucide/svelte/icons/smartphone';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -58,6 +60,8 @@
 	let loading = $state(true);
 	let activeTab = $state('progress');
 	let searchQuery = $state('');
+	let showLessonDialog = $state(false);
+	let currentLesson = $state<any>(null);
 
 	let selectedModule = $state<string | null>(null);
 
@@ -170,6 +174,42 @@
 				{ id: 'af-3', title: 'Custom Checklist Templates', completed: false, duration: 6 },
 				{ id: 'af-4', title: 'API & Webhooks', completed: false, duration: 8 },
 				{ id: 'af-5', title: 'Analytics Deep Dive', completed: false, duration: 4 }
+			]
+		},
+		{
+			id: 'mobile-workflow',
+			title: 'Mobile Workflow',
+			description: 'Review code on the go',
+			icon: Smartphone,
+			color: 'blue',
+			totalLessons: 3,
+			completedLessons: 0,
+			estimatedTime: 10,
+			lessons: [
+				{
+					id: 'mw-1',
+					title: 'Mobile Interface Overview',
+					completed: false,
+					duration: 3,
+					content:
+						'The mobile interface is optimized for viewing code and watching reviews. You can switch between Video, Code, and Discussion tabs using the bottom navigation bar.'
+				},
+				{
+					id: 'mw-2',
+					title: 'Adding Video Comments on Mobile',
+					completed: false,
+					duration: 4,
+					content:
+						'To add a video comment on mobile:\n1. Navigate to the "Discuss" tab.\n2. Tap the "Camera" icon or "Record" button.\n3. Allow camera/microphone access.\n4. Record your feedback and tap "Stop".\n5. Review your recording and tap "Post".'
+				},
+				{
+					id: 'mw-3',
+					title: 'Gesture Controls',
+					completed: false,
+					duration: 3,
+					content:
+						'Swipe left/right to navigate between files in the code viewer. Double tap code to add a line comment.'
+				}
 			]
 		}
 	]);
@@ -464,6 +504,10 @@
 	function handleLessonAction(module: any, lesson: any) {
 		if (lesson.action) {
 			goto(lesson.action);
+		} else if (lesson.content) {
+			currentLesson = lesson;
+			showLessonDialog = true;
+			markLessonComplete(module.id, lesson.id);
 		} else if (lesson.videoUrl) {
 			// Simulate watching video
 			// In a real app, this would open a modal
@@ -934,4 +978,19 @@
 			</div>
 		</TabsContent>
 	</Tabs>
+
+	<Dialog bind:open={showLessonDialog}>
+		<DialogContent>
+			<DialogHeader>
+				<DialogTitle>{currentLesson?.title}</DialogTitle>
+			</DialogHeader>
+			<div class="py-4 space-y-4">
+				{#if currentLesson?.content}
+					{#each currentLesson.content.split('\n') as line}
+						<p>{line}</p>
+					{/each}
+				{/if}
+			</div>
+		</DialogContent>
+	</Dialog>
 </div>

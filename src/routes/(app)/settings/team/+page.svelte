@@ -7,6 +7,7 @@
 	import { teamsStore, teamInvitationsStore } from '$lib/stores/index.svelte';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { hasFeatureAccess } from '$lib/config';
+	import { inviteToTeam } from '$lib/team.remote';
 	import UserPlus from '@lucide/svelte/icons/user-plus';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import Mail from '@lucide/svelte/icons/mail';
@@ -32,19 +33,16 @@
 				return;
 			}
 
-			await teamInvitationsStore.create({
+			await inviteToTeam({
 				teamId: currentTeam.id,
 				email: newMemberEmail,
-				role: newMemberRole,
-				invitedBy: auth.currentUser.id,
-				token: crypto.randomUUID(),
-				expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+				role: newMemberRole as any
 			});
 
 			toast.success('Invitation sent!');
 			newMemberEmail = '';
-		} catch (error) {
-			toast.error('Failed to send invitation');
+		} catch (error: any) {
+			toast.error(error.message || 'Failed to send invitation');
 		} finally {
 			isInviting = false;
 		}

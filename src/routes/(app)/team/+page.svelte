@@ -20,25 +20,27 @@
   import Users from '@lucide/svelte/icons/users';
   import { teamsStore, teamInvitationsStore } from '$lib/stores/index.svelte';
   import { toast } from 'svelte-sonner';
+  import { inviteToTeam, getTeamMembers } from '$lib/team.remote';
   
   let inviteEmail = $state('');
   let inviteOpen = $state(false);
-  
+  let members = $state<any[]>([]);
+
   // Load stores
   $effect(() => {
     teamsStore.load();
     teamInvitationsStore.load();
+    if (teamsStore.current?.id) {
+        getTeamMembers({ teamId: teamsStore.current.id }).then(res => {
+            members = res;
+        });
+    }
   });
-  
-  const members = $derived([
-    // In real implementation, you'd fetch team members from a separate store
-    // For now, showing placeholder based on team existence
-  ]);
   
   const pendingInvites = $derived(teamInvitationsStore.pending);
   
   function getInitials(name: string) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return (name || 'User').split(' ').map(n => n[0]).join('').toUpperCase();
   }
   
   function getRoleIcon(role: string) {
@@ -59,20 +61,17 @@
     }
     
     try {
-      await teamInvitationsStore.create({
+      await inviteToTeam({
         teamId: currentTeam.id,
         email: inviteEmail,
-        role: 'member',
-        invitedBy: currentTeam.ownerId,
-        token: crypto.randomUUID(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        role: 'member'
       });
       
       toast.success(`Invitation sent to ${inviteEmail}`);
       inviteEmail = '';
       inviteOpen = false;
-    } catch (error) {
-      toast.error('Failed to send invitation');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send invitation');
       console.error(error);
     }
   }

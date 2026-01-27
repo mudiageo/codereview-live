@@ -1,8 +1,16 @@
-import { sheet, drill, scroll, fade } from '@ssgoi/svelte/view-transitions';
+import { sheet, drill, scroll, fade, snap, swap } from '@ssgoi/svelte/view-transitions';
 
 export const transitionConfig = {
 	defaultTransition: fade(),
 	transitions: [
+		// --- Settings Tabs (Snap) ---
+		{
+			from: '/settings/*',
+			to: '/settings/*',
+			transition: snap(),
+			symmetric: true
+		},
+
 		// --- Creation Flows (Sheet) ---
 		// Higher priority to override wildcards
 		{
@@ -67,67 +75,67 @@ export const transitionConfig = {
             symmetric: true
 		},
 
-		// --- Top Level Navigation (fade) ---
+		// --- Top Level Navigation (swap) ---
         // Transitions between main sibling pages
 		{
 			from: '/dashboard',
 			to: '/projects',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		},
 		{
 			from: '/dashboard',
 			to: '/reviews',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		},
 		{
 			from: '/dashboard',
 			to: '/settings',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		},
 		{
 			from: '/projects',
 			to: '/reviews',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		},
 		{
 			from: '/projects',
 			to: '/settings',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		},
 		{
 			from: '/reviews',
 			to: '/settings',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		},
         // Team page
         {
 			from: '/team',
 			to: '/dashboard',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		},
         {
 			from: '/team',
 			to: '/projects',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		},
         {
 			from: '/team',
 			to: '/reviews',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		},
         {
 			from: '/team',
 			to: '/settings',
-			transition: fade(),
+			transition: swap(),
 			symmetric: true
 		}
 	]
