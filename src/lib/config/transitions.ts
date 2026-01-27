@@ -1,4 +1,4 @@
-import { fade, sheet, drill, scroll, jaemin } from '@ssgoi/svelte/view-transitions';
+import { sheet, drill, scroll, fade } from '@ssgoi/svelte/view-transitions';
 
 export const transitionConfig = {
 	defaultTransition: fade(),
@@ -67,67 +67,67 @@ export const transitionConfig = {
             symmetric: true
 		},
 
-		// --- Top Level Navigation (Jaemin) ---
+		// --- Top Level Navigation (fade) ---
         // Transitions between main sibling pages
 		{
 			from: '/dashboard',
 			to: '/projects',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		},
 		{
 			from: '/dashboard',
 			to: '/reviews',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		},
 		{
 			from: '/dashboard',
 			to: '/settings',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		},
 		{
 			from: '/projects',
 			to: '/reviews',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		},
 		{
 			from: '/projects',
 			to: '/settings',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		},
 		{
 			from: '/reviews',
 			to: '/settings',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		},
         // Team page
         {
 			from: '/team',
 			to: '/dashboard',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		},
         {
 			from: '/team',
 			to: '/projects',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		},
         {
 			from: '/team',
 			to: '/reviews',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		},
         {
 			from: '/team',
 			to: '/settings',
-			transition: jaemin(),
+			transition: fade(),
 			symmetric: true
 		}
 	]
