@@ -16,10 +16,6 @@
   import Trash from '@lucide/svelte/icons/trash';
   import { goto } from '$app/navigation';
 
-  $effect(() => {
-    notificationsStore.load();
-  });
-
   const unreadCount = $derived(notificationsStore.unreadCount);
   const notifications = $derived(notificationsStore.all.slice(0, 5)); // Show recent 5
 
@@ -36,10 +32,10 @@
     notificationsStore.markAllAsRead();
   }
 </script>
-
+				
 <DropdownMenu>
   <DropdownMenuTrigger>
-    {#snippet child(props)}
+    {#snippet child({ props })}
       <Button {...props} variant="ghost" size="icon" class="relative">
         <Bell class="h-5 w-5" />
         {#if unreadCount > 0}
@@ -48,7 +44,8 @@
       </Button>
     {/snippet}
   </DropdownMenuTrigger>
-  <DropdownMenuContent align="end" class="w-80">
+  <DropdownMenuContent align="end" class="w-80">							
+
     <div class="flex items-center justify-between px-4 py-2">
       <h4 class="text-sm font-semibold">Notifications</h4>
       {#if unreadCount > 0}
@@ -57,6 +54,7 @@
         </Button>
       {/if}
     </div>
+						
     <DropdownMenuSeparator />
     {#if notifications.length === 0}
       <div class="p-8 text-center text-sm text-muted-foreground">
