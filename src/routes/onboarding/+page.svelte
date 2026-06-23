@@ -391,12 +391,21 @@
 		]
 	});
 
-	// Calculate overall progress
+	// Calculate overall progress — always derived from actual lesson completion state
 	const totalLessons = $derived(onboardingModules.reduce((sum, m) => sum + m.totalLessons, 0));
 	const completedLessons = $derived(
-		onboardingModules.reduce((sum, m) => sum + m.completedLessons, 0)
+		onboardingModules.reduce((sum, m) => sum + m.lessons.filter((l) => l.completed).length, 0)
 	);
-	const overallProgress = $derived(Math.round((completedLessons / totalLessons) * 100));
+	const overallProgress = $derived(
+		totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
+	);
+
+	// Per-module completion (derived)
+	$effect(() => {
+		onboardingModules.forEach((m) => {
+			m.completedLessons = m.lessons.filter((l) => l.completed).length;
+		});
+	});
 
 	// Filter templates based on search
 	const filteredTemplates = $derived(
@@ -410,14 +419,14 @@
 	);
 
 	function saveProgress() {
-        if (browser) {
-             const progress = onboardingModules.map(m => ({
-                 id: m.id,
-                 lessons: m.lessons.map(l => ({ id: l.id, completed: l.completed }))
-             }));
-             localStorage.setItem('onboarding-progress', JSON.stringify(progress));
-        }
-    }
+		if (browser) {
+			const progress = onboardingModules.map((m) => ({
+				id: m.id,
+				lessons: m.lessons.map((l) => ({ id: l.id, completed: l.completed }))
+			}));
+			localStorage.setItem('onboarding-progress', JSON.stringify(progress));
+		}
+	}
 
 	$effect(() => {
 		// Check if profile is complete
@@ -523,7 +532,8 @@
 			const lesson = module.lessons.find((l) => l.id === lessonId);
 			if (lesson && !lesson.completed) {
 				lesson.completed = true;
-				module.completedLessons++;
+				// completedLessons is now auto-derived via the $effect, but keep in sync immediately
+				module.completedLessons = module.lessons.filter((l) => l.completed).length;
 				saveProgress();
 			}
 		}
@@ -585,8 +595,18 @@
 					<Button
 						class="gap-2"
 						onclick={() => {
-							const nextModule = onboardingModules.find((m) => m.completedLessons < m.totalLessons);
-							if (nextModule) selectedModule = nextModule.id;
+							const nextModule = onboardingModules.find(
+								(m) => m.lessons.filter((l) => l.completed).length < m.totalLessons
+							);
+							if (nextModule) {
+								selectedModule = nextModule.id;
+								activeTab = 'progress';
+								setTimeout(() => {
+									document
+										.querySelector('[data-module-id="' + nextModule.id + '"]')
+										?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+								}, 100);
+							}
 						}}
 					>
 						<Play class="h-4 w-4" />
@@ -619,10 +639,12 @@
 			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each onboardingModules as module}
 					{@const colors = getColorClasses(module.color)}
-					{@const progress = Math.round((module.completedLessons / module.totalLessons) * 100)}
-					{@const isComplete = module.completedLessons === module.totalLessons}
+					{@const lessonsDone = module.lessons.filter((l) => l.completed).length}
+					{@const progress = Math.round((lessonsDone / module.totalLessons) * 100)}
+					{@const isComplete = lessonsDone === module.totalLessons}
 
 					<Card
+						data-module-id={module.id}
 						class="relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 {selectedModule ===
 						module.id
 							? 'ring-2 ring-primary'
@@ -650,7 +672,7 @@
 									</Badge>
 								{:else}
 									<Badge variant="outline">
-										{module.completedLessons}/{module.totalLessons}
+										{lessonsDone}/{module.totalLessons}
 									</Badge>
 								{/if}
 							</div>
