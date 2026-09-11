@@ -95,7 +95,8 @@
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
-			"esbuild"
+			"esbuild",
+			"workerd"
 		]
 	},
 	"devEngines": {
