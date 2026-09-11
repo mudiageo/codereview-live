@@ -1,6 +1,5 @@
 import { defineEnvVars } from '@sveltejs/kit/env';
-
-import { building } from '$app/environment';
+import { building } from '$app/env';
 import * as v from 'valibot';
 
 const value = (v: string | Promise<string>) => v.pipeAsync(v.unknown(), v.transformAsync(() => v));
