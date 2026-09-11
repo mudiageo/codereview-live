@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { GitHubImporter } from '$lib/utils/github-import';
+import { GitHubImporter } from '#lib/utils/github-import.js';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {

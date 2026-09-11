@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { handleWebhook } from '$lib/server/payments/paystack';
-import { db } from '$lib/server/db';
-import { subscriptions, users } from '$lib/server/db/schema';
+import { handleWebhook } from '#lib/server/payments/paystack.js';
+import { db } from '#lib/server/db/index.js';
+import { subscriptions, users } from '#lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 export const POST: RequestHandler = async ({ request }) => {

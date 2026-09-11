@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '#lib/components/ui/button/index.js';
     import Video from '@lucide/svelte/icons/video';
     import Code from '@lucide/svelte/icons/code';
     import Server from '@lucide/svelte/icons/server';

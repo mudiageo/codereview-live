@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Progress } from '$lib/components/ui/progress';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+	import { Progress } from '#lib/components/ui/progress/index.js';
+	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '#lib/components/ui/select/index.js';
+	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
 	import Check from '@lucide/svelte/icons/check';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import Shield from '@lucide/svelte/icons/shield';
@@ -19,7 +19,7 @@
 		getTemplate,
 		type ChecklistItem,
 		type ChecklistTemplate
-	} from '$lib/config/checklist-templates';
+	} from '#lib/config/checklist-templates.js';
 	import { toast } from 'svelte-sonner';
 
 	interface Props {

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
-	import { Slider } from '$lib/components/ui/slider';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Popover, PopoverContent, PopoverTrigger } from '#lib/components/ui/popover/index.js';
+	import { Slider } from '#lib/components/ui/slider/index.js';
 	import Pen from '@lucide/svelte/icons/pen';
 	import Highlighter from '@lucide/svelte/icons/highlighter';
 	import Square from '@lucide/svelte/icons/square';

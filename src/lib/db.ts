@@ -1,10 +1,20 @@
 import { IndexedDBAdapter } from 'sveltekit-sync/adapters';
 import { SyncEngine } from 'sveltekit-sync';
-import { pushChanges, pullChanges } from '$lib/sync.remote';
-import { browser } from '$app/environment';
-import { reviewsStore, projectsStore, commentsStore, teamsStore, aiUsageStore, subscriptionsStore, teamInvitationsStore, settingsStore } from '$lib/stores/index.svelte';
-import { notificationsStore } from '$lib/stores/notifications.svelte';
+import { pushChanges, pullChanges } from '#lib/sync.remote.js';
+import { browser } from '$app/env';
 
+import {
+  reviewsStore,
+  projectsStore,
+  commentsStore,
+  teamsStore,
+  aiUsageStore,
+  subscriptionsStore,
+  teamInvitationsStore,
+  settingsStore
+} from '#lib/stores/index.svelte.js';
+
+import { notificationsStore } from '#lib/stores/notifications.svelte.js';
 
 export const adapter = new IndexedDBAdapter('codereview-db', 1);
 
@@ -14,7 +24,7 @@ export const syncEngine = new SyncEngine({
     adapter
   },
   remote: {
-    push: data => pushChanges(data),
+    push: (data) => pushChanges(data),
     pull: (lastSync: number, clientId: string) => pullChanges({ lastSync, clientId })
   },
   syncInterval: 30000,
@@ -48,17 +58,17 @@ export async function initDb() {
 
     // SyncEngine.init() now handles initial data pull automatically
     await syncEngine.init();
-    
-     await Promise.all([
-        projectsStore.load(),
-        reviewsStore.load(),
-        commentsStore.load(),
-        teamsStore.load(),
-        teamInvitationsStore.load(),
-        aiUsageStore.load(),
-        subscriptionsStore.load(),
-        notificationsStore.load()
-      ]);
+
+    await Promise.all([
+      projectsStore.load(),
+      reviewsStore.load(),
+      commentsStore.load(),
+      teamsStore.load(),
+      teamInvitationsStore.load(),
+      aiUsageStore.load(),
+      subscriptionsStore.load(),
+      notificationsStore.load()
+    ]);
 
     console.log('✅ Database initialized successfully');
   } catch (error) {

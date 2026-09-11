@@ -1,20 +1,20 @@
 <script lang="ts">
-  import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { Badge } from '$lib/components/ui/badge';
-  import { ScrollArea } from '$lib/components/ui/scroll-area';
-  import { Skeleton } from '$lib/components/ui/skeleton';
+  import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '#lib/components/ui/dialog/index.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
+  import { Skeleton } from '#lib/components/ui/skeleton/index.js';
   import Github from '@lucide/svelte/icons/github';
   import Search from '@lucide/svelte/icons/search';
   import GitPullRequest from '@lucide/svelte/icons/git-pull-request';
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import Settings from '@lucide/svelte/icons/settings';
-  import { GitHubImporter, type Repository, type PullRequest } from '$lib/utils/github-import';
+  import { GitHubImporter, type Repository, type PullRequest } from '#lib/utils/github-import.js';
   import { toast } from 'svelte-sonner';
   import { onMount } from 'svelte';
-  import { authClient } from '$lib/auth-client'
+  import { authClient } from '#lib/auth-client.js'
   import { goto } from '$app/navigation'
 
   interface Props {

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Switch } from '$lib/components/ui/switch';
-	import { RadioGroup, RadioGroupItem } from '$lib/components/ui/radio-group';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { RadioGroup, RadioGroupItem } from '#lib/components/ui/radio-group/index.js';
 	import {
 		Card,
 		CardContent,
@@ -10,9 +10,9 @@
 		CardFooter,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
+	} from '#lib/components/ui/card/index.js';
 	import { goto } from '$app/navigation';
-	import { settingsStore } from '$lib/stores/index.svelte';
+	import { settingsStore } from '#lib/stores/index.svelte.js';
 	import { toast } from 'svelte-sonner';
 
 	let theme = $state<any>('dark');

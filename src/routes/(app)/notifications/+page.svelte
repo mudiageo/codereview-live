@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { notificationsStore } from '$lib/stores/notifications.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Card, CardContent } from '$lib/components/ui/card';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Tabs, TabsList, TabsTrigger, TabsContent } from '$lib/components/ui/tabs';
+  import { notificationsStore } from '#lib/stores/notifications.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Card, CardContent } from '#lib/components/ui/card/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Tabs, TabsList, TabsTrigger, TabsContent } from '#lib/components/ui/tabs/index.js';
   import Bell from '@lucide/svelte/icons/bell';
   import Check from '@lucide/svelte/icons/check';
   import Trash from '@lucide/svelte/icons/trash';

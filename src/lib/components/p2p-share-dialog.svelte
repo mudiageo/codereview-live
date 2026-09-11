@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { Switch } from '$lib/components/ui/switch';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Progress } from '$lib/components/ui/progress';
-  import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+  import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '#lib/components/ui/dialog/index.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Switch } from '#lib/components/ui/switch/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Progress } from '#lib/components/ui/progress/index.js';
+  import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
   import Share2 from '@lucide/svelte/icons/share-2';
   import Copy from '@lucide/svelte/icons/copy';
   import Check from '@lucide/svelte/icons/check';
   import Users from '@lucide/svelte/icons/users';
   import Lock from '@lucide/svelte/icons/lock';
   import Loader2 from '@lucide/svelte/icons/loader-2';
-  import { P2PSharing } from '$lib/utils/p2p-sharing';
+  import { P2PSharing } from '#lib/utils/p2p-sharing.js';
   import { toast } from 'svelte-sonner';
 
   interface Props {

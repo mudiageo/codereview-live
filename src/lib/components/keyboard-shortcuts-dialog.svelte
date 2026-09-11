@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
-	import { keyboardShortcuts, KeyboardShortcuts } from '$lib/utils/keyboard-shortcuts';
+	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#lib/components/ui/dialog/index.js';
+	import { keyboardShortcuts, KeyboardShortcuts } from '#lib/utils/keyboard-shortcuts.js';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
 

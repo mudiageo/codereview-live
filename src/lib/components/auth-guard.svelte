@@ -2,10 +2,10 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import * as Card from '$lib/components/ui/card';
-  import { Button } from '$lib/components/ui/button';
+  import * as Card from '#lib/components/ui/card/index.js';
+  import { Button } from '#lib/components/ui/button/index.js';
   import Lock from '@lucide/svelte/icons/lock';
-  import { auth } from '$lib/stores/auth.svelte';
+  import { auth } from '#lib/stores/auth.svelte.js';
   
   interface Props {
     children: import('svelte').Snippet;

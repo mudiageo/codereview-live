@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Textarea } from '$lib/components/ui/textarea';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
 	import { toast } from 'svelte-sonner';
-	import { projectsStore, subscriptionsStore } from '$lib/stores/index.svelte';
-	import { auth } from '$lib/stores/auth.svelte';
+	import { projectsStore, subscriptionsStore } from '#lib/stores/index.svelte.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
-	import { hasFeatureAccess } from '$lib/config';
+	import { hasFeatureAccess } from '#lib/config/index.js';
 
 	let name = $state('');
 	let description = $state('');

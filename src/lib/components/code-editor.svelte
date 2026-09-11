@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { Textarea } from '$lib/components/ui/textarea';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import Copy from '@lucide/svelte/icons/copy';
 	import Check from '@lucide/svelte/icons/check';
-	import { settingsStore } from '$lib/stores/index.svelte';
+	import { settingsStore } from '#lib/stores/index.svelte.js';
 
 	interface Props {
 		value?: string;

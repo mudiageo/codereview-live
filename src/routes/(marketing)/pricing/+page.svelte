@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import Check from '@lucide/svelte/icons/check';
     import X from '@lucide/svelte/icons/x';
-    import { plans } from '$lib/config/plans';
+    import { plans } from '#lib/config/plans.js';
 </script>
 
 <div class="pt-24 pb-20">

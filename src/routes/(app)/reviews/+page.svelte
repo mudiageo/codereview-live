@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-  import { Tabs, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Card, CardContent, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+  import { Tabs, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
   import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
-  } from '$lib/components/ui/select';
+  } from '#lib/components/ui/select/index.js';
   import Plus from '@lucide/svelte/icons/plus';
   import Search from '@lucide/svelte/icons/search';
   import Filter from '@lucide/svelte/icons/filter';
@@ -18,9 +18,9 @@
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Eye from '@lucide/svelte/icons/eye';
   import Clock from '@lucide/svelte/icons/clock';
-  import { reviewsStore } from '$lib/stores/index.svelte';
-  import { SearchEngine } from '$lib/utils/search';
-  import VirtualList from '$lib/components/virtual-list.svelte';
+  import { reviewsStore } from '#lib/stores/index.svelte.js';
+  import { SearchEngine } from '#lib/utils/search.js';
+  import VirtualList from '#lib/components/virtual-list.svelte';
   
   let searchQuery = $state('');
   let statusFilter = $state('all');

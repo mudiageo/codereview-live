@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import ShieldAlert from '@lucide/svelte/icons/shield-alert';
 	import Zap from '@lucide/svelte/icons/zap';
@@ -15,7 +15,7 @@
 	import Copy from '@lucide/svelte/icons/copy';
 	import Check from '@lucide/svelte/icons/check';
 	import { toast } from 'svelte-sonner';
-	import { settingsStore } from '$lib/stores/index.svelte';
+	import { settingsStore } from '#lib/stores/index.svelte.js';
 	import { goto } from '$app/navigation';
 	import type {
 		CodeAnalysis,
@@ -24,7 +24,7 @@
 		SecurityIssue,
 		PerformanceNote,
 		CodeSmell
-	} from '$lib/server/ai';
+	} from '#lib/server/ai.js';
 
 	interface Props {
 		analysis: CodeAnalysis | null;

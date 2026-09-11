@@ -1,24 +1,24 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
   import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-  } from '$lib/components/ui/dropdown-menu';
-  import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
-  import { Label } from '$lib/components/ui/label';
+  } from '#lib/components/ui/dropdown-menu/index.js';
+  import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '#lib/components/ui/dialog/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
   import UserPlus from '@lucide/svelte/icons/user-plus';
   import MoreVertical from '@lucide/svelte/icons/more-vertical';
   import Mail from '@lucide/svelte/icons/mail';
   import Shield from '@lucide/svelte/icons/shield';
   import Crown from '@lucide/svelte/icons/crown';
   import Users from '@lucide/svelte/icons/users';
-  import { teamsStore, teamInvitationsStore } from '$lib/stores/index.svelte';
+  import { teamsStore, teamInvitationsStore } from '#lib/stores/index.svelte.js';
   import { toast } from 'svelte-sonner';
   
   let inviteEmail = $state('');

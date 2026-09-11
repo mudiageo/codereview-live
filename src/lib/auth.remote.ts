@@ -1,4 +1,4 @@
-import { auth } from '$lib/server/auth';
+import { auth } from '#lib/server/auth.js';
 import { command, getRequestEvent } from '$app/server';
 import { redirect } from '@sveltejs/kit';
 

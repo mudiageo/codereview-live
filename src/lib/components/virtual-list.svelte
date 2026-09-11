@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-	import { createVirtualScroller } from '$lib/utils/virtual-scroll';
+	import { createVirtualScroller } from '#lib/utils/virtual-scroll.js';
 	import { onMount } from 'svelte';
 
 	let {

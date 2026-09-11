@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { createCheckoutSession } from '$lib/server/payments/stripe';
+import { createCheckoutSession } from '#lib/server/payments/stripe.js';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {

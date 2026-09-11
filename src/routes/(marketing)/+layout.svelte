@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import Video from '@lucide/svelte/icons/video';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
 	import Github from '@lucide/svelte/icons/github';
 	import Twitter from '@lucide/svelte/icons/twitter';
-	import { cn } from '$lib/utils';
+	import { cn } from '#lib/utils.js';
 	import { onMount } from 'svelte';
 	import '../layout.css';
 

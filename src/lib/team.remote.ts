@@ -1,11 +1,11 @@
 import { command, query } from '$app/server';
 import * as v from 'valibot';
-import { getUser } from '$lib/server/auth';
-import { db } from '$lib/server/db';
-import { teamMembers, projects } from '$lib/server/db/schema';
+import { getUser } from '#lib/server/auth.js';
+import { db } from '#lib/server/db/index.js';
+import { teamMembers, projects } from '#lib/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
-import { sendTeamInviteEmail } from '$lib/server/email';
-import { generateToken } from '$lib/server/utils/encryption';
+import { sendTeamInviteEmail } from '#lib/server/email/index.js';
+import { generateToken } from '#lib/server/utils/encryption.js';
 
 export const inviteTeamMember = command(
   v.object({

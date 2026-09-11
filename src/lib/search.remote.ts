@@ -1,8 +1,8 @@
 import { query } from '$app/server';
 import * as v from 'valibot';
-import { getUser } from '$lib/server/auth';
-import { db } from '$lib/server/db';
-import { reviews, projects } from '$lib/server/db/schema';
+import { getUser } from '#lib/server/auth.js';
+import { db } from '#lib/server/db/index.js';
+import { reviews, projects } from '#lib/server/db/schema.js';
 import { or, like, eq, and } from 'drizzle-orm';
 
 export const searchAll = query(

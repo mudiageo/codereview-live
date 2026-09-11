@@ -1,6 +1,6 @@
-import { db } from '$lib/server/db'
-import * as schema from '$lib/server/db/schema'
-import { getUser } from '$lib/server/auth'
+import { db } from '#lib/server/db/index.js'
+import * as schema from '#lib/server/db/schema.js'
+import { getUser } from '#lib/server/auth.js'
 import { createServerSync } from 'sveltekit-sync/server';
 import type { SyncConfig } from 'sveltekit-sync/server'
 import { DrizzleAdapter } from 'sveltekit-sync/adapters/drizzle';

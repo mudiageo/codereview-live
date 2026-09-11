@@ -6,7 +6,7 @@ export { stripe } from './stripe';
 export * as stripeService from './stripe';
 export * as paystackService from './paystack';
 
-import type { PlanId } from '$lib/config/plans';
+import type { PlanId } from '#lib/config/plans.js';
 
 export type PaymentProvider = 'stripe' | 'paystack';
 

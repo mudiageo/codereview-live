@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Progress } from '$lib/components/ui/progress';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { ScrollArea } from '$lib/components/ui/scroll-area';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Progress } from '#lib/components/ui/progress/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '#lib/components/ui/select/index.js';
+	import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
+	import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
 	import TrendingUp from '@lucide/svelte/icons/trending-up';
 	import TrendingDown from '@lucide/svelte/icons/trending-down';
 	import Users from '@lucide/svelte/icons/users';
@@ -32,8 +32,8 @@
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import FileCode from '@lucide/svelte/icons/file-code';
 	import FolderTree from '@lucide/svelte/icons/folder-tree';
-	import { reviewsStore, commentsStore, teamsStore, aiUsageStore } from '$lib/stores/index.svelte';
-	import { auth } from '$lib/stores/auth.svelte';
+	import { reviewsStore, commentsStore, teamsStore, aiUsageStore } from '#lib/stores/index.svelte.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
 	import { onMount } from 'svelte';
 
 	let loading = $state(true);

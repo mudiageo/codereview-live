@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
@@ -9,9 +9,9 @@
 		DropdownMenuLabel,
 		DropdownMenuSeparator,
 		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Badge } from '$lib/components/ui/badge';
+	} from '#lib/components/ui/dropdown-menu/index.js';
+	import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import Home from '@lucide/svelte/icons/home';
 	import Folder from '@lucide/svelte/icons/folder';
 	import Video from '@lucide/svelte/icons/video';
@@ -26,8 +26,8 @@
 	import CreditCard from '@lucide/svelte/icons/credit-card';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
-	import { cn } from '$lib/utils';
-	import { auth } from '$lib/stores/auth.svelte';
+	import { cn } from '#lib/utils.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
 
 	let { children } = $props();
 
@@ -83,17 +83,17 @@
 
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { initDb, syncEngine } from '$lib/db';
-	import { Toaster } from '$lib/components/ui/sonner';
-	import SearchCommand from '$lib/components/search-command.svelte';
-	import KeyboardShortcutsDialog from '$lib/components/keyboard-shortcuts-dialog.svelte';
-	import NotificationsDropdown from '$lib/components/ui/notifications-dropdown.svelte';
-	import { browser } from '$app/environment';
-	import { keyboardShortcuts } from '$lib/utils/keyboard-shortcuts';
+	import { initDb, syncEngine } from '#lib/db.js';
+	import { Toaster } from '#lib/components/ui/sonner/index.js';
+	import SearchCommand from '#lib/components/search-command.svelte';
+	import KeyboardShortcutsDialog from '#lib/components/keyboard-shortcuts-dialog.svelte';
+	import NotificationsDropdown from '#lib/components/ui/notifications-dropdown.svelte';
+	import { browser } from '$app/env';
+	import { keyboardShortcuts } from '#lib/utils/keyboard-shortcuts.js';
 
-	import { createRecordingContext } from '$lib/contexts/recording-context.svelte';
-	import RecordingToolbar from '$lib/components/recording-toolbar.svelte';
-    import { notificationsStore } from '$lib/stores/notifications.svelte';
+	import { createRecordingContext } from '#lib/contexts/recording-context.svelte.js';
+	import RecordingToolbar from '#lib/components/recording-toolbar.svelte';
+    import { notificationsStore } from '#lib/stores/notifications.svelte.js';
 
 	// Initialize global recording context
 	const recordingCtx = createRecordingContext();
@@ -211,7 +211,7 @@
 			}
 		}}
 		isAnnotationMode={recordingCtx.isAnnotationMode}
-		onToggleAnnotation={() => (recordingCtx.isAnnotationMode = !recordingCtx.isAnnotationMode)}
+		onToggleAnnotation={() => recordingCtx.isAnnotationMode = !recordingCtx.isAnnotationMode}
 		webcamPosition={recordingCtx.settings.webcamPosition}
 		onCyclePosition={() => recordingCtx.cycleWebcamPosition()}
 		onCycleSize={() => recordingCtx.cycleWebcamSize()}

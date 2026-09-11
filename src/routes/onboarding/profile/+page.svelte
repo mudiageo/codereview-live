@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '#lib/components/ui/select/index.js';
 	import {
 		Card,
 		CardContent,
@@ -10,12 +10,12 @@
 		CardFooter,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+	} from '#lib/components/ui/card/index.js';
+	import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
 	import Camera from '@lucide/svelte/icons/camera';
 	import { goto } from '$app/navigation';
-	import { authClient } from '$lib/auth-client';
-	import { auth } from '$lib/stores/auth.svelte';
+	import { authClient } from '#lib/auth-client.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
 	import { toast } from 'svelte-sonner';
 
 	let name = $state('');

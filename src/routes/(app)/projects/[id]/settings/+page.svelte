@@ -1,17 +1,17 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { projectsStore } from '$lib/stores/index.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Textarea } from '$lib/components/ui/textarea';
-  import { Label } from '$lib/components/ui/label';
-  import { Switch } from '$lib/components/ui/switch';
-  import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-  import { Badge } from '$lib/components/ui/badge';
+  import { projectsStore } from '#lib/stores/index.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Textarea } from '#lib/components/ui/textarea/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Switch } from '#lib/components/ui/switch/index.js';
+  import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
   import { toast } from 'svelte-sonner';
-  import { notificationsStore } from '$lib/stores/notifications.svelte';
+  import { notificationsStore } from '#lib/stores/notifications.svelte.js';
   import Trash from '@lucide/svelte/icons/trash';
   import Save from '@lucide/svelte/icons/save';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';

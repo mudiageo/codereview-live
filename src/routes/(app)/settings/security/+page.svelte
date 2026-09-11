@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
 	import { toast } from 'svelte-sonner';
 	import Shield from '@lucide/svelte/icons/shield';
 	import Key from '@lucide/svelte/icons/key';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
-	import { authClient } from '$lib/auth-client';
-	import { auth } from '$lib/stores/auth.svelte';
+	import { authClient } from '#lib/auth-client.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 

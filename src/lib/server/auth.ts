@@ -1,9 +1,19 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { twoFactor, admin, multiSession } from 'better-auth/plugins';
-import { env } from '$env/dynamic/private';
-import { db } from '$lib/server/db';
-import * as schema from '$lib/server/db/schema';
+
+import {
+	GOOGLE_CLIENT_ID,
+	GOOGLE_CLIENT_SECRET,
+	GITHUB_CLIENT_ID,
+	GITHUB_CLIENT_SECRET,
+	GITLAB_CLIENT_ID,
+	GITLAB_CLIENT_SECRET,
+	BETTER_AUTH_URL
+} from '$app/env/private';
+
+import { db } from '#lib/server/db/index.js';
+import * as schema from '#lib/server/db/schema.js';
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { getRequestEvent } from "$app/server";
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
@@ -33,20 +43,20 @@ export const auth = betterAuth({
 	},
 	socialProviders: {
 		google: {
-			clientId: env.GOOGLE_CLIENT_ID as string,
-			clientSecret: env.GOOGLE_CLIENT_SECRET as string,
-			enabled: !!env.GOOGLE_CLIENT_ID && !!env.GOOGLE_CLIENT_SECRET
+			clientId: GOOGLE_CLIENT_ID as string,
+			clientSecret: GOOGLE_CLIENT_SECRET as string,
+			enabled: !!GOOGLE_CLIENT_ID && !!GOOGLE_CLIENT_SECRET
 		},
-		github: { 
-      clientId: env.GITHUB_CLIENT_ID as string, 
-      clientSecret: env.GITHUB_CLIENT_SECRET as string,
-      scope: ["user", "repo", "read:user"]
+		github: {
+			clientId: GITHUB_CLIENT_ID as string,
+			clientSecret: GITHUB_CLIENT_SECRET as string,
+			scope: ["user", "repo", "read:user"]
             
-    },
-    gitlab: { 
-      clientId: env.GITLAB_CLIENT_ID as string, 
-      clientSecret: env.GITLAB_CLIENT_SECRET as string, 
-    }, 
+		},
+		gitlab: {
+			clientId: GITLAB_CLIENT_ID as string,
+			clientSecret: GITLAB_CLIENT_SECRET as string
+		}
 	},
 	// Email verification configuration
 	emailVerification: {
@@ -114,7 +124,7 @@ export const auth = betterAuth({
 	plugins: [
 		// Two-factor authentication plugin
 		twoFactor({
-			issuer: env.BETTER_AUTH_URL || 'CodeReview Live',
+			issuer: BETTER_AUTH_URL || 'CodeReview Live',
 			skipVerificationOnEnable: false,
 			totpOptions: {
 				period: 30,

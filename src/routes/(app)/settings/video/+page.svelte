@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Switch } from '$lib/components/ui/switch';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
 	import {
 		Card,
 		CardContent,
 		CardDescription,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { Slider } from '$lib/components/ui/slider';
-	import { Badge } from '$lib/components/ui/badge';
+	} from '#lib/components/ui/card/index.js';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '#lib/components/ui/select/index.js';
+	import { Slider } from '#lib/components/ui/slider/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { toast } from 'svelte-sonner';
-	import { settingsStore } from '$lib/stores/index.svelte';
-	import { VIDEO } from '$lib/constants';
+	import { settingsStore } from '#lib/stores/index.svelte.js';
+	import { VIDEO } from '#lib/constants.js';
 	import {
 		detectAvailableBackends,
 		createClientVideoStorage,
@@ -22,7 +22,7 @@
 		getBackendDisplayName,
 		type ClientStorageBackend,
 		type StorageInfo
-	} from '$lib/utils/client-video-storage';
+	} from '#lib/utils/client-video-storage.js';
 	import HardDrive from '@lucide/svelte/icons/hard-drive';
 	import Cloud from '@lucide/svelte/icons/cloud';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';

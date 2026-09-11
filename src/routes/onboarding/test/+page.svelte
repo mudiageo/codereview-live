@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import {
 		Card,
 		CardContent,
 		CardDescription,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Progress } from '$lib/components/ui/progress';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { ScrollArea } from '$lib/components/ui/scroll-area';
+	} from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Progress } from '#lib/components/ui/progress/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+	import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
+	import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
 	import {
 		Accordion,
 		AccordionContent,
 		AccordionItem,
 		AccordionTrigger
-	} from '$lib/components/ui/accordion';
-	import { Input } from '$lib/components/ui/input';
+	} from '#lib/components/ui/accordion/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
 	import Play from '@lucide/svelte/icons/play';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
 	import Circle from '@lucide/svelte/icons/circle';
@@ -50,8 +50,8 @@
 	import Lock from '@lucide/svelte/icons/lock';
 	import Eye from '@lucide/svelte/icons/eye';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
-	import { reviewsStore, teamsStore } from '$lib/stores/index.svelte';
-	import { auth } from '$lib/stores/auth.svelte';
+	import { reviewsStore, teamsStore } from '#lib/stores/index.svelte.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 

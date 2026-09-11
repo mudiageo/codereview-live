@@ -1,75 +1,103 @@
-import { env } from '$env/dynamic/private';
+import {
+  PUBLIC_APP_NAME,
+  PUBLIC_APP_URL,
+  BETTER_AUTH_SECRET,
+  BETTER_AUTH_URL,
+  EMAIL_PROVIDER,
+  SMTP_HOST,
+  SMTP_PORT,
+  SMTP_USER,
+  SMTP_PASSWORD,
+  SMTP_FROM,
+  RESEND_API_KEY,
+  STORAGE_PROVIDER,
+  LOCAL_STORAGE_PATH,
+  PUBLIC_STORAGE_URL,
+  R2_ACCOUNT_ID,
+  R2_ACCESS_KEY_ID,
+  R2_SECRET_ACCESS_KEY,
+  R2_BUCKET_NAME,
+  R2_PUBLIC_URL,
+  S3_REGION,
+  S3_ACCESS_KEY_ID,
+  S3_SECRET_ACCESS_KEY,
+  S3_BUCKET_NAME,
+  S3_PUBLIC_URL,
+  MAX_VIDEO_SIZE_MB,
+  ENABLE_SERVER_COMPRESSION,
+  VIDEO_THUMBNAIL_ENABLED,
+  STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET,
+  STRIPE_PRO_PRICE_ID,
+  STRIPE_TEAM_PRICE_ID,
+  PAYSTACK_SECRET_KEY,
+  PAYSTACK_PRO_PLAN_CODE,
+  PAYSTACK_TEAM_PLAN_CODE,
+  RATE_LIMIT_ENABLED,
+  RATE_LIMIT_MAX_REQUESTS,
+  RATE_LIMIT_WINDOW_MS
+} from '$app/env/private';
 
 export const config = {
   app: {
-    name: env.PUBLIC_APP_NAME || 'CodeReview.live',
-    url: env.PUBLIC_APP_URL || 'http://localhost:5173',
+    name: PUBLIC_APP_NAME || 'CodeReview.live',
+    url: PUBLIC_APP_URL || 'http://localhost:5173'
   },
-
-  auth: {
-    secret: env.BETTER_AUTH_SECRET!,
-    url: env.BETTER_AUTH_URL!,
-  },
-
+  auth: { secret: BETTER_AUTH_SECRET!, url: BETTER_AUTH_URL! },
   email: {
-    provider: (env.EMAIL_PROVIDER || 'nodemailer') as 'nodemailer' | 'resend',
+    provider: (EMAIL_PROVIDER || 'nodemailer') as 'nodemailer' | 'resend',
     smtp: {
-      host: env.SMTP_HOST!,
-      port: parseInt(env.SMTP_PORT || '587'),
-      user: env.SMTP_USER!,
-      password: env.SMTP_PASSWORD!,
-      from: env.SMTP_FROM!,
+      host: SMTP_HOST!,
+      port: parseInt(SMTP_PORT || '587'),
+      user: SMTP_USER!,
+      password: SMTP_PASSWORD!,
+      from: SMTP_FROM!
     },
-    resend: {
-      apiKey: env.RESEND_API_KEY!,
-    },
+    resend: { apiKey: RESEND_API_KEY! }
   },
-
   storage: {
-    provider: (env.STORAGE_PROVIDER || 'local') as 'local' | 'r2' | 's3' | 'hybrid',
+    provider: (STORAGE_PROVIDER || 'local') as 'local' | 'r2' | 's3' | 'hybrid',
     local: {
-      path: env.LOCAL_STORAGE_PATH || './uploads',
-      publicUrl: env.PUBLIC_STORAGE_URL!,
+      path: LOCAL_STORAGE_PATH || './uploads',
+      publicUrl: PUBLIC_STORAGE_URL!
     },
     r2: {
-      accountId: env.R2_ACCOUNT_ID!,
-      accessKeyId: env.R2_ACCESS_KEY_ID!,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY!,
-      bucketName: env.R2_BUCKET_NAME!,
-      publicUrl: env.R2_PUBLIC_URL!,
+      accountId: R2_ACCOUNT_ID!,
+      accessKeyId: R2_ACCESS_KEY_ID!,
+      secretAccessKey: R2_SECRET_ACCESS_KEY!,
+      bucketName: R2_BUCKET_NAME!,
+      publicUrl: R2_PUBLIC_URL!
     },
     s3: {
-      region: env.S3_REGION || 'us-east-1',
-      accessKeyId: env.S3_ACCESS_KEY_ID!,
-      secretAccessKey: env.S3_SECRET_ACCESS_KEY!,
-      bucketName: env.S3_BUCKET_NAME!,
-      publicUrl: env.S3_PUBLIC_URL!,
-    },
+      region: S3_REGION || 'us-east-1',
+      accessKeyId: S3_ACCESS_KEY_ID!,
+      secretAccessKey: S3_SECRET_ACCESS_KEY!,
+      bucketName: S3_BUCKET_NAME!,
+      publicUrl: S3_PUBLIC_URL!
+    }
   },
-
   video: {
-    maxSizeMB: parseInt(env.MAX_VIDEO_SIZE_MB || '500'),
-    enableServerCompression: env.ENABLE_SERVER_COMPRESSION === 'true',
-    thumbnailEnabled: env.VIDEO_THUMBNAIL_ENABLED === 'true',
+    maxSizeMB: parseInt(MAX_VIDEO_SIZE_MB || '500'),
+    enableServerCompression: ENABLE_SERVER_COMPRESSION === 'true',
+    thumbnailEnabled: VIDEO_THUMBNAIL_ENABLED === 'true'
   },
 
   payments: {
     stripe: {
-      secretKey: env.STRIPE_SECRET_KEY!,
-      webhookSecret: env.STRIPE_WEBHOOK_SECRET!,
-      proPriceId: env.STRIPE_PRO_PRICE_ID!,
-      teamPriceId: env.STRIPE_TEAM_PRICE_ID!,
+      secretKey: STRIPE_SECRET_KEY!,
+      webhookSecret: STRIPE_WEBHOOK_SECRET!,
+      proPriceId: STRIPE_PRO_PRICE_ID!,
+      teamPriceId: STRIPE_TEAM_PRICE_ID!
     },
     paystack: {
-      secretKey: env.PAYSTACK_SECRET_KEY!,
-      proPlanCode: env.PAYSTACK_PRO_PLAN_CODE!,
-      teamPlanCode: env.PAYSTACK_TEAM_PLAN_CODE!,
-    },
+      secretKey: PAYSTACK_SECRET_KEY!,
+      proPlanCode: PAYSTACK_PRO_PLAN_CODE!,
+      teamPlanCode: PAYSTACK_TEAM_PLAN_CODE!
+    }
   },
-
   rateLimit: {
-    enabled: env.RATE_LIMIT_ENABLED === 'true',
-    maxRequests: parseInt(env.RATE_LIMIT_MAX_REQUESTS || '100'),
-    windowMs: parseInt(env.RATE_LIMIT_WINDOW_MS || '60000'),
-  },
+    enabled: RATE_LIMIT_ENABLED === 'true',
+    maxRequests: parseInt(RATE_LIMIT_MAX_REQUESTS || '100'),
+    windowMs: parseInt(RATE_LIMIT_WINDOW_MS || '60000')
+  }
 };

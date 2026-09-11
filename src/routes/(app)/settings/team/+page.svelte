@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '#lib/components/ui/select/index.js';
 	import { toast } from 'svelte-sonner';
-	import { teamsStore, teamInvitationsStore } from '$lib/stores/index.svelte';
-	import { auth } from '$lib/stores/auth.svelte';
-	import { hasFeatureAccess } from '$lib/config';
+	import { teamsStore, teamInvitationsStore } from '#lib/stores/index.svelte.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
+	import { hasFeatureAccess } from '#lib/config/index.js';
 	import UserPlus from '@lucide/svelte/icons/user-plus';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import Mail from '@lucide/svelte/icons/mail';

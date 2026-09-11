@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Progress } from '$lib/components/ui/progress';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Progress } from '#lib/components/ui/progress/index.js';
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import Sparkles from '@lucide/svelte/icons/sparkles';
   

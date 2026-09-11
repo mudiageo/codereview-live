@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { initializeTransaction } from '$lib/server/payments/paystack';
+import { initializeTransaction } from '#lib/server/payments/paystack.js';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {

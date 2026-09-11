@@ -1,6 +1,6 @@
 import { command, query } from '$app/server';
 import * as v from 'valibot';
-import { getUser } from '$lib/server/auth';
+import { getUser } from '#lib/server/auth.js';
 import {
   explainCode,
   generateReviewSuggestions,
@@ -10,12 +10,12 @@ import {
   checkReviewItems,
   estimateReviewTime,
   type CodeAnalysis,
-} from '$lib/server/ai';
-import { db } from '$lib/server/db';
-import { aiUsage, users } from '$lib/server/db/schema';
+} from '#lib/server/ai.js';
+import { db } from '#lib/server/db/index.js';
+import { aiUsage, users } from '#lib/server/db/schema.js';
 import { eq, sql } from 'drizzle-orm';
-import { env } from '$env/dynamic/private'
-import { planLimits } from '$lib/config/features'
+import { GEMINI_API_KEY } from '$app/env/private';
+import { planLimits } from '#lib/config/features.js';
 
 // Check AI credits and user limits
 async function checkAICredits(userId: string): Promise<boolean> {
@@ -39,11 +39,9 @@ async function checkAICredits(userId: string): Promise<boolean> {
 
 // Helper to get API key
 async function getApiKey(userId: string): Promise<string> {
-  const userRecord = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
+  const userRecord = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  const apiKey = userRecord?.apiKey || GEMINI_API_KEY;
 
-  const apiKey = userRecord?.apiKey || env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('Gemini API key not configured. Add your key in Settings > AI.');
   }

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { ModeWatcher, setMode, resetMode } from 'mode-watcher';
 	import './layout.css';
-	import '$lib/styles/animations.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import '#lib/styles/animations.css';
+	import favicon from '#lib/assets/favicon.svg';
 	import { onNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { settingsStore } from '$lib/stores/index.svelte';
-	import { CSS_VARS } from '$lib/constants';
+	import { settingsStore } from '#lib/stores/index.svelte.js';
+	import { CSS_VARS } from '#lib/constants.js';
 
 	let { children } = $props();
 
@@ -37,6 +37,7 @@
 
 	// Enable View Transitions API for smooth page navigation
 	onNavigate((navigation) => {
+		if (navigation.shallow) return;
 		if (!document.startViewTransition) return;
 
 		return new Promise((resolve) => {

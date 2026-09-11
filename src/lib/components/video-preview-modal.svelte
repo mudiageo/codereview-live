@@ -5,13 +5,13 @@
 		DialogFooter,
 		DialogHeader,
 		DialogTitle
-	} from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Textarea } from '$lib/components/ui/textarea';
-	import { Label } from '$lib/components/ui/label';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { Badge } from '$lib/components/ui/badge';
+	} from '#lib/components/ui/dialog/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '#lib/components/ui/select/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { toast } from 'svelte-sonner';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Save from '@lucide/svelte/icons/save';
@@ -20,8 +20,8 @@
 	import Cloud from '@lucide/svelte/icons/cloud';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import X from '@lucide/svelte/icons/x';
-	import { uploadVideo as uploadVideoForm } from '$lib/video.remote';
-	import { settingsStore } from '$lib/stores/index.svelte';
+	import { uploadVideo as uploadVideoForm } from '#lib/video.remote.js';
+	import { settingsStore } from '#lib/stores/index.svelte.js';
 	import {
 		createClientVideoStorage,
 		cloudSyncQueue,
@@ -29,7 +29,7 @@
 		detectAvailableBackends,
 		type StorageMode,
 		type ClientStorageBackend
-	} from '$lib/utils/client-video-storage';
+	} from '#lib/utils/client-video-storage.js';
 
 	interface Props {
 		open: boolean;

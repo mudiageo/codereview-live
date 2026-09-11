@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import {
 		Card,
 		CardContent,
 		CardDescription,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Progress } from '$lib/components/ui/progress';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { ScrollArea } from '$lib/components/ui/scroll-area';
+	} from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Progress } from '#lib/components/ui/progress/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+	import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
+	import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
 	import {
 		Accordion,
 		AccordionContent,
 		AccordionItem,
 		AccordionTrigger
-	} from '$lib/components/ui/accordion';
-	import { Input } from '$lib/components/ui/input';
+	} from '#lib/components/ui/accordion/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
 	import Play from '@lucide/svelte/icons/play';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
 	import Circle from '@lucide/svelte/icons/circle';
@@ -50,10 +50,10 @@
 	import Lock from '@lucide/svelte/icons/lock';
 	import Eye from '@lucide/svelte/icons/eye';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
-	import { auth } from '$lib/stores/auth.svelte';
+	import { auth } from '#lib/stores/auth.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 
 	let loading = $state(true);
 	let activeTab = $state('progress');
@@ -104,8 +104,23 @@
 					duration: 5,
 					videoUrl: '#'
 				},
-				{ id: 'vr-3', title: 'Screen Recording Tips', completed: false, duration: 4, videoUrl: '#' },
-				{ id: 'vr-4', title: 'Adding Annotations', completed: false, duration: 4, videoUrl: '#' },
+
+				{
+					id: 'vr-3',
+					title: 'Screen Recording Tips',
+					completed: false,
+					duration: 4,
+					videoUrl: '#'
+				},
+
+				{
+					id: 'vr-4',
+					title: 'Adding Annotations',
+					completed: false,
+					duration: 4,
+					videoUrl: '#'
+				},
+
 				{
 					id: 'vr-5',
 					title: 'Using Picture-in-Picture',
@@ -353,10 +368,9 @@
 
 	// Calculate overall progress
 	const totalLessons = $derived(onboardingModules.reduce((sum, m) => sum + m.totalLessons, 0));
-	const completedLessons = $derived(
-		onboardingModules.reduce((sum, m) => sum + m.completedLessons, 0)
-	);
-	const overallProgress = $derived(Math.round((completedLessons / totalLessons) * 100));
+
+	const completedLessons = $derived(onboardingModules.reduce((sum, m) => sum + m.completedLessons, 0));
+	const overallProgress = $derived(Math.round(completedLessons / totalLessons * 100));
 
 	// Filter templates based on search
 	const filteredTemplates = $derived(
@@ -370,14 +384,14 @@
 	);
 
 	function saveProgress() {
-        if (browser) {
-             const progress = onboardingModules.map(m => ({
-                 id: m.id,
-                 lessons: m.lessons.map(l => ({ id: l.id, completed: l.completed }))
-             }));
-             localStorage.setItem('onboarding-progress', JSON.stringify(progress));
-        }
-    }
+		if (browser) {
+			const progress = onboardingModules.map((m) => ({
+				id: m.id,
+				lessons: m.lessons.map((l) => ({ id: l.id, completed: l.completed }))
+			}));
+			localStorage.setItem('onboarding-progress', JSON.stringify(progress));
+		}
+	}
 
 	$effect(() => {
 		// Check if profile is complete
@@ -534,10 +548,12 @@
 					</div>
 				</div>
 				<div class="flex gap-3">
-					<Button variant="outline" class="gap-2" onclick={() => (activeTab = 'templates')}>
-						<BookOpen class="h-4 w-4" />
-						Templates
-					</Button>
+					<Button
+						variant="outline"
+						class="gap-2"
+						onclick={() => activeTab = 'templates'}
+					><BookOpen class="h-4 w-4" />Templates</Button>
+
 					<Button
 						class="gap-2"
 						onclick={() => {
@@ -575,15 +591,12 @@
 			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each onboardingModules as module}
 					{@const colors = getColorClasses(module.color)}
-					{@const progress = Math.round((module.completedLessons / module.totalLessons) * 100)}
+					{@const progress = Math.round(module.completedLessons / module.totalLessons * 100)}
 					{@const isComplete = module.completedLessons === module.totalLessons}
 
 					<Card
-						class="relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 {selectedModule ===
-						module.id
-							? 'ring-2 ring-primary'
-							: ''}"
-						onclick={() => (selectedModule = selectedModule === module.id ? null : module.id)}
+						class="relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 {selectedModule === module.id ? 'ring-2 ring-primary' : ''}"
+						onclick={() => selectedModule = selectedModule === module.id ? null : module.id}
 					>
 						<div class="absolute top-0 left-0 right-0 h-1 bg-muted">
 							<div
@@ -701,7 +714,11 @@
 					<Input placeholder="Search templates..." bind:value={searchQuery} class="pl-9" />
 				</div>
 				<div class="flex gap-2">
-					<Badge variant="outline" class="px-3 py-2 cursor-pointer hover:bg-muted">All</Badge>
+					<Badge
+						variant="outline"
+						class="px-3 py-2 cursor-pointer hover:bg-muted"
+					>All</Badge>
+
 					<Badge
 						variant="outline"
 						class="px-3 py-2 cursor-pointer hover:bg-muted bg-emerald-500/10 text-emerald-600 border-emerald-500/20"

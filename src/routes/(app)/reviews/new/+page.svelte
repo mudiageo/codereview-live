@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Textarea } from '$lib/components/ui/textarea';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
 	import {
 		Card,
 		CardContent,
 		CardDescription,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { Badge } from '$lib/components/ui/badge';
+	} from '#lib/components/ui/card/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '#lib/components/ui/select/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Upload from '@lucide/svelte/icons/upload';
 	import Github from '@lucide/svelte/icons/github';
@@ -29,39 +29,39 @@
 	import FileCode from '@lucide/svelte/icons/file-code';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
 	import X from '@lucide/svelte/icons/x';
-	import AuthGuard from '$lib/components/auth-guard.svelte';
-	import PaywallDialog from '$lib/components/paywall-dialog.svelte';
-	import LimitReached from '$lib/components/limit-reached.svelte';
-	import UpgradeDialog from '$lib/components/upgrade-dialog.svelte';
-	import CodeEditor from '$lib/components/code-editor.svelte';
-	import MediaRecorder from '$lib/components/media-recorder.svelte';
-	import VideoUploader from '$lib/components/video-uploader.svelte';
-	import GitHubImportDialog from '$lib/components/github-import-dialog.svelte';
-	import GitLabImportDialog from '$lib/components/gitlab-import-dialog.svelte';
-	import LocalGitBrowser from '$lib/components/git-repo-browser.svelte';
-	import AIAnalysisPanel from '$lib/components/ai-analysis-panel.svelte';
-	import ReviewChecklist from '$lib/components/review-checklist.svelte';
-	import GlobalAnnotationLayer from '$lib/components/global-annotation-layer.svelte';
-	import CodeReviewWorkspace, { type FileNode } from '$lib/components/code-review-workspace.svelte';
+	import AuthGuard from '#lib/components/auth-guard.svelte';
+	import PaywallDialog from '#lib/components/paywall-dialog.svelte';
+	import LimitReached from '#lib/components/limit-reached.svelte';
+	import UpgradeDialog from '#lib/components/upgrade-dialog.svelte';
+	import CodeEditor from '#lib/components/code-editor.svelte';
+	import MediaRecorder from '#lib/components/media-recorder.svelte';
+	import VideoUploader from '#lib/components/video-uploader.svelte';
+	import GitHubImportDialog from '#lib/components/github-import-dialog.svelte';
+	import GitLabImportDialog from '#lib/components/gitlab-import-dialog.svelte';
+	import LocalGitBrowser from '#lib/components/git-repo-browser.svelte';
+	import AIAnalysisPanel from '#lib/components/ai-analysis-panel.svelte';
+	import ReviewChecklist from '#lib/components/review-checklist.svelte';
+	import GlobalAnnotationLayer from '#lib/components/global-annotation-layer.svelte';
+	import CodeReviewWorkspace, { type FileNode } from '#lib/components/code-review-workspace.svelte';
 	import {
 		getRecordingContext,
 		type RecordingContext
-	} from '$lib/contexts/recording-context.svelte';
+	} from '#lib/contexts/recording-context.svelte.js';
 	import {
 		reviewsStore,
 		projectsStore,
 		subscriptionsStore,
 		aiUsageStore
-	} from '$lib/stores/index.svelte';
-	import { auth } from '$lib/stores/auth.svelte';
-	import { analyzeCodeAI, checkReviewItemsAI } from '$lib/ai.remote';
-	import { checklistTemplates, getTemplate } from '$lib/config/checklist-templates';
-	import { hasFeatureAccess, getLimit, isWithinLimit } from '$lib/config';
+	} from '#lib/stores/index.svelte.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
+	import { analyzeCodeAI, checkReviewItemsAI } from '#lib/ai.remote.js';
+	import { checklistTemplates, getTemplate } from '#lib/config/checklist-templates.js';
+	import { hasFeatureAccess, getLimit, isWithinLimit } from '#lib/config/index.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
-	import type { CodeAnalysis } from '$lib/server/ai';
+	import type { CodeAnalysis } from '#lib/server/ai.js';
 
 	// Language detection map (shared constant)
 	const LANGUAGE_MAP: Record<string, string> = {

@@ -1,10 +1,10 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { Button } from '$lib/components/ui/button';
-  import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-  import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Card, CardContent, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+  import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Settings from '@lucide/svelte/icons/settings';
   import Plus from '@lucide/svelte/icons/plus';
@@ -13,7 +13,7 @@
   import Clock from '@lucide/svelte/icons/clock';
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Eye from '@lucide/svelte/icons/eye';
-  import { projectsStore, reviewsStore, commentsStore, teamsStore } from '$lib/stores/index.svelte';
+  import { projectsStore, reviewsStore, commentsStore, teamsStore } from '#lib/stores/index.svelte.js';
   
   const projectId = $derived(page.params.id);
   

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getUser } from '$lib/server/auth';
+import { getUser } from '#lib/server/auth.js';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 

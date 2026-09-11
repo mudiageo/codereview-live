@@ -1,9 +1,9 @@
 import { form, command } from '$app/server';
 import * as v from 'valibot';
-import { getUser } from '$lib/server/auth';
-import { uploadFile, deleteFile } from '$lib/server/storage';
-import { compressVideo, generateThumbnail, getVideoMetadata } from '$lib/server/storage/video-processor';
-import { config } from '$lib/server/config';
+import { getUser } from '#lib/server/auth.js';
+import { uploadFile, deleteFile } from '#lib/server/storage/index.js';
+import { compressVideo, generateThumbnail, getVideoMetadata } from '#lib/server/storage/video-processor.js';
+import { config } from '#lib/server/config.js';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { writeFile, unlink } from 'fs/promises';

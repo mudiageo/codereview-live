@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Skeleton } from '$lib/components/ui/skeleton';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Skeleton } from '#lib/components/ui/skeleton/index.js';
   import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-  } from '$lib/components/ui/dropdown-menu';
-  import { Tabs, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
+  } from '#lib/components/ui/dropdown-menu/index.js';
+  import { Tabs, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
   import Plus from '@lucide/svelte/icons/plus';
   import Search from '@lucide/svelte/icons/search';
   import Grid3x3 from '@lucide/svelte/icons/grid-3x3';
@@ -20,8 +20,8 @@
   import FileVideo from '@lucide/svelte/icons/file-video';
   import Users from '@lucide/svelte/icons/users';
   import Clock from '@lucide/svelte/icons/clock';
-  import { projectsStore, reviewsStore } from '$lib/stores/index.svelte';
-  import { SearchEngine } from '$lib/utils/search';
+  import { projectsStore, reviewsStore } from '#lib/stores/index.svelte.js';
+  import { SearchEngine } from '#lib/utils/search.js';
   import { goto } from '$app/navigation';
   import Globe from '@lucide/svelte/icons/globe';
   import Lock from '@lucide/svelte/icons/lock';
