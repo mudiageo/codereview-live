@@ -1,4 +1,4 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
 import { getUser } from '#lib/server/auth.js';
 import { writeFile, mkdir } from 'fs/promises';
@@ -9,24 +9,24 @@ export const POST: RequestHandler = async ({ request }) => {
     // Verify user is authenticated
     const user = await getUser();
     if (!user) {
-      return json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const formData = await request.formData();
     const avatarEntry = formData.get('avatar');
     if (!(avatarEntry instanceof File)) {
-      return json({ error: 'No file provided or invalid file' }, { status: 400 });
+      return Response.json({ error: 'No file provided or invalid file' }, { status: 400 });
     }
     const avatar = avatarEntry;
 
     // Validate file type
     if (!avatar.type.startsWith('image/')) {
-      return json({ error: 'File must be an image' }, { status: 400 });
+      return Response.json({ error: 'File must be an image' }, { status: 400 });
     }
 
     // Validate file size (5MB)
     const MAX_SIZE = 5 * 1024 * 1024;
     if (avatar.size > MAX_SIZE) {
-      return json({ error: 'File size must be less than 5MB' }, { status: 400 });
+      return Response.json({ error: 'File size must be less than 5MB' }, { status: 400 });
     }
 
     // Generate unique filename
@@ -38,7 +38,7 @@ export const POST: RequestHandler = async ({ request }) => {
     };
     const ext = extensionMap[avatar.type];
     if (!ext) {
-      return json({ error: 'Unsupported image type' }, { status: 400 });
+      return Response.json({ error: 'Unsupported image type' }, { status: 400 });
     }
     const filename = `${user.id}-${crypto.randomUUID()}.${ext}`;
 
@@ -54,9 +54,9 @@ export const POST: RequestHandler = async ({ request }) => {
     // Return public URL
     const url = `/uploads/avatars/${filename}`;
 
-    return json({ url });
+    return Response.json({ url });
   } catch (error) {
     console.error('Avatar upload error:', error);
-    return json({ error: 'Failed to upload avatar' }, { status: 500 });
+    return Response.json({ error: 'Failed to upload avatar' }, { status: 500 });
   }
 };

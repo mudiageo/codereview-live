@@ -1,4 +1,4 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
 import { createCheckoutSession } from '#lib/server/payments/stripe.js';
 
@@ -7,13 +7,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		// Check if user is authenticated
 		const session = await locals.auth();
 		if (!session?.user) {
-			return json({ error: 'Unauthorized' }, { status: 401 });
+			return Response.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
 		const { priceId, plan } = await request.json();
 
 		if (!priceId) {
-			return json({ error: 'Price ID is required' }, { status: 400 });
+			return Response.json({ error: 'Price ID is required' }, { status: 400 });
 		}
 
 		const publicAppUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
@@ -28,10 +28,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			customerEmail: session.user.email
 		});
 
-		return json({ url: checkoutSession.url });
+		return Response.json({ url: checkoutSession.url });
 	} catch (error) {
 		console.error('Failed to create checkout session:', error);
-		return json(
+		return Response.json(
 			{ error: 'Failed to create checkout session' },
 			{ status: 500 }
 		);

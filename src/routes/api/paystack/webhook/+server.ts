@@ -1,4 +1,4 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
 import { handleWebhook } from '#lib/server/payments/paystack.js';
 import { db } from '#lib/server/db/index.js';
@@ -11,7 +11,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const signature = request.headers.get('x-paystack-signature');
 
 		if (!signature) {
-			return json({ error: 'No signature provided' }, { status: 400 });
+			return Response.json({ error: 'No signature provided' }, { status: 400 });
 		}
 
 		const event = await handleWebhook(body, signature);
@@ -140,10 +140,10 @@ export const POST: RequestHandler = async ({ request }) => {
 				console.log(`Unhandled event type: ${event.event}`);
 		}
 
-		return json({ received: true });
+		return Response.json({ received: true });
 	} catch (error) {
 		console.error('Webhook error:', error);
-		return json(
+		return Response.json(
 			{ error: 'Webhook processing failed' },
 			{ status: 400 }
 		);
