@@ -128,6 +128,100 @@ class ReviewsStore {
 
 export const reviewsStore = new ReviewsStore();
 
+// Review Assignments Store
+class ReviewAssignmentsStore {
+  private collection: any = null;
+
+  data = $state<import('#lib/server/db/schema.js').ReviewAssignment[]>([]);
+  isLoading = $state(false);
+  error = $state<Error | null>(null);
+
+  // Join assignments with user data locally
+  get withDetails() {
+    return this.data.map(assignment => {
+      const user = usersStore.findById(assignment.userId);
+      const assigner = assignment.assignedBy ? usersStore.findById(assignment.assignedBy) : null;
+      return {
+        ...assignment,
+        user: {
+          name: user?.name || 'Unknown User',
+          email: user?.email || '',
+          avatar: user?.image || ''
+        },
+        assigner: assigner ? {
+          name: assigner.name,
+          avatar: assigner.image
+        } : null
+      };
+    });
+  }
+
+  async load() {
+    this.isLoading = true;
+    this.error = null;
+    try {
+      this.collection = syncEngine.collection('reviewAssignments');
+      await this.collection.load();
+      this.data = this.collection.data as import('#lib/server/db/schema.js').ReviewAssignment[];
+    } catch (err) {
+      this.error = err as Error;
+      console.error('Failed to load review assignments:', err);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  findByReview(reviewId: string) {
+    return this.withDetails.filter((a) => a.reviewId === reviewId);
+  }
+
+  findByUser(userId: string) {
+    return this.withDetails.filter((a) => a.userId === userId);
+  }
+
+  async create(assignment: Omit<import('#lib/server/db/schema.js').ReviewAssignment, 'id' | 'createdAt' | 'updatedAt'>) {
+    if (!this.collection) return null;
+    try {
+      const newAssignment = {
+        ...assignment,
+        id: crypto.randomUUID(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      await this.collection.create(newAssignment);
+      this.data.push(newAssignment);
+      return newAssignment;
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+
+  async updateStatus(id: string, status: 'pending' | 'approved' | 'changes_requested') {
+    if (!this.collection) return;
+    try {
+      await this.collection.update(id, { status, updatedAt: new Date() });
+      this.data = this.data.map(a => a.id === id ? { ...a, status, updatedAt: new Date() } : a);
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+
+  async delete(id: string) {
+    if (!this.collection) return;
+    try {
+      await this.collection.delete(id);
+      this.data = this.data.filter(a => a.id !== id);
+    } catch (err) {
+      this.error = err as Error;
+      throw err;
+    }
+  }
+}
+
+export const reviewAssignmentsStore = new ReviewAssignmentsStore();
+
 class ProjectsStore {
   private collection = { id: null };
 

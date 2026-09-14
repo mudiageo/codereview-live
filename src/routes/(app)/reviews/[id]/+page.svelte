@@ -35,7 +35,7 @@
 	import FileCode from '@lucide/svelte/icons/file-code';
 
 	import { toast } from 'svelte-sonner';
-	import { reviewsStore, commentsStore, teamsStore } from '#lib/stores/index.svelte.js';
+	import { reviewsStore, commentsStore, teamsStore, reviewAssignmentsStore } from '#lib/stores/index.svelte.js';
 	import { notificationsStore } from '#lib/stores/notifications.svelte.js';
 	import { auth } from '#lib/stores/auth.svelte.js';
 	import { ReviewExporter } from '#lib/utils/export-import.js';
@@ -70,6 +70,20 @@
 	);
 
 	const onlineUsers = $derived(presence.others);
+
+	// Review Approvals
+	const allAssignments = $derived(reviewAssignmentsStore.findByReview(reviewId));
+	const myAssignment = $derived(allAssignments.find(a => a.userId === auth.currentUser?.id));
+
+	async function submitApproval(status: 'approved' | 'changes_requested') {
+		if (!myAssignment) return;
+		try {
+			await reviewAssignmentsStore.updateStatus(myAssignment.id, status);
+			toast.success(status === 'approved' ? 'Review approved!' : 'Changes requested.');
+		} catch (err) {
+			toast.error('Failed to submit approval.');
+		}
+	}
 
 	// Cursor Tracking for Code Area
 	let codeAreaElement = $state<HTMLElement>();
@@ -640,6 +654,27 @@
 				<div class="hidden sm:block mr-2">
 					<PresenceAvatars users={onlineUsers} />
 				</div>
+
+				{#if myAssignment && myAssignment.status === 'pending'}
+					<Button variant="default" size="sm" class="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white" onclick={() => submitApproval('approved')}>
+						<Check class="h-4 w-4" />
+						<span class="hidden lg:inline">Approve</span>
+					</Button>
+					<Button variant="outline" size="sm" class="gap-1 border-amber-500/50 text-amber-600 hover:bg-amber-500/10" onclick={() => submitApproval('changes_requested')}>
+						<MessageSquare class="h-4 w-4" />
+						<span class="hidden lg:inline">Request Changes</span>
+					</Button>
+				{:else if myAssignment && myAssignment.status === 'approved'}
+					<Badge variant="outline" class="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 py-1.5 px-3">
+						<Check class="h-3.5 w-3.5 mr-1.5" />
+						Approved
+					</Badge>
+				{:else if myAssignment && myAssignment.status === 'changes_requested'}
+					<Badge variant="outline" class="bg-amber-500/10 text-amber-600 border-amber-500/20 py-1.5 px-3">
+						<MessageSquare class="h-3.5 w-3.5 mr-1.5" />
+						Changes Requested
+					</Badge>
+				{/if}
 
 				<Button variant="outline" size="sm" class="gap-1 hidden sm:flex" onclick={shareP2P}>
 					<Share2 class="h-4 w-4" />

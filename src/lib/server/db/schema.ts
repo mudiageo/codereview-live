@@ -178,6 +178,20 @@ export const comments = pgTable('comments', {
   ...syncMetadata
 });
 
+// Review Assignments table (for Approval Workflow)
+export const reviewAssignments = pgTable('review_assignments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  reviewId: uuid('review_id').references(() => reviews.id, { onDelete: 'cascade' }).notNull(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  status: text('status').default('pending').notNull(), // pending, approved, changes_requested
+  assignedBy: text('assigned_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  ...syncMetadata
+});
+
 // Team members table
 export const teamMembers = pgTable('team_members', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -341,6 +355,7 @@ export const reviewsRelations = relations(reviews, ({ one, many }) => ({
     references: [users.id],
   }),
   comments: many(comments),
+  assignments: many(reviewAssignments),
 }));
 
 export const commentsRelations = relations(comments, ({ one, many }) => ({
@@ -357,6 +372,21 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
     references: [comments.id],
   }),
   replies: many(comments),
+}));
+
+export const reviewAssignmentsRelations = relations(reviewAssignments, ({ one }) => ({
+  review: one(reviews, {
+    fields: [reviewAssignments.reviewId],
+    references: [reviews.id],
+  }),
+  user: one(users, {
+    fields: [reviewAssignments.userId],
+    references: [users.id],
+  }),
+  assigner: one(users, {
+    fields: [reviewAssignments.assignedBy],
+    references: [users.id],
+  }),
 }));
 
 export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
@@ -425,3 +455,5 @@ export type TeamInvitation = typeof teamInvitations.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+export type ReviewAssignment = typeof reviewAssignments.$inferSelect;
+export type NewReviewAssignment = typeof reviewAssignments.$inferInsert;

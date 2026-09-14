@@ -10,6 +10,7 @@ import {
   teamsStore,
   usersStore,
   teamMembersStore,
+  reviewAssignmentsStore,
   aiUsageStore,
   subscriptionsStore,
   teamInvitationsStore,
@@ -18,7 +19,7 @@ import {
 
 import { notificationsStore } from '#lib/stores/notifications.svelte.js';
 
-export const adapter = new IndexedDBAdapter('codereview-db', 2);
+export const adapter = new IndexedDBAdapter('codereview-db', 3);
 
 export const syncEngine = new SyncEngine({
   local: {
@@ -55,7 +56,8 @@ export async function initDb() {
       teams: 'id',
       teamInvitations: 'id',
       aiUsage: 'id',
-      notifications: 'id'
+      notifications: 'id',
+      reviewAssignments: 'id'
     });
 
     // SyncEngine.init() now handles initial data pull automatically
@@ -68,6 +70,7 @@ export async function initDb() {
       teamsStore.load(),
       usersStore.load(),
       teamMembersStore.load(),
+      reviewAssignmentsStore.load(),
       teamInvitationsStore.load(),
       aiUsageStore.load(),
       subscriptionsStore.load(),
