@@ -18,24 +18,21 @@
   import Shield from '@lucide/svelte/icons/shield';
   import Crown from '@lucide/svelte/icons/crown';
   import Users from '@lucide/svelte/icons/users';
-  import { teamsStore, teamInvitationsStore } from '#lib/stores/index.svelte.js';
+  import { teamsStore, teamInvitationsStore, teamMembersStore } from '#lib/stores/index.svelte.js';
   import { toast } from 'svelte-sonner';
-  import { getTeamMembers } from '$lib/team.remote';
   import { auth } from '$lib/stores/auth.svelte';
   
   let inviteEmail = $state('');
   let inviteOpen = $state(false);
-  let members = $state<any[]>([]);
+  
+  const members = $derived(
+    teamsStore.current?.id ? teamMembersStore.findByTeam(teamsStore.current.id) : []
+  );
 
-  // Load stores
+  // Load stores (initial load handled by db.ts, but safe to ensure they are fetched)
   $effect(() => {
     teamsStore.load();
     teamInvitationsStore.load();
-    if (teamsStore.current?.id) {
-        getTeamMembers({ teamId: teamsStore.current.id }).then(res => {
-            members = res;
-        });
-    }
   });
   
   const pendingInvites = $derived(teamInvitationsStore.pending);

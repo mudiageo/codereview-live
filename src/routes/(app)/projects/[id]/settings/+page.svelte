@@ -1,7 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { getTeamMembers } from '#lib/team.remote.js';
-  import { projectsStore, teamsStore } from '#lib/stores/index.svelte.js';
+  import { projectsStore, teamsStore, teamMembersStore } from '#lib/stores/index.svelte.js';
   import { Button } from '#lib/components/ui/button/index.js';
   import { Input } from '#lib/components/ui/input/index.js';
   import { Textarea } from '#lib/components/ui/textarea/index.js';

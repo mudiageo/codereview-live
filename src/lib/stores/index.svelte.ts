@@ -549,6 +549,81 @@ class TeamsStore {
 
 export const teamsStore = new TeamsStore();
 
+// Users Store (for resolving names/avatars of team members locally)
+class UsersStore {
+  private collection: any = null;
+
+  data = $state<import('#lib/server/db/schema.js').User[]>([]);
+  isLoading = $state(false);
+  error = $state<Error | null>(null);
+
+  async load() {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      this.collection = syncEngine.collection('users');
+      await this.collection.load();
+      this.data = this.collection.data as import('#lib/server/db/schema.js').User[];
+    } catch (err) {
+      this.error = err as Error;
+      console.error('Failed to load users:', err);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  findById(id: string) {
+    return this.data.find((u) => u.id === id);
+  }
+}
+
+export const usersStore = new UsersStore();
+
+// Team Members Store
+class TeamMembersStore {
+  private collection: any = null;
+
+  data = $state<import('#lib/server/db/schema.js').TeamMember[]>([]);
+  isLoading = $state(false);
+  error = $state<Error | null>(null);
+
+  // Derives the member details by joining with the Users store locally
+  get withDetails() {
+    return this.data.map(member => {
+      const user = usersStore.findById(member.userId);
+      return {
+        ...member,
+        name: user?.name || 'Unknown User',
+        email: user?.email || '',
+        avatar: user?.image || ''
+      };
+    });
+  }
+
+  async load() {
+    this.isLoading = true;
+    this.error = null;
+
+    try {
+      this.collection = syncEngine.collection('teamMembers');
+      await this.collection.load();
+      this.data = this.collection.data as import('#lib/server/db/schema.js').TeamMember[];
+    } catch (err) {
+      this.error = err as Error;
+      console.error('Failed to load team members:', err);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+  
+  findByTeam(teamId: string) {
+    return this.withDetails.filter((m) => m.teamId === teamId);
+  }
+}
+
+export const teamMembersStore = new TeamMembersStore();
+
 // Team Invitations Store with sveltekit-sync collection
 class TeamInvitationsStore {
   private collection = { id: null };
