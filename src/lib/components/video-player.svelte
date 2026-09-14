@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Slider } from '$lib/components/ui/slider';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Slider } from '#lib/components/ui/slider/index.js';
 	import Play from '@lucide/svelte/icons/play';
 	import Pause from '@lucide/svelte/icons/pause';
 	import Volume2 from '@lucide/svelte/icons/volume-2';
@@ -8,7 +8,7 @@
 	import Maximize from '@lucide/svelte/icons/maximize';
 	import PictureInPicture from '@lucide/svelte/icons/picture-in-picture';
 	import Settings from '@lucide/svelte/icons/settings';
-	import { settingsStore } from '$lib/stores/index.svelte';
+	import { settingsStore } from '#lib/stores/index.svelte.js';
 	import { onMount } from 'svelte';
 
 	interface Props {

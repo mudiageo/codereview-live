@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-  import { Tooltip, TooltipContent, TooltipTrigger } from '$lib/components/ui/tooltip';
+  import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+  import { Tooltip, TooltipContent, TooltipTrigger } from '#lib/components/ui/tooltip/index.js';
 
   interface UserPresence {
     user: {

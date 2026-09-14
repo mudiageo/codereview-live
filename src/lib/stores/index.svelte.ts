@@ -1,8 +1,8 @@
-import { browser } from '$app/environment'
-import { syncEngine } from '$lib/db';
-import { sendTeamInviteEmailRemote } from '$lib/team.remote';
+import { browser } from '$app/env';
+import { sendTeamInviteEmailRemote } from '#lib/team.remote';
+import { syncEngine } from '#lib/db.js';
 
-import type { Review, Project, Comment, Team, TeamInvitation, Subscription } from '$lib/server/db/schema';
+import type { Review, Project, Comment, Team, TeamInvitation, Subscription } from '#lib/server/db/schema.js';
 
 
 class ReviewsStore {
@@ -21,15 +21,15 @@ class ReviewsStore {
   }
 
   get published() {
-    return this.data.filter(r => r.status === 'published');
+    return this.data.filter((r) => r.status === 'published');
   }
 
   get drafts() {
-    return this.data.filter(r => r.status === 'draft');
+    return this.data.filter((r) => r.status === 'draft');
   }
 
   get archived() {
-    return this.data.filter(r => r.status === 'archived');
+    return this.data.filter((r) => r.status === 'archived');
   }
 
   async load() {
@@ -82,10 +82,10 @@ class ReviewsStore {
         updatedAt: new Date(),
       });
 
-      this.data = this.data.map(review =>
-        review.id === id ? { ...review, ...updates, updatedAt: new Date() } : review
-      );
-    } catch (err) {
+      this.data = this.data.map((review) => review.id === id
+        ? { ...review, ...updates, updatedAt: new Date() }
+        : review);
+    } catch(err) {
       this.error = err as Error;
       throw err;
     }
@@ -96,28 +96,25 @@ class ReviewsStore {
 
     try {
       await this.collection.delete(id);
-      this.data = this.data.filter(review => review.id !== id);
-    } catch (err) {
+      this.data = this.data.filter((review) => review.id !== id);
+    } catch(err) {
       this.error = err as Error;
       throw err;
     }
   }
 
   findById(id: string) {
-    return this.data.find(review => review.id === id);
+    return this.data.find((review) => review.id === id);
   }
 
   findByProject(projectId: string) {
-    return this.data.filter(review => review.projectId === projectId);
+    return this.data.filter((review) => review.projectId === projectId);
   }
 
   search(query: string) {
     const q = query.toLowerCase();
-    return this.data.filter(
-      review =>
-        review.title.toLowerCase().includes(q) ||
-        review.description?.toLowerCase().includes(q)
-    );
+
+    return this.data.filter((review) => review.title.toLowerCase().includes(q) || review.description?.toLowerCase().includes(q));
   }
 
   sortByDate(order: 'asc' | 'desc' = 'desc') {
@@ -148,11 +145,11 @@ class ProjectsStore {
   }
 
   get teamProjects() {
-    return this.data.filter(p => p.isTeam);
+    return this.data.filter((p) => p.isTeam);
   }
 
   get personalProjects() {
-    return this.data.filter(p => !p.isTeam);
+    return this.data.filter((p) => !p.isTeam);
   }
 
   async load() {
@@ -204,10 +201,10 @@ class ProjectsStore {
         updatedAt: new Date(),
       });
 
-      this.data = this.data.map(project =>
-        project.id === id ? { ...project, ...updates, updatedAt: new Date() } : project
-      );
-    } catch (err) {
+      this.data = this.data.map((project) => project.id === id
+        ? { ...project, ...updates, updatedAt: new Date() }
+        : project);
+    } catch(err) {
       this.error = err as Error;
       throw err;
     }
@@ -218,7 +215,7 @@ class ProjectsStore {
 
     try {
       await this.collection.delete(id);
-      this.data = this.data.filter(project => project.id !== id);
+      this.data = this.data.filter((project) => project.id !== id);
 
       if (this.activeProject?.id === id) {
         this.activeProject = null;
@@ -230,7 +227,7 @@ class ProjectsStore {
   }
 
   findById(id: string) {
-    return this.data.find(project => project.id === id);
+    return this.data.find((project) => project.id === id);
   }
 
   setActive(project: Project | null) {
@@ -239,18 +236,15 @@ class ProjectsStore {
 
   search(query: string) {
     const q = query.toLowerCase();
-    return this.data.filter(
-      project =>
-        project.name.toLowerCase().includes(q) ||
-        project.description?.toLowerCase().includes(q)
-    );
+
+    return this.data.filter((project) => project.name.toLowerCase().includes(q) || project.description?.toLowerCase().includes(q));
   }
 
   async addMember(projectId: string, member: { email: string; role: string; userId?: string }) {
     const project = this.findById(projectId);
     if (!project) return;
 
-    const members = (project.members as any[]) || [];
+    const members = project.members as any[] || [];
     // Check if exists
     if (members.find((m: any) => m.email === member.email)) return;
 
@@ -286,7 +280,7 @@ class ProjectsStore {
     const project = this.findById(projectId);
     if (!project) return;
 
-    const members = (project.members as any[]) || [];
+    const members = project.members as any[] || [];
     const updatedMembers = members.filter((m: any) => m.email !== email);
 
     await this.update(projectId, {
@@ -299,10 +293,9 @@ class ProjectsStore {
     const project = this.findById(projectId);
     if (!project) return;
 
-    const currentSettings = (project.settings as any) || {};
-    await this.update(projectId, {
-      settings: { ...currentSettings, ...settings },
-    });
+    const currentSettings = project.settings as any || {};
+
+    await this.update(projectId, { settings: { ...currentSettings, ...settings } });
   }
 }
 
@@ -373,10 +366,10 @@ class CommentsStore {
         updatedAt: new Date(),
       });
 
-      this.data = this.data.map(comment =>
-        comment.id === id ? { ...comment, ...updates, updatedAt: new Date() } : comment
-      );
-    } catch (err) {
+      this.data = this.data.map((comment) => comment.id === id
+        ? { ...comment, ...updates, updatedAt: new Date() }
+        : comment);
+    } catch(err) {
       this.error = err as Error;
       throw err;
     }
@@ -387,33 +380,30 @@ class CommentsStore {
 
     try {
       await this.collection.delete(id);
-      this.data = this.data.filter(comment => comment.id !== id);
-    } catch (err) {
+      this.data = this.data.filter((comment) => comment.id !== id);
+    } catch(err) {
       this.error = err as Error;
       throw err;
     }
   }
 
   findByReview(reviewId: string) {
-    return this.data.filter(comment => comment.reviewId === reviewId);
+    return this.data.filter((comment) => comment.reviewId === reviewId);
   }
 
   findReplies(parentId: string) {
-    return this.data.filter(comment => comment.parentId === parentId);
+    return this.data.filter((comment) => comment.parentId === parentId);
   }
 
   getThreaded(reviewId: string) {
     const comments = this.findByReview(reviewId);
-    const topLevel = comments.filter(c => !c.parentId);
+    const topLevel = comments.filter((c) => !c.parentId);
 
-    return topLevel.map(comment => ({
-      ...comment,
-      replies: this.findReplies(comment.id),
-    }));
+    return topLevel.map((comment) => ({ ...comment, replies: this.findReplies(comment.id) }));
   }
 
   async toggleResolved(id: string) {
-    const comment = this.data.find(c => c.id === id);
+    const comment = this.data.find((c) => c.id === id);
     if (comment) {
       await this.update(id, { isResolved: !comment.isResolved });
     }
@@ -457,19 +447,13 @@ class SubscriptionsStore {
     }
   }
 
-  async update(id: string, updates: Partial<import('$lib/server/db/schema').Subscription>) {
+  async update(id: string, updates: Partial<import('#lib/server/db/schema.js').Subscription>) {
     if (!this.collection) return;
 
     try {
-      await this.collection.update(id, {
-        ...updates,
-        updatedAt: new Date(),
-      });
-
-      this.data = this.data.map(sub =>
-        sub.id === id ? { ...sub, ...updates, updatedAt: new Date() } : sub
-      );
-    } catch (err) {
+      await this.collection.update(id, { ...updates, updatedAt: new Date() });
+      this.data = this.data.map((sub) => sub.id === id ? { ...sub, ...updates, updatedAt: new Date() } : sub);
+    } catch(err) {
       this.error = err as Error;
       throw err;
     }
@@ -482,7 +466,7 @@ export const subscriptionsStore = new SubscriptionsStore();
 class TeamsStore {
   private collection = { id: null };
 
-  data = $state<import('$lib/server/db/schema').Team[]>([]);
+  data = $state<import('#lib/server/db/schema.js').Team[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
 
@@ -513,7 +497,7 @@ class TeamsStore {
     }
   }
 
-  async create(team: Omit<import('$lib/server/db/schema').Team, 'id' | 'createdAt' | 'updatedAt'>) {
+  async create(team: Omit<import('#lib/server/db/schema').Team, 'id' | 'createdAt' | 'updatedAt'>) {
     if (!this.collection) return null;
 
     try {
@@ -534,19 +518,13 @@ class TeamsStore {
     }
   }
 
-  async update(id: string, updates: Partial<import('$lib/server/db/schema').Team>) {
+  async update(id: string, updates: Partial<import('#lib/server/db/schema.js').Team>) {
     if (!this.collection) return;
 
     try {
-      await this.collection.update(id, {
-        ...updates,
-        updatedAt: new Date(),
-      });
-
-      this.data = this.data.map(team =>
-        team.id === id ? { ...team, ...updates, updatedAt: new Date() } : team
-      );
-    } catch (err) {
+      await this.collection.update(id, { ...updates, updatedAt: new Date() });
+      this.data = this.data.map((team) => team.id === id ? { ...team, ...updates, updatedAt: new Date() } : team);
+    } catch(err) {
       this.error = err as Error;
       throw err;
     }
@@ -557,15 +535,15 @@ class TeamsStore {
 
     try {
       await this.collection.delete(id);
-      this.data = this.data.filter(team => team.id !== id);
-    } catch (err) {
+      this.data = this.data.filter((team) => team.id !== id);
+    } catch(err) {
       this.error = err as Error;
       throw err;
     }
   }
 
   findById(id: string) {
-    return this.data.find(team => team.id === id);
+    return this.data.find((team) => team.id === id);
   }
 }
 
@@ -575,16 +553,16 @@ export const teamsStore = new TeamsStore();
 class TeamInvitationsStore {
   private collection = { id: null };
 
-  data = $state<import('$lib/server/db/schema').TeamInvitation[]>([]);
+  data = $state<import('#lib/server/db/schema.js').TeamInvitation[]>([]);
   isLoading = $state(false);
   error = $state<Error | null>(null);
 
   get pending() {
-    return this.data.filter(inv => new Date(inv.expiresAt) > new Date());
+    return this.data.filter((inv) => new Date(inv.expiresAt) > new Date());
   }
 
   get expired() {
-    return this.data.filter(inv => new Date(inv.expiresAt) <= new Date());
+    return this.data.filter((inv) => new Date(inv.expiresAt) <= new Date());
   }
 
   async load() {
@@ -595,7 +573,7 @@ class TeamInvitationsStore {
 
     try {
       this.collection = syncEngine.collection('teamInvitations')
-      this.data = this.collection.data as import('$lib/server/db/schema').TeamInvitation[];
+      this.data = this.collection.data as import('#lib/server/db/schema.js').TeamInvitation[];
     } catch (err) {
       this.error = err as Error;
       console.error('Failed to load team invitations:', err);
@@ -604,7 +582,7 @@ class TeamInvitationsStore {
     }
   }
 
-  async create(invitation: Omit<import('$lib/server/db/schema').TeamInvitation, 'id' | 'createdAt'>) {
+  async create(invitation: Omit<import('#lib/server/db/schema').TeamInvitation, 'id' | 'createdAt'>) {
     if (!this.collection) return null;
 
     try {
@@ -643,19 +621,19 @@ class TeamInvitationsStore {
 
     try {
       await this.collection.delete(id);
-      this.data = this.data.filter(inv => inv.id !== id);
-    } catch (err) {
+      this.data = this.data.filter((inv) => inv.id !== id);
+    } catch(err) {
       this.error = err as Error;
       throw err;
     }
   }
 
   findByTeam(teamId: string) {
-    return this.data.filter(inv => inv.teamId === teamId);
+    return this.data.filter((inv) => inv.teamId === teamId);
   }
 
   findByEmail(email: string) {
-    return this.data.filter(inv => inv.email === email);
+    return this.data.filter((inv) => inv.email === email);
   }
 }
 
@@ -673,7 +651,7 @@ class AIUsageStore {
   }
 
   get successfulRequests() {
-    return this.data.filter(usage => usage.success);
+    return this.data.filter((usage) => usage.success);
   }
 
   async load() {
@@ -716,15 +694,15 @@ class AIUsageStore {
   }
 
   findByReview(reviewId: string) {
-    return this.data.filter(usage => usage.reviewId === reviewId);
+    return this.data.filter((usage) => usage.reviewId === reviewId);
   }
 
   findByFeature(feature: string) {
-    return this.data.filter(usage => usage.feature === feature);
+    return this.data.filter((usage) => usage.feature === feature);
   }
 
   getUsageByMonth(year: number, month: number) {
-    return this.data.filter(usage => {
+    return this.data.filter((usage) => {
       const date = new Date(usage.createdAt);
       return date.getFullYear() === year && date.getMonth() === month;
     });

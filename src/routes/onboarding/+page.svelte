@@ -1,26 +1,26 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import {
 		Card,
 		CardContent,
 		CardDescription,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Progress } from '$lib/components/ui/progress';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { ScrollArea } from '$lib/components/ui/scroll-area';
+	} from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Progress } from '#lib/components/ui/progress/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+	import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
+	import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
 	import {
 		Accordion,
 		AccordionContent,
 		AccordionItem,
 		AccordionTrigger
-	} from '$lib/components/ui/accordion';
-	import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '$lib/components/ui/dialog';
-	import { Input } from '$lib/components/ui/input';
+	} from '#lib/components/ui/accordion/index.js';
+  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '#lib/components/ui/dialog/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
 	import Play from '@lucide/svelte/icons/play';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
 	import Circle from '@lucide/svelte/icons/circle';
@@ -52,10 +52,11 @@
 	import Eye from '@lucide/svelte/icons/eye';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
 	import Smartphone from '@lucide/svelte/icons/smartphone';
-	import { auth } from '$lib/stores/auth.svelte';
+	import { auth } from '#lib/stores/auth.svelte.js';
+
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 
 	let loading = $state(true);
 	let activeTab = $state('progress');
@@ -108,8 +109,23 @@
 					duration: 5,
 					videoUrl: '#'
 				},
-				{ id: 'vr-3', title: 'Screen Recording Tips', completed: false, duration: 4, videoUrl: '#' },
-				{ id: 'vr-4', title: 'Adding Annotations', completed: false, duration: 4, videoUrl: '#' },
+
+				{
+					id: 'vr-3',
+					title: 'Screen Recording Tips',
+					completed: false,
+					duration: 4,
+					videoUrl: '#'
+				},
+
+				{
+					id: 'vr-4',
+					title: 'Adding Annotations',
+					completed: false,
+					duration: 4,
+					videoUrl: '#'
+				},
+
 				{
 					id: 'vr-5',
 					title: 'Using Picture-in-Picture',
@@ -407,6 +423,7 @@
 		});
 	});
 
+
 	// Filter templates based on search
 	const filteredTemplates = $derived(
 		searchQuery
@@ -588,10 +605,12 @@
 					</div>
 				</div>
 				<div class="flex gap-3">
-					<Button variant="outline" class="gap-2" onclick={() => (activeTab = 'templates')}>
-						<BookOpen class="h-4 w-4" />
-						Templates
-					</Button>
+					<Button
+						variant="outline"
+						class="gap-2"
+						onclick={() => activeTab = 'templates'}
+					><BookOpen class="h-4 w-4" />Templates</Button>
+
 					<Button
 						class="gap-2"
 						onclick={() => {
@@ -639,9 +658,9 @@
 			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each onboardingModules as module}
 					{@const colors = getColorClasses(module.color)}
-					{@const lessonsDone = module.lessons.filter((l) => l.completed).length}
-					{@const progress = Math.round((lessonsDone / module.totalLessons) * 100)}
-					{@const isComplete = lessonsDone === module.totalLessons}
+					{const lessonsDone = module.lessons.filter((l) => l.completed).length}
+					{const progress = Math.round((lessonsDone / module.totalLessons) * 100)}
+					{const isComplete = lessonsDone === module.totalLessons}
 
 					<Card
 						data-module-id={module.id}
@@ -767,7 +786,11 @@
 					<Input placeholder="Search templates..." bind:value={searchQuery} class="pl-9" />
 				</div>
 				<div class="flex gap-2">
-					<Badge variant="outline" class="px-3 py-2 cursor-pointer hover:bg-muted">All</Badge>
+					<Badge
+						variant="outline"
+						class="px-3 py-2 cursor-pointer hover:bg-muted"
+					>All</Badge>
+
 					<Badge
 						variant="outline"
 						class="px-3 py-2 cursor-pointer hover:bg-muted bg-emerald-500/10 text-emerald-600 border-emerald-500/20"

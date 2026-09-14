@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Card, CardContent } from '$lib/components/ui/card';
-	import { Label } from '$lib/components/ui/label';
-	import { Switch } from '$lib/components/ui/switch';
-	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Card, CardContent } from '#lib/components/ui/card/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '#lib/components/ui/select/index.js';
+	import { Popover, PopoverContent, PopoverTrigger } from '#lib/components/ui/popover/index.js';
 	import { toast } from 'svelte-sonner';
 	import Circle from '@lucide/svelte/icons/circle';
 	import Square from '@lucide/svelte/icons/square';
@@ -19,7 +19,7 @@
 		type WebcamPosition,
 		type WebcamSize,
 		type WebcamShape
-	} from '$lib/contexts/recording-context.svelte';
+	} from '#lib/contexts/recording-context.svelte.js';
 
 	import AnnotationToolbar from './annotation-toolbar.svelte';
 	import VideoPreviewModal from './video-preview-modal.svelte';

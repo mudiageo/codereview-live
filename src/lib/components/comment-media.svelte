@@ -1,5 +1,5 @@
 <script lang="ts">
-  import VideoPlayer from '$lib/components/video-player.svelte';
+  import VideoPlayer from '#lib/components/video-player.svelte';
 
   interface Props {
     type: 'video' | 'audio';

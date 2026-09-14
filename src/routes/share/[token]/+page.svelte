@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  import { Button } from '$lib/components/ui/button';
-  import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-  import CodeEditor from '$lib/components/code-editor.svelte';
+  import { page } from '$app/state';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Card, CardContent, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+  import CodeEditor from '#lib/components/code-editor.svelte';
   import Eye from '@lucide/svelte/icons/eye';
   import Download from '@lucide/svelte/icons/download';
   import Share2 from '@lucide/svelte/icons/share-2';
   import Lock from '@lucide/svelte/icons/lock';
-  
-  const token = $derived($page.params.token);
-  
+
+  const token = $derived(page.params.token);
+
   // Mock data - fetch based on token
   const review = {
     id: '1',
@@ -27,7 +27,7 @@
   let requiresLogin = $state(false);
   
   function getInitials(name: string) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return name.split(' ').map((n) => n[0]).join('').toUpperCase();
   }
 </script>
 

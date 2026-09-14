@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { ScrollArea } from '$lib/components/ui/scroll-area';
-  import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-  import { Button } from '$lib/components/ui/button';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Input } from '$lib/components/ui/input';
+  import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
+  import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
   import CodeEditor from './code-editor.svelte';
   import DiffViewer from './diff-viewer.svelte';
   import File from '@lucide/svelte/icons/file';
@@ -12,7 +12,7 @@
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import FileText from '@lucide/svelte/icons/file-text';
-  import { LanguageDetector } from '$lib/utils/language-detector';
+  import { LanguageDetector } from '#lib/utils/language-detector.js';
 
   interface FileNode {
     name: string;

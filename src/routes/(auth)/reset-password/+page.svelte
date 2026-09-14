@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
+  import { page } from '$app/state';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
   import KeyRound from '@lucide/svelte/icons/key-round';
   import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
-  
-  const token = $derived($page.url.searchParams.get('token'));
+
+  const token = $derived(page.url.searchParams.get('token'));
   
   let password = $state('');
   let confirmPassword = $state('');
@@ -26,10 +26,10 @@
     let strength = 0;
     if (password.length >= 8) strength++;
     if (password.length >= 12) strength++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-    if (/\d/.test(password)) strength++;
-    if (/[^a-zA-Z0-9]/.test(password)) strength++;
-    
+    if ((/[a-z]/).test(password) && (/[A-Z]/).test(password)) strength++;
+    if ((/\d/).test(password)) strength++;
+    if ((/[^a-zA-Z0-9]/).test(password)) strength++;
+
     passwordStrength = Math.min(strength, 4);
   });
   
@@ -58,7 +58,7 @@
     
     try {
       // TODO: Call password reset API with token
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       success = true;
       setTimeout(() => {
         window.location.href = '/login';

@@ -1,7 +1,7 @@
 import { query, command, getRequestEvent } from '$app/server';
 import * as v from 'valibot';
-import { syncEngine } from '$lib/server/sync'
-import { getUser } from '$lib/server/auth';
+import { syncEngine } from '#lib/server/sync.js'
+import { getUser } from '#lib/server/auth.js';
 
 // Validation schemas
 const SyncOperationSchema = v.object({

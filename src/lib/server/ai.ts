@@ -10,8 +10,8 @@
  */
 
 import { GoogleGenerativeAI, type GenerativeModel } from '@google/generative-ai';
-import { db } from '$lib/server/db';
-import { aiUsage } from '$lib/server/db/schema';
+import { db } from '#lib/server/db/index.js';
+import { aiUsage } from '#lib/server/db/schema.js';
 
 // Types for AI responses
 export interface CodeAnalysis {

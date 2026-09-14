@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { Button } from '$lib/components/ui/button';
-  import { cn } from '$lib/utils';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { cn } from '#lib/utils.js';
   import User from '@lucide/svelte/icons/user';
   import Palette from '@lucide/svelte/icons/palette';
   import Video from '@lucide/svelte/icons/video';

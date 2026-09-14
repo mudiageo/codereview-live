@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Progress } from '$lib/components/ui/progress';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Progress } from '#lib/components/ui/progress/index.js';
   import Check from '@lucide/svelte/icons/check';
   import CreditCard from '@lucide/svelte/icons/credit-card';
   import Download from '@lucide/svelte/icons/download';
-  import UpgradeDialog from '$lib/components/upgrade-dialog.svelte';
-  import { subscriptionsStore, aiUsageStore } from '$lib/stores/index.svelte';
-  import { auth } from '$lib/stores/auth.svelte';
-  import { plans } from '$lib/config';
+  import UpgradeDialog from '#lib/components/upgrade-dialog.svelte';
+  import { subscriptionsStore, aiUsageStore } from '#lib/stores/index.svelte.js';
+  import { auth } from '#lib/stores/auth.svelte.js';
+  import { plans } from '#lib/config/index.js';
   import { onMount } from 'svelte';
-  import { formatStorageSize, parseStorageString, calculateStoragePercentage } from '$lib/utils/storage';
+  import { formatStorageSize, parseStorageString, calculateStoragePercentage } from '#lib/utils/storage.js';
   import { toast } from 'svelte-sonner';
   
   let showUpgradeDialog = $state(false);

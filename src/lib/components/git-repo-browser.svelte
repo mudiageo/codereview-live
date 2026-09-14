@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#lib/components/ui/dialog/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
 	import FolderGit2 from '@lucide/svelte/icons/folder-git-2';
 	import GitCommit from '@lucide/svelte/icons/git-commit';
 	import GitBranch from '@lucide/svelte/icons/git-branch';

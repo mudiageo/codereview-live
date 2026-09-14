@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
+  import { Button } from '#lib/components/ui/button/index.js';
   import { toast } from 'svelte-sonner';
   import Mic from '@lucide/svelte/icons/mic';
   import Video from '@lucide/svelte/icons/video';
   import Square from '@lucide/svelte/icons/square';
   import X from '@lucide/svelte/icons/x';
   import Loader2 from '@lucide/svelte/icons/loader-2';
-  import { uploadVideo as uploadVideoForm } from '$lib/video.remote';
+  import { uploadVideo as uploadVideoForm } from '#lib/video.remote.js';
 
   interface Props {
     onRecordingComplete: (media: { type: 'video' | 'audio'; url: string; metadata?: any }) => void;

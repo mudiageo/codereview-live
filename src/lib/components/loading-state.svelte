@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Card, CardContent, CardHeader } from '$lib/components/ui/card';
-  import { Skeleton } from '$lib/components/ui/skeleton';
+  import { Card, CardContent, CardHeader } from '#lib/components/ui/card/index.js';
+  import { Skeleton } from '#lib/components/ui/skeleton/index.js';
   
   interface Props {
     type?: 'card' | 'list' | 'table';

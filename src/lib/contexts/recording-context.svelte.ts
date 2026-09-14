@@ -7,7 +7,7 @@
 
 import { getContext, setContext } from 'svelte';
 import { snapdom } from '@zumer/snapdom';
-import { settingsStore } from '$lib/stores/index.svelte';
+import { settingsStore } from '#lib/stores/index.svelte.js';
 
 // Constants
 const CAPTURE_FPS = 10; // Reduced from 30 - DOM capture is expensive, 10fps is sufficient for screen recording

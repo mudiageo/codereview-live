@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-  import { Skeleton } from '$lib/components/ui/skeleton';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+  import { Skeleton } from '#lib/components/ui/skeleton/index.js';
   import FileVideo from '@lucide/svelte/icons/file-video';
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Users from '@lucide/svelte/icons/users';
@@ -15,10 +15,10 @@
   import TrendingUp from '@lucide/svelte/icons/trending-up';
   import Eye from '@lucide/svelte/icons/eye';
   import Clock from '@lucide/svelte/icons/clock';
-  import { reviewsStore, commentsStore, teamsStore, aiUsageStore, subscriptionsStore } from '$lib/stores/index.svelte';
-  import { initDb } from '$lib/db';
-  import { getLimit } from '$lib/config';
-  import { browser } from '$app/environment'; 
+  import { reviewsStore, commentsStore, teamsStore, aiUsageStore, subscriptionsStore } from '#lib/stores/index.svelte.js';
+  import { initDb } from '#lib/db.js';
+  import { getLimit } from '#lib/config/index.js';
+  import { browser } from '$app/env';
   let loading = $state(false);
 
 
@@ -34,7 +34,7 @@
     {
       title: 'Comments',
       value: commentsStore.count.toString(),
-      change: `${commentsStore.data.filter(c => !c.parentId).length} top-level`,
+      change: `${commentsStore.data.filter((c) => !c.parentId).length} top-level`,
       icon: MessageSquare,
       color: 'text-chart-2'
     },
@@ -70,7 +70,7 @@
   ];
   
   function getInitials(name: string) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return name.split(' ').map((n) => n[0]).join('').toUpperCase();
   }
   
   function getStatusColor(status: string) {

@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Switch } from '$lib/components/ui/switch';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
 	import {
 		Card,
 		CardContent,
 		CardDescription,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
-	import { Alert, AlertDescription, AlertTitle } from '$lib/components/ui/alert';
-	import { Progress } from '$lib/components/ui/progress';
+	} from '#lib/components/ui/card/index.js';
+	import { Alert, AlertDescription, AlertTitle } from '#lib/components/ui/alert/index.js';
+	import { Progress } from '#lib/components/ui/progress/index.js';
 	import { toast } from 'svelte-sonner';
 	import Info from '@lucide/svelte/icons/info';
 	import ExternalLink from '@lucide/svelte/icons/external-link';
-	import { settingsStore, aiUsageStore, subscriptionsStore } from '$lib/stores/index.svelte';
-	import { getLimit } from '$lib/config';
-	import { API } from '$lib/constants';
+	import { settingsStore, aiUsageStore, subscriptionsStore } from '#lib/stores/index.svelte.js';
+	import { getLimit } from '#lib/config/index.js';
+	import { API } from '#lib/constants.js';
 
 	// Load stores
 	$effect(() => {

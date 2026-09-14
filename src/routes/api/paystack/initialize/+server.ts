@@ -1,19 +1,19 @@
-import { json } from '@sveltejs/kit';
+
 import type { RequestHandler } from './$types';
-import { initializeTransaction } from '$lib/server/payments/paystack';
+import { initializeTransaction } from '#lib/server/payments/paystack.js';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
 		// Check if user is authenticated
 		const session = await locals.auth();
 		if (!session?.user) {
-			return json({ error: 'Unauthorized' }, { status: 401 });
+			return Response.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
 		const { amount, plan } = await request.json();
 
 		if (!amount || !plan) {
-			return json({ error: 'Amount and plan are required' }, { status: 400 });
+			return Response.json({ error: 'Amount and plan are required' }, { status: 400 });
 		}
 
 		const publicAppUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
@@ -27,14 +27,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			callbackUrl
 		});
 
-		return json({
+		return Response.json({
 			authorizationUrl: transaction.authorization_url,
 			accessCode: transaction.access_code,
 			reference: transaction.reference
 		});
 	} catch (error) {
 		console.error('Failed to initialize transaction:', error);
-		return json(
+		return Response.json(
 			{ error: 'Failed to initialize transaction' },
 			{ status: 500 }
 		);

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { GitLabImporter, type GitLabRepository, type MergeRequest } from '$lib/utils/gitlab-import';
-	import { LanguageDetector } from '$lib/utils/language-detector';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#lib/components/ui/dialog/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+	import { GitLabImporter, type GitLabRepository, type MergeRequest } from '#lib/utils/gitlab-import.js';
+	import { LanguageDetector } from '#lib/utils/language-detector.js';
 	import Search from '@lucide/svelte/icons/search';
 	import GitBranch from '@lucide/svelte/icons/git-branch';
 	import GitMerge from '@lucide/svelte/icons/git-merge';

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Card } from '$lib/components/ui/card';
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+  import { Card } from '#lib/components/ui/card/index.js';
+  import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
 
   interface TeamMember {
     id: string;

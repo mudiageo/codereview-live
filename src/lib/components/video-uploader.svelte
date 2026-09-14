@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Progress } from '$lib/components/ui/progress';
-	import { uploadVideo as uploadVideoForm } from '$lib/video.remote';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Progress } from '#lib/components/ui/progress/index.js';
+	import { uploadVideo as uploadVideoForm } from '#lib/video.remote.js';
 	import { toast } from 'svelte-sonner';
 	import Upload from '@lucide/svelte/icons/upload';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
-	import { settingsStore } from '$lib/stores/index.svelte';
-	import { FILE_SIZE } from '$lib/constants';
+	import { settingsStore } from '#lib/stores/index.svelte.js';
+	import { FILE_SIZE } from '#lib/constants.js';
 
 	interface Props {
 		reviewId: string;

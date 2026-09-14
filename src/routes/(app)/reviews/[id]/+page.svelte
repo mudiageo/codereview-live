@@ -1,25 +1,25 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { untrack } from 'svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Textarea } from '$lib/components/ui/textarea';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Card, CardContent } from '$lib/components/ui/card';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+	import { Card, CardContent } from '#lib/components/ui/card/index.js';
 	import {
 		DropdownMenu,
 		DropdownMenuContent,
 		DropdownMenuItem,
 		DropdownMenuSeparator,
 		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu';
+	} from '#lib/components/ui/dropdown-menu/index.js';
 
-	import CodeReviewWorkspace from '$lib/components/code-review-workspace.svelte';
-	import InlineCommentThread from '$lib/components/inline-comment-thread.svelte';
-	import MentionAutocomplete from '$lib/components/mention-autocomplete.svelte';
-	import VideoPlayer from '$lib/components/video-player.svelte';
-	import P2PShareDialog from '$lib/components/p2p-share-dialog.svelte';
+	import CodeReviewWorkspace from '#lib/components/code-review-workspace.svelte';
+	import InlineCommentThread from '#lib/components/inline-comment-thread.svelte';
+	import MentionAutocomplete from '#lib/components/mention-autocomplete.svelte';
+	import VideoPlayer from '#lib/components/video-player.svelte';
+	import P2PShareDialog from '#lib/components/p2p-share-dialog.svelte';
 
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Share2 from '@lucide/svelte/icons/share-2';
@@ -35,24 +35,24 @@
 	import FileCode from '@lucide/svelte/icons/file-code';
 
 	import { toast } from 'svelte-sonner';
-	import { reviewsStore, commentsStore, teamsStore } from '$lib/stores/index.svelte';
-	import { notificationsStore } from '$lib/stores/notifications.svelte';
-	import { auth } from '$lib/stores/auth.svelte';
-	import { ReviewExporter } from '$lib/utils/export-import';
-	import { createClientVideoStorage } from '$lib/utils/client-video-storage';
-	import MediaRecorder from '$lib/components/media-recorder.svelte';
-	import VideoUploader from '$lib/components/video-uploader.svelte';
+	import { reviewsStore, commentsStore, teamsStore } from '#lib/stores/index.svelte.js';
+	import { notificationsStore } from '#lib/stores/notifications.svelte.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
+	import { ReviewExporter } from '#lib/utils/export-import.js';
+	import { createClientVideoStorage } from '#lib/utils/client-video-storage.js';
+	import MediaRecorder from '#lib/components/media-recorder.svelte';
+	import VideoUploader from '#lib/components/video-uploader.svelte';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import Upload from '@lucide/svelte/icons/upload';
-	import type { FileNode } from '$lib/components/code-review-workspace.svelte';
-	import { analyzeCodeAI, checkReviewItemsAI } from '$lib/ai.remote';
-	import { checklistTemplates, getTemplate } from '$lib/config/checklist-templates';
+	import type { FileNode } from '#lib/components/code-review-workspace.svelte';
+	import { analyzeCodeAI, checkReviewItemsAI } from '#lib/ai.remote.js';
+	import { checklistTemplates, getTemplate } from '#lib/config/checklist-templates.js';
 
 	// Collaboration Imports
-	import { syncEngine } from '$lib/db';
+	import { syncEngine } from '#lib/db.js';
 	import { usePresence, useCursorTracking } from 'sveltekit-sync';
-	import PresenceAvatars from '$lib/components/collaboration/PresenceAvatars.svelte';
-	import CursorOverlay from '$lib/components/collaboration/CursorOverlay.svelte';
+	import PresenceAvatars from '#lib/components/collaboration/PresenceAvatars.svelte';
+	import CursorOverlay from '#lib/components/collaboration/CursorOverlay.svelte';
 
 	const reviewId = $derived(page.params.id);
 	const isMobile = $derived(typeof window !== 'undefined' && window.innerWidth < 1024);

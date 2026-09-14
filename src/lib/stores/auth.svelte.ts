@@ -1,5 +1,5 @@
 import { goto } from '$app/navigation';
-import { authClient } from '$lib/auth-client';
+import { authClient } from '#lib/auth-client.js';
 import type { User } from 'better-auth';
 import { toast } from 'svelte-sonner';
 

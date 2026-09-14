@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getRecordingContext } from '$lib/contexts/recording-context.svelte';
+	import { getRecordingContext } from '#lib/contexts/recording-context.svelte.js';
 	import { onMount, onDestroy } from 'svelte';
 	import AnnotationToolbar from './annotation-toolbar.svelte';
 

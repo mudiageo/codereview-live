@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Label } from '$lib/components/ui/label';
-  import { RadioGroup, RadioGroupItem } from '$lib/components/ui/radio-group';
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-  import { Slider } from '$lib/components/ui/slider';
-  import { Switch } from '$lib/components/ui/switch';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { RadioGroup, RadioGroupItem } from '#lib/components/ui/radio-group/index.js';
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Select, SelectContent, SelectItem, SelectTrigger } from '#lib/components/ui/select/index.js';
+  import { Slider } from '#lib/components/ui/slider/index.js';
+  import { Switch } from '#lib/components/ui/switch/index.js';
   import { toast } from 'svelte-sonner';
   import Sun from '@lucide/svelte/icons/sun';
   import Moon from '@lucide/svelte/icons/moon';
@@ -13,8 +13,8 @@
   import Sunset from '@lucide/svelte/icons/sunset';
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import { resetMode, setMode } from "mode-watcher";
-  import { settingsStore } from '$lib/stores/index.svelte';
-  import { EDITOR } from '$lib/constants';
+  import { settingsStore } from '#lib/stores/index.svelte.js';
+  import { EDITOR } from '#lib/constants.js';
 
   const settings = $derived(settingsStore.settings);
   let saving = $state(false);

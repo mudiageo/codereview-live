@@ -1,5 +1,5 @@
-import { syncEngine } from '$lib/db';
-import type { Notification } from '$lib/server/db/schema';
+import { syncEngine } from '#lib/db.js';
+import type { Notification } from '#lib/server/db/schema.js';
 import { toast } from 'svelte-sonner';
 import { goto } from '$app/navigation';
 

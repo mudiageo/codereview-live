@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import {
 		Card,
 		CardContent,
 		CardDescription,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
+	} from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import Github from '@lucide/svelte/icons/github';
 	import GitlabIcon from '@lucide/svelte/icons/gitlab';
 	import Chrome from '@lucide/svelte/icons/chrome';
@@ -16,7 +16,7 @@
 	import Loader2 from '@lucide/svelte/icons/loader-2';
 	import { toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
-	import { authClient } from '$lib/auth-client';
+	import { authClient } from '#lib/auth-client.js';
 
 	interface ConnectedAccount {
 		id: string;

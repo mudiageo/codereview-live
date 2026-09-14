@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { notificationsStore } from '$lib/stores/notifications.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Badge } from '$lib/components/ui/badge';
+  import { notificationsStore } from '#lib/stores/notifications.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
   import {
     DropdownMenu,
     DropdownMenuContent,
@@ -9,8 +9,8 @@
     DropdownMenuTrigger,
     DropdownMenuSeparator,
     DropdownMenuLabel
-  } from '$lib/components/ui/dropdown-menu';
-  import { ScrollArea } from '$lib/components/ui/scroll-area';
+  } from '#lib/components/ui/dropdown-menu/index.js';
+  import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
   import Bell from '@lucide/svelte/icons/bell';
   import Check from '@lucide/svelte/icons/check';
   import Trash from '@lucide/svelte/icons/trash';

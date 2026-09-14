@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
+  import { Button } from '#lib/components/ui/button/index.js';
   import {
     Dialog,
     DialogContent,
@@ -7,8 +7,8 @@
     DialogFooter,
     DialogHeader,
     DialogTitle,
-  } from '$lib/components/ui/dialog';
-  import { Badge } from '$lib/components/ui/badge';
+  } from '#lib/components/ui/dialog/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
   import Check from '@lucide/svelte/icons/check';
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import Zap from '@lucide/svelte/icons/zap';

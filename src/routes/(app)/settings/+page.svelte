@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Textarea } from '$lib/components/ui/textarea';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
 	import {
 		Card,
 		CardContent,
 		CardDescription,
 		CardHeader,
 		CardTitle
-	} from '$lib/components/ui/card';
-	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-	import { Separator } from '$lib/components/ui/separator';
+	} from '#lib/components/ui/card/index.js';
+	import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+	import { Separator } from '#lib/components/ui/separator/index.js';
 	import Camera from '@lucide/svelte/icons/camera';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import Link2 from '@lucide/svelte/icons/link-2';
 	import Briefcase from '@lucide/svelte/icons/briefcase';
 	import { toast } from 'svelte-sonner';
-	import { MAX_AVATAR_SIZE_BYTES } from '$lib/constants';
-	import { authClient } from '$lib/auth-client';
-	import { auth } from '$lib/stores/auth.svelte';
+	import { MAX_AVATAR_SIZE_BYTES } from '#lib/constants.js';
+	import { authClient } from '#lib/auth-client.js';
+	import { auth } from '#lib/stores/auth.svelte.js';
 	import { onMount } from 'svelte';
 
 	let name = $state('');

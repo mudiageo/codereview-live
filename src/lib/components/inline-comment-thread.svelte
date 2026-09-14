@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Textarea } from '$lib/components/ui/textarea';
-  import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
-  import { Badge } from '$lib/components/ui/badge';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Textarea } from '#lib/components/ui/textarea/index.js';
+  import { Avatar, AvatarFallback, AvatarImage } from '#lib/components/ui/avatar/index.js';
+  import { Badge } from '#lib/components/ui/badge/index.js';
   import MessageSquare from '@lucide/svelte/icons/message-square';
   import Check from '@lucide/svelte/icons/check';
   import ChevronUp from '@lucide/svelte/icons/chevron-up';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import Mic from '@lucide/svelte/icons/mic';
   import Video from '@lucide/svelte/icons/video';
-  import { auth } from '$lib/stores/auth.svelte';
+  import { auth } from '#lib/stores/auth.svelte.js';
   import CommentMedia from './comment-media.svelte';
   import CommentRecorder from './comment-recorder.svelte';
   

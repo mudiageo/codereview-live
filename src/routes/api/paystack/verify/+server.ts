@@ -1,8 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { verifyTransaction } from '$lib/server/payments/paystack';
-import { db } from '$lib/server/db';
-import { subscriptions, users } from '$lib/server/db/schema';
+import { verifyTransaction } from '#lib/server/payments/paystack.js';
+import { db } from '#lib/server/db/index.js';
+import { subscriptions, users } from '#lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 export const GET: RequestHandler = async ({ url, locals }) => {

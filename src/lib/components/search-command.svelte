@@ -7,7 +7,7 @@
     CommandInput,
     CommandItem,
     CommandList,
-  } from '$lib/components/ui/command';
+  } from '#lib/components/ui/command/index.js';
   import FileVideo from '@lucide/svelte/icons/file-video';
   import Folder from '@lucide/svelte/icons/folder';
   import Users from '@lucide/svelte/icons/users';

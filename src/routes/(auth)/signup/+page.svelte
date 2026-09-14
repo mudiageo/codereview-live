@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { Checkbox } from '$lib/components/ui/checkbox';
-  import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Separator } from '$lib/components/ui/separator';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+  import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '#lib/components/ui/card/index.js';
+  import { Separator } from '#lib/components/ui/separator/index.js';
   import Video from '@lucide/svelte/icons/video';
   import Github from '@lucide/svelte/icons/github';
   import Chrome from '@lucide/svelte/icons/chrome';
   import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
-  import { authClient } from '$lib/auth-client';
-  import { auth } from '$lib/stores/auth.svelte';
+  import { authClient } from '#lib/auth-client.js';
+  import { auth } from '#lib/stores/auth.svelte.js';
   import { goto } from '$app/navigation'
  
   let name = $state('');

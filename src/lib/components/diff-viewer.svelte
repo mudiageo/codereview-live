@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { ScrollArea } from '$lib/components/ui/scroll-area';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
-	import { LanguageDetector } from '$lib/utils/language-detector';
+	import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
+	import { Tabs, TabsContent, TabsList, TabsTrigger } from '#lib/components/ui/tabs/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Popover, PopoverContent, PopoverTrigger } from '#lib/components/ui/popover/index.js';
+	import { LanguageDetector } from '#lib/utils/language-detector.js';
 	import GitCompare from '@lucide/svelte/icons/git-compare';
 	import Copy from '@lucide/svelte/icons/copy';
 	import AlertCircle from '@lucide/svelte/icons/alert-circle';
@@ -13,7 +13,7 @@
 	import Zap from '@lucide/svelte/icons/zap';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import { toast } from 'svelte-sonner';
-	import type { CodeAnalysis } from '$lib/server/ai';
+	import type { CodeAnalysis } from '#lib/server/ai.js';
 
 	interface Props {
 		diff: string;

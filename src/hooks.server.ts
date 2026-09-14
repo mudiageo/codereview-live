@@ -1,10 +1,10 @@
-import { auth } from '$lib/server/auth';
+import { auth } from '#lib/server/auth.js';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { building } from '$app/environment';
-import { redirect } from '@sveltejs/kit'
-import { rateLimit } from '$lib/server/rate-limit';
+import { building } from '$app/env';
+import { redirect } from '@sveltejs/kit';
+import { rateLimit } from '#lib/server/rate-limit.js';
 import { sequence } from '@sveltejs/kit/hooks';
-import { handle as syncHandle } from '$lib/server/sync';
+import { handle as syncHandle } from '#lib/server/sync.js';
 
 const protectedRoutes = [
   '/dashboard',
@@ -29,17 +29,17 @@ const authHandle: Handle = async ({ event, resolve }) => {
     headers: event.request.headers,
   });
 
-  	if (session) {
-		event.locals.session = session.session;
-		event.locals.user = session.user;
-	}
-	
-	// Populate event.locals.auth with a function that gets the session
-	event.locals.auth = async () => {
+  if (session) {
+    event.locals.session = session.session;
+    event.locals.user = session.user;
+  }
+
+  // Populate event.locals.auth with a function that gets the session
+  event.locals.auth = async () => {
 		return await auth.api.getSession({
 			headers: event.request.headers
 		});
-	};
+  };
 
   const { pathname } = event.url;
 
@@ -62,11 +62,11 @@ const authHandle: Handle = async ({ event, resolve }) => {
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(self), microphone=(self), fullscreen=(self)',
-    ...(process.env.NODE_ENV === 'production' && {
+    ...process.env.NODE_ENV === 'production' && {
       'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
-    })  // CSP for production
-});
- 
+    } // CSP for production
+  });
+
   
   return svelteKitHandler({ event, resolve, auth, building });
 };

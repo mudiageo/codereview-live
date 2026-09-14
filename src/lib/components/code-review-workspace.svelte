@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Input } from '$lib/components/ui/input';
-	import { ScrollArea } from '$lib/components/ui/scroll-area';
-	import { Separator } from '$lib/components/ui/separator';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { ScrollArea } from '#lib/components/ui/scroll-area/index.js';
+	import { Separator } from '#lib/components/ui/separator/index.js';
 	import {
 		Dialog,
 		DialogContent,
 		DialogDescription,
 		DialogHeader,
 		DialogTitle
-	} from '$lib/components/ui/dialog';
+	} from '#lib/components/ui/dialog/index.js';
 	import CodeEditor from './code-editor.svelte';
 	import DiffViewer from './diff-viewer.svelte';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -30,10 +30,10 @@
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import Menu from '@lucide/svelte/icons/menu';
 	import Loader2 from '@lucide/svelte/icons/loader-2';
-	import { LanguageDetector } from '$lib/utils/language-detector';
+	import { LanguageDetector } from '#lib/utils/language-detector.js';
 	import { toast } from 'svelte-sonner';
-	import { getRecordingContext } from '$lib/contexts/recording-context.svelte';
-	import { explainCodeAI } from '$lib/ai.remote';
+	import { getRecordingContext } from '#lib/contexts/recording-context.svelte.js';
+	import { explainCodeAI } from '#lib/ai.remote.js';
 
 	export interface FileNode {
 		name: string;

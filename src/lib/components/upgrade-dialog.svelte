@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { plans, type PlanId } from '$lib/config/plans';
-	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { RadioGroup, RadioGroupItem } from '$lib/components/ui/radio-group';
-	import { Label } from '$lib/components/ui/label';
+	import { plans, type PlanId } from '#lib/config/plans.js';
+	import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#lib/components/ui/dialog/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { RadioGroup, RadioGroupItem } from '#lib/components/ui/radio-group/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
 	import Check from '@lucide/svelte/icons/check';
 	import { toast } from 'svelte-sonner';
 

@@ -4,9 +4,9 @@
 		AccordionItem,
 		AccordionTrigger,
 		AccordionContent
-	} from '$lib/components/ui/accordion';
-	import { Button } from '$lib/components/ui/button';
-	import { Card } from '$lib/components/ui/card';
+	} from '#lib/components/ui/accordion/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Card } from '#lib/components/ui/card/index.js';
 </script>
 
 <div class="max-w-4xl mx-auto space-y-8 py-8 px-4">
