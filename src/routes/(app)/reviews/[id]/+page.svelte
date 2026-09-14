@@ -35,7 +35,7 @@
 	import FileCode from '@lucide/svelte/icons/file-code';
 
 	import { toast } from 'svelte-sonner';
-	import { reviewsStore, commentsStore, teamsStore, reviewAssignmentsStore } from '#lib/stores/index.svelte.js';
+	import { reviewsStore, commentsStore, teamsStore, reviewAssignmentsStore, teamMembersStore } from '#lib/stores/index.svelte.js';
 	import { notificationsStore } from '#lib/stores/notifications.svelte.js';
 	import { auth } from '#lib/stores/auth.svelte.js';
 	import { ReviewExporter } from '#lib/utils/export-import.js';
@@ -82,6 +82,30 @@
 			toast.success(status === 'approved' ? 'Review approved!' : 'Changes requested.');
 		} catch (err) {
 			toast.error('Failed to submit approval.');
+		}
+	}
+
+	const teamMembers = $derived(
+		teamsStore.current?.id ? teamMembersStore.findByTeam(teamsStore.current.id) : []
+	);
+
+	async function toggleAssignment(memberId: string) {
+		const existing = allAssignments.find(a => a.userId === memberId);
+		try {
+			if (existing) {
+				await reviewAssignmentsStore.delete(existing.id);
+				toast.success('Reviewer removed');
+			} else {
+				await reviewAssignmentsStore.create({
+					reviewId,
+					userId: memberId,
+					status: 'pending',
+					assignedBy: auth.currentUser?.id || null
+				});
+				toast.success('Reviewer assigned');
+			}
+		} catch(err) {
+			toast.error('Failed to update reviewers');
 		}
 	}
 
@@ -675,6 +699,44 @@
 						Changes Requested
 					</Badge>
 				{/if}
+
+				<DropdownMenu>
+					<DropdownMenuTrigger>
+						{#snippet child(props)}
+						<Button {...props} variant="outline" size="sm" class="gap-1 hidden sm:flex">
+							<Users class="h-4 w-4" />
+							<span>Reviewers</span>
+							{#if allAssignments.length > 0}
+								<Badge variant="secondary" class="ml-1 h-5 px-1">{allAssignments.length}</Badge>
+							{/if}
+						</Button>
+						{/snippet}
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" class="w-64">
+						<div class="px-2 py-1.5 text-sm font-semibold">Assign Reviewers</div>
+						<DropdownMenuSeparator />
+						{#if teamMembers.length === 0}
+							<div class="px-2 py-3 text-sm text-muted-foreground text-center">
+								No team members found
+							</div>
+						{/if}
+						{#each teamMembers as member}
+							{@const isAssigned = allAssignments.some(a => a.userId === member.userId)}
+							<DropdownMenuItem onclick={() => toggleAssignment(member.userId)} class="justify-between cursor-pointer">
+								<div class="flex items-center gap-2">
+									<Avatar class="h-6 w-6">
+										<AvatarImage src={member.avatar} />
+										<AvatarFallback class="text-[10px]">{getInitials(member.name)}</AvatarFallback>
+									</Avatar>
+									<span class="truncate max-w-[120px]">{member.name}</span>
+								</div>
+								{#if isAssigned}
+									<Check class="h-4 w-4 text-primary" />
+								{/if}
+							</DropdownMenuItem>
+						{/each}
+					</DropdownMenuContent>
+				</DropdownMenu>
 
 				<Button variant="outline" size="sm" class="gap-1 hidden sm:flex" onclick={shareP2P}>
 					<Share2 class="h-4 w-4" />
