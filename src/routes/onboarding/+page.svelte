@@ -19,6 +19,7 @@
 		AccordionItem,
 		AccordionTrigger
 	} from '#lib/components/ui/accordion/index.js';
+  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '#lib/components/ui/dialog/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
 	import Play from '@lucide/svelte/icons/play';
 	import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
@@ -50,7 +51,9 @@
 	import Lock from '@lucide/svelte/icons/lock';
 	import Eye from '@lucide/svelte/icons/eye';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
+	import Smartphone from '@lucide/svelte/icons/smartphone';
 	import { auth } from '#lib/stores/auth.svelte.js';
+
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/env';
@@ -58,6 +61,8 @@
 	let loading = $state(true);
 	let activeTab = $state('progress');
 	let searchQuery = $state('');
+	let showLessonDialog = $state(false);
+	let currentLesson = $state<any>(null);
 
 	let selectedModule = $state<string | null>(null);
 
@@ -185,6 +190,42 @@
 				{ id: 'af-3', title: 'Custom Checklist Templates', completed: false, duration: 6 },
 				{ id: 'af-4', title: 'API & Webhooks', completed: false, duration: 8 },
 				{ id: 'af-5', title: 'Analytics Deep Dive', completed: false, duration: 4 }
+			]
+		},
+		{
+			id: 'mobile-workflow',
+			title: 'Mobile Workflow',
+			description: 'Review code on the go',
+			icon: Smartphone,
+			color: 'blue',
+			totalLessons: 3,
+			completedLessons: 0,
+			estimatedTime: 10,
+			lessons: [
+				{
+					id: 'mw-1',
+					title: 'Mobile Interface Overview',
+					completed: false,
+					duration: 3,
+					content:
+						'The mobile interface is optimized for viewing code and watching reviews. You can switch between Video, Code, and Discussion tabs using the bottom navigation bar.'
+				},
+				{
+					id: 'mw-2',
+					title: 'Adding Video Comments on Mobile',
+					completed: false,
+					duration: 4,
+					content:
+						'To add a video comment on mobile:\n1. Navigate to the "Discuss" tab.\n2. Tap the "Camera" icon or "Record" button.\n3. Allow camera/microphone access.\n4. Record your feedback and tap "Stop".\n5. Review your recording and tap "Post".'
+				},
+				{
+					id: 'mw-3',
+					title: 'Gesture Controls',
+					completed: false,
+					duration: 3,
+					content:
+						'Swipe left/right to navigate between files in the code viewer. Double tap code to add a line comment.'
+				}
 			]
 		}
 	]);
@@ -366,11 +407,22 @@
 		]
 	});
 
-	// Calculate overall progress
+	// Calculate overall progress — always derived from actual lesson completion state
 	const totalLessons = $derived(onboardingModules.reduce((sum, m) => sum + m.totalLessons, 0));
+	const completedLessons = $derived(
+		onboardingModules.reduce((sum, m) => sum + m.lessons.filter((l) => l.completed).length, 0)
+	);
+	const overallProgress = $derived(
+		totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
+	);
 
-	const completedLessons = $derived(onboardingModules.reduce((sum, m) => sum + m.completedLessons, 0));
-	const overallProgress = $derived(Math.round(completedLessons / totalLessons * 100));
+	// Per-module completion (derived)
+	$effect(() => {
+		onboardingModules.forEach((m) => {
+			m.completedLessons = m.lessons.filter((l) => l.completed).length;
+		});
+	});
+
 
 	// Filter templates based on search
 	const filteredTemplates = $derived(
@@ -478,6 +530,10 @@
 	function handleLessonAction(module: any, lesson: any) {
 		if (lesson.action) {
 			goto(lesson.action);
+		} else if (lesson.content) {
+			currentLesson = lesson;
+			showLessonDialog = true;
+			markLessonComplete(module.id, lesson.id);
 		} else if (lesson.videoUrl) {
 			// Simulate watching video
 			// In a real app, this would open a modal
@@ -493,7 +549,8 @@
 			const lesson = module.lessons.find((l) => l.id === lessonId);
 			if (lesson && !lesson.completed) {
 				lesson.completed = true;
-				module.completedLessons++;
+				// completedLessons is now auto-derived via the $effect, but keep in sync immediately
+				module.completedLessons = module.lessons.filter((l) => l.completed).length;
 				saveProgress();
 			}
 		}
@@ -557,8 +614,18 @@
 					<Button
 						class="gap-2"
 						onclick={() => {
-							const nextModule = onboardingModules.find((m) => m.completedLessons < m.totalLessons);
-							if (nextModule) selectedModule = nextModule.id;
+							const nextModule = onboardingModules.find(
+								(m) => m.lessons.filter((l) => l.completed).length < m.totalLessons
+							);
+							if (nextModule) {
+								selectedModule = nextModule.id;
+								activeTab = 'progress';
+								setTimeout(() => {
+									document
+										.querySelector('[data-module-id="' + nextModule.id + '"]')
+										?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+								}, 100);
+							}
 						}}
 					>
 						<Play class="h-4 w-4" />
@@ -591,12 +658,17 @@
 			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each onboardingModules as module}
 					{@const colors = getColorClasses(module.color)}
-					{@const progress = Math.round(module.completedLessons / module.totalLessons * 100)}
-					{@const isComplete = module.completedLessons === module.totalLessons}
+					{const lessonsDone = module.lessons.filter((l) => l.completed).length}
+					{const progress = Math.round((lessonsDone / module.totalLessons) * 100)}
+					{const isComplete = lessonsDone === module.totalLessons}
 
 					<Card
-						class="relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 {selectedModule === module.id ? 'ring-2 ring-primary' : ''}"
-						onclick={() => selectedModule = selectedModule === module.id ? null : module.id}
+						data-module-id={module.id}
+						class="relative overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 {selectedModule ===
+						module.id
+							? 'ring-2 ring-primary'
+							: ''}"
+						onclick={() => (selectedModule = selectedModule === module.id ? null : module.id)}
 					>
 						<div class="absolute top-0 left-0 right-0 h-1 bg-muted">
 							<div
@@ -619,7 +691,7 @@
 									</Badge>
 								{:else}
 									<Badge variant="outline">
-										{module.completedLessons}/{module.totalLessons}
+										{lessonsDone}/{module.totalLessons}
 									</Badge>
 								{/if}
 							</div>
@@ -951,4 +1023,19 @@
 			</div>
 		</TabsContent>
 	</Tabs>
+
+	<Dialog bind:open={showLessonDialog}>
+		<DialogContent>
+			<DialogHeader>
+				<DialogTitle>{currentLesson?.title}</DialogTitle>
+			</DialogHeader>
+			<div class="py-4 space-y-4">
+				{#if currentLesson?.content}
+					{#each currentLesson.content.split('\n') as line}
+						<p>{line}</p>
+					{/each}
+				{/if}
+			</div>
+		</DialogContent>
+	</Dialog>
 </div>

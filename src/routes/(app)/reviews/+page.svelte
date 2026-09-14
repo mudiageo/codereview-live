@@ -21,6 +21,10 @@
   import { reviewsStore } from '#lib/stores/index.svelte.js';
   import { SearchEngine } from '#lib/utils/search.js';
   import VirtualList from '#lib/components/virtual-list.svelte';
+  import { transition } from '@ssgoi/svelte';
+  import { scale } from '@ssgoi/svelte/transitions';
+  import { config } from '@ssgoi/svelte/presets';
+
   
   let searchQuery = $state('');
   let statusFilter = $state('all');
@@ -105,8 +109,12 @@
 
   <!-- Reviews Grid -->
   <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-    {#each filteredReviews as review}
-      <a href="/reviews/{review.id}" class="group">
+    {#each filteredReviews as review (review.id)}
+      <a
+        href="/reviews/{review.id}"
+        class="group"
+        use:transition={{ key: review.id, ...scale({ physics: { spring: config.gentle } }) }}
+      >
         <Card class="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1">
           <!-- Thumbnail -->
           <div class="relative aspect-video bg-muted">

@@ -181,7 +181,7 @@ export const comments = pgTable('comments', {
 // Team members table
 export const teamMembers = pgTable('team_members', {
   id: uuid('id').primaryKey().defaultRandom(),
-  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+  teamId: uuid('team_id').references(() => teams.id, { onDelete: 'cascade' }).notNull(),
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   role: text('role').default('member').notNull(), // owner, admin, member, viewer
   invitedBy: text('invited_by').references(() => users.id),
@@ -329,7 +329,6 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [users.id],
   }),
   reviews: many(reviews),
-  teamMembers: many(teamMembers),
 }));
 
 export const reviewsRelations = relations(reviews, ({ one, many }) => ({
@@ -361,9 +360,9 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
 }));
 
 export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
-  project: one(projects, {
-    fields: [teamMembers.projectId],
-    references: [projects.id],
+  team: one(teams, {
+    fields: [teamMembers.teamId],
+    references: [teams.id],
   }),
   user: one(users, {
     fields: [teamMembers.userId],
@@ -381,6 +380,7 @@ export const teamsRelations = relations(teams, ({ one, many }) => ({
     references: [users.id],
   }),
   invitations: many(teamInvitations),
+  members: many(teamMembers),
 }));
 
 export const teamInvitationsRelations = relations(teamInvitations, ({ one }) => ({

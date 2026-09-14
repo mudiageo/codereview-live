@@ -7,6 +7,8 @@
 	import { onMount } from 'svelte';
 	import { settingsStore } from '#lib/stores/index.svelte.js';
 	import { CSS_VARS } from '#lib/constants.js';
+	import { Ssgoi } from '@ssgoi/svelte';
+	import { transitionConfig } from '#lib/config/transitions.js';
 
 	let { children } = $props();
 
@@ -54,4 +56,8 @@
 </svelte:head>
 
 <ModeWatcher />
-{@render children()}
+<Ssgoi config={transitionConfig}>
+	<div style="position: relative; min-height: 100vh;">
+		{@render children()}
+	</div>
+</Ssgoi>

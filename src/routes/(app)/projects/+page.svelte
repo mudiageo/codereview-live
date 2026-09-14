@@ -25,6 +25,9 @@
   import { goto } from '$app/navigation';
   import Globe from '@lucide/svelte/icons/globe';
   import Lock from '@lucide/svelte/icons/lock';
+  import { transition } from '@ssgoi/svelte';
+  import { scale, slide } from '@ssgoi/svelte/transitions';
+  import { config } from '@ssgoi/svelte/presets';
   
   let view = $state<'grid' | 'list'>('grid');
   let searchQuery = $state('');
@@ -126,8 +129,12 @@
     </Card>
   {:else if view === 'grid'}
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {#each filteredProjects as project}
-        <a href="/projects/{project.id}" class="group">
+      {#each filteredProjects as project (project.id)}
+        <a
+          href="/projects/{project.id}"
+          class="group"
+          use:transition={{ key: project.id, ...scale({ physics: { spring: config.gentle } }) }}
+        >
           <Card class="transition-all hover:shadow-lg hover:-translate-y-1">
             <CardHeader>
               <div class="flex items-start justify-between">
@@ -196,8 +203,11 @@
     </div>
   {:else}
     <div class="space-y-2">
-      {#each filteredProjects as project}
-        <a href="/projects/{project.id}">
+      {#each filteredProjects as project (project.id)}
+        <a
+          href="/projects/{project.id}"
+          use:transition={{ key: project.id, ...slide({ direction: 'left', physics: { spring: config.stiff } }) }}
+        >
           <Card class="transition-all hover:shadow-md">
             <CardContent class="flex items-center gap-4 p-4">
               <div 

@@ -124,6 +124,9 @@ importers:
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
+      '@ssgoi/svelte':
+        specifier: ^4.0.0
+        version: 4.0.0(svelte@5.57.0(@typescript-eslint/types@8.48.1))
       '@tauri-apps/plugin-fs':
         specifier: ~2
         version: 2.4.4
@@ -1916,6 +1919,16 @@ packages:
 
   '@speed-highlight/core@1.2.24':
     resolution: {integrity: sha512-qeW2e1l78afw8VhRPfPQ1Gjj+KU5XFQ/OFV5ti6eTa9bruO7mJyZtA4vw0ofqmA3tKCkROE9xLk3VZoeRc98nw==}
+
+  '@ssgoi/core@4.4.1':
+    resolution: {integrity: sha512-+5sGQU90zi/WrZ5Cy7etzegXjfFFFn7yb1omVxl0103RVJviyw22JxDFYeWk/0EVQFhnH0015JxnofBD77KoyQ==}
+    engines: {node: '>=18.0.0'}
+
+  '@ssgoi/svelte@4.0.0':
+    resolution: {integrity: sha512-GxhIyNFkfWx1kLWdMzdNNzz8upg2pn3LJzDUCrM+4mxzXHZ71lvQZUQhVaid0lZ3GMhFYwHxbRFIvZ8320oZ1A==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      svelte: ^5.0.0
 
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
@@ -6032,6 +6045,13 @@ snapshots:
       tslib: 2.8.1
 
   '@speed-highlight/core@1.2.24': {}
+
+  '@ssgoi/core@4.4.1': {}
+
+  '@ssgoi/svelte@4.0.0(svelte@5.57.0(@typescript-eslint/types@8.48.1))':
+    dependencies:
+      '@ssgoi/core': 4.4.1
+      svelte: 5.57.0(@typescript-eslint/types@8.48.1)
 
   '@stablelib/base64@1.0.1': {}
 

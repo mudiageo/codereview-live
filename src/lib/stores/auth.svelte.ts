@@ -62,7 +62,7 @@ class AuthState {
 		);
 
 		if (result.data?.user) {
-			this.currentUser = result.dara.user;
+			this.currentUser = result.data.user;
 		}
 
 		return result;
@@ -73,6 +73,9 @@ class AuthState {
 		this.currentUser = null;
 		goto('/login');
 	}
+
+	// Alias for signOut for compatibility
+	logOut = this.signOut.bind(this);
 
 	async signInWithProvider(provider: 'google' | 'github') {
 		await authClient.signIn.social({

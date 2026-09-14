@@ -81,21 +81,21 @@ export async function sendPasswordResetEmail(email: string, token: string) {
 export async function sendTeamInviteEmail(
   email: string,
   inviterName: string,
-  projectName: string,
+  teamName: string,
   inviteToken: string
 ) {
   const inviteUrl = `${config.app.url}/team/accept?token=${inviteToken}`;
 
   await sendEmail({
     to: email,
-    subject: `${inviterName} invited you to join ${projectName}`,
+    subject: `${inviterName} invited you to join ${teamName}`,
     html: `
       <h1>You've Been Invited!</h1>
-      <p>${inviterName} has invited you to join the "${projectName}" project on CodeReview.live.</p>
+      <p>${inviterName} has invited you to join the "${teamName}" team on CodeReview.live.</p>
       <a href="${inviteUrl}">Accept Invitation</a>
       <p>This invitation will expire in 7 days.</p>
     `,
-    text: `${inviterName} invited you to join ${projectName}. Accept: ${inviteUrl}`,
+    text: `${inviterName} invited you to join ${teamName}. Accept: ${inviteUrl}`,
   });
 }
 

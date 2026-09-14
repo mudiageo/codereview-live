@@ -149,7 +149,7 @@ Think of it as “Loom meets GitHub”—optimized for code review.
 
 ## Accomplishments
 
-- MVP built in 3 weeks, 50+ routes/components
+- MVP built in 5 weeks, 50+ routes/components
 - True offline-first UX, native everywhere (desktop/web/mobile)
 - Polished, production-quality UI (70+ shadcn-svelte components)
 - Gemini-powered AI insights for developers
